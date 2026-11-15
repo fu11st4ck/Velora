@@ -151,6 +151,8 @@ model User {
   fullName     String    @map("full_name")
   phone        String?
   isActive     Boolean   @default(true) @map("is_active")
+  failedLoginCount Int   @default(0) @map("failed_login_count")
+  lockedUntil  DateTime? @map("locked_until") @db.Timestamptz(6)
   lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -181,6 +183,7 @@ model OrganizationMember {
   stockMovements StockMovement[]
   payments       Payment[]
   returns        SalesReturn[]
+  refreshTokens  RefreshToken[]
 
   @@unique([organizationId, userId])
   @@index([userId])
@@ -191,6 +194,7 @@ model OrganizationMember {
 model RefreshToken {
   id           String    @id @default(uuid(7)) @db.Uuid
   userId       String    @map("user_id") @db.Uuid
+  memberId     String    @map("member_id") @db.Uuid // membership this session acts as
   familyId     String    @map("family_id") @db.Uuid
   tokenHash    String    @unique @map("token_hash") // SHA-256 of the opaque token
   deviceName   String?   @map("device_name")
@@ -201,9 +205,11 @@ model RefreshToken {
   revokeReason String?   @map("revoke_reason")
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  member OrganizationMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([memberId])
   @@index([familyId])
   @@map("refresh_tokens")
 }
@@ -622,7 +628,7 @@ model IdempotencyKey {
 // Append-only. No FK on actor/entity so history survives any future hard delete.
 model AuditLog {
   id             String   @id @default(uuid(7)) @db.Uuid
-  organizationId String   @map("organization_id") @db.Uuid
+  organizationId String?  @map("organization_id") @db.Uuid // null for pre-tenant auth events
   actorUserId    String?  @map("actor_user_id") @db.Uuid
   action         String // e.g. "invoice.cancel", "product.update", "auth.login_failed"
   entityType     String?  @map("entity_type")
@@ -634,7 +640,7 @@ model AuditLog {
   requestId      String?  @map("request_id")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
 
   @@index([organizationId, createdAt])
   @@index([organizationId, entityType, entityId])
