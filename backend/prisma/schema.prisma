@@ -1,0 +1,642 @@
+// Velora — PostgreSQL schema (Prisma).
+// Conventions
+//  - All money is stored as BIGINT minor units of the organization currency (e.g. fils for AED).
+//  - Percentages (markup, tax) are stored as integer basis points (30% = 3000).
+//  - Every business row carries organization_id (tenant isolation, enforced in the data layer
+//    and by PostgreSQL row-level security — see docs/database-design.md).
+//  - Financial and stock history is append-only: invoices, payments, returns and stock
+//    movements are never updated in place except for the derived/cached columns noted below.
+//  - IDs are UUIDv7. Entities that can be created offline accept a client-generated ID.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum MemberRole {
+  OWNER
+  MANAGER
+  SALES
+}
+
+enum WeightUnit {
+  G
+  KG
+}
+
+enum StockMovementType {
+  OPENING
+  PURCHASE_RECEIPT
+  SALE
+  SALE_CANCELLATION
+  CUSTOMER_RETURN
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+}
+
+enum QuotationStatus {
+  OPEN
+  CONVERTED
+  EXPIRED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  ISSUED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+}
+
+enum PaymentKind {
+  PAYMENT
+  REFUND
+}
+
+enum DocumentType {
+  QUOTATION
+  INVOICE
+  CREDIT_NOTE
+}
+
+// ───────────────────────── Tenant & identity ─────────────────────────
+
+model Organization {
+  id                    String   @id @default(uuid(7)) @db.Uuid
+  name                  String
+  legalName             String?  @map("legal_name")
+  taxRegistrationNumber String?  @map("tax_registration_number")
+  phone                 String?
+  email                 String?
+  addressLine           String?  @map("address_line")
+  city                  String?
+  countryCode           String?  @map("country_code") @db.Char(2)
+  logoKey               String?  @map("logo_key")
+  // Regional settings — never hardcoded in application code.
+  currencyCode          String   @map("currency_code") @db.Char(3)
+  currencyExponent      Int      @default(2) @map("currency_exponent") @db.SmallInt
+  timezone              String // IANA name, e.g. "Asia/Dubai"
+  locale                String   @default("en")
+  // Business rule settings
+  lowStockThreshold     Int      @default(8) @map("low_stock_threshold")
+  maxMarkupBp           Int      @default(6000) @map("max_markup_bp")
+  defaultMarkupBp       Int      @default(3000) @map("default_markup_bp")
+  defaultMinMarkupBp    Int      @default(1500) @map("default_min_markup_bp")
+  defaultCreditDays     Int      @default(30) @map("default_credit_days")
+  quotationValidityDays Int      @default(14) @map("quotation_validity_days")
+  allowOfflineSales     Boolean  @default(false) @map("allow_offline_sales")
+  invoiceFooter         String?  @map("invoice_footer")
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  branches          Branch[]
+  members           OrganizationMember[]
+  taxRates          TaxRate[]
+  products          Product[]
+  stockLevels       StockLevel[]
+  stockMovements    StockMovement[]
+  customers         Customer[]
+  documentSequences DocumentSequence[]
+  quotations        Quotation[]
+  invoices          Invoice[]
+  payments          Payment[]
+  returns           SalesReturn[]
+  idempotencyKeys   IdempotencyKey[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model Branch {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  code           String // short code, unique per organization
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  members        OrganizationMember[]
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+  quotations     Quotation[]
+  invoices       Invoice[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId])
+  @@map("branches")
+}
+
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  email        String    @unique @db.Citext
+  passwordHash String    @map("password_hash") // Argon2id
+  fullName     String    @map("full_name")
+  phone        String?
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  memberships         OrganizationMember[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model OrganizationMember {
+  id             String     @id @default(uuid(7)) @db.Uuid
+  organizationId String     @map("organization_id") @db.Uuid
+  userId         String     @map("user_id") @db.Uuid
+  role           MemberRole
+  branchId       String?    @map("branch_id") @db.Uuid // null = all branches
+  isActive       Boolean    @default(true) @map("is_active")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  branch       Branch?      @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  quotations     Quotation[]
+  invoices       Invoice[]
+  stockMovements StockMovement[]
+  payments       Payment[]
+  returns        SalesReturn[]
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+// One row per issued refresh token. A "session" is a token family (familyId).
+model RefreshToken {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  familyId     String    @map("family_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash") // SHA-256 of the opaque token
+  deviceName   String?   @map("device_name")
+  ipAddress    String?   @map("ip_address") @db.Inet
+  expiresAt    DateTime  @map("expires_at") @db.Timestamptz(6)
+  rotatedAt    DateTime? @map("rotated_at") @db.Timestamptz(6) // set when exchanged
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(6)
+  revokeReason String?   @map("revoke_reason")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+// ───────────────────────── Catalog & inventory ─────────────────────────
+
+model TaxRate {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String // e.g. "VAT 5%", "Zero rated"
+  rateBp         Int      @map("rate_bp") // 500 = 5%
+  isDefault      Boolean  @default(false) @map("is_default")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  quotations   Quotation[]
+  invoices     Invoice[]
+
+  @@unique([organizationId, name])
+  @@map("tax_rates")
+}
+
+model Product {
+  id             String      @id @default(uuid(7)) @db.Uuid
+  organizationId String      @map("organization_id") @db.Uuid
+  sku            String // unique per organization, case-insensitive
+  barcode        String?
+  name           String
+  description    String?
+  weightValue    Decimal?    @map("weight_value") @db.Decimal(12, 3)
+  weightUnit     WeightUnit? @map("weight_unit")
+  imageKey       String?     @map("image_key") // object-storage key
+  // Pricing policy. Current cost is a moving weighted average maintained by stock receipts.
+  costMinor      BigInt      @map("cost_minor")
+  defaultMarkupBp Int        @map("default_markup_bp")
+  minMarkupBp    Int         @map("min_markup_bp")
+  reorderLevel   Int?        @map("reorder_level") // null = use organization.low_stock_threshold
+  isActive       Boolean     @default(true) @map("is_active")
+  archivedAt     DateTime?   @map("archived_at") @db.Timestamptz(6) // soft delete
+  version        Int         @default(1) // optimistic concurrency for edits
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  stockLevels    StockLevel[]
+  stockMovements StockMovement[]
+  quotationItems QuotationItem[]
+  invoiceItems   InvoiceItem[]
+
+  @@unique([organizationId, sku])
+  @@index([organizationId, name])
+  @@index([organizationId, barcode])
+  @@index([organizationId, updatedAt]) // delta sync
+  @@map("products")
+}
+
+// Current on-hand quantity per product per branch. A cache of SUM(stock_movements.quantity_delta),
+// updated in the same transaction as the movement. CHECK (quantity >= 0) is added in SQL migration.
+model StockLevel {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  productId      String   @map("product_id") @db.Uuid
+  branchId       String   @map("branch_id") @db.Uuid
+  quantity       Int      @default(0)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  branch       Branch       @relation(fields: [branchId], references: [id], onDelete: Restrict)
+
+  @@unique([productId, branchId])
+  @@index([organizationId, branchId, quantity])
+  @@map("stock_levels")
+}
+
+// Append-only ledger. Every change of stock has exactly one row here.
+model StockMovement {
+  id             String            @id @default(uuid(7)) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  productId      String            @map("product_id") @db.Uuid
+  branchId       String            @map("branch_id") @db.Uuid
+  type           StockMovementType
+  quantityDelta  Int               @map("quantity_delta") // signed
+  balanceAfter   Int               @map("balance_after")
+  unitCostMinor  BigInt            @map("unit_cost_minor") // cost attached to this movement
+  // Traceability to the originating business document (at most one is set).
+  invoiceId      String?           @map("invoice_id") @db.Uuid
+  returnId       String?           @map("return_id") @db.Uuid
+  supplierName   String?           @map("supplier_name") // free text on receipts (no supplier module in v1)
+  referenceNote  String?           @map("reference_note")
+  reason         String? // mandatory for adjustments (validated in service)
+  createdById    String            @map("created_by_id") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  product      Product            @relation(fields: [productId], references: [id], onDelete: Restrict)
+  branch       Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  invoice      Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  salesReturn  SalesReturn?       @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  createdBy    OrganizationMember @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, productId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([invoiceId])
+  @@index([returnId])
+  @@map("stock_movements")
+}
+
+// ───────────────────────── Customers ─────────────────────────
+
+model Customer {
+  id                    String    @id @default(uuid(7)) @db.Uuid // may be client-generated
+  organizationId        String    @map("organization_id") @db.Uuid
+  name                  String?
+  company               String?
+  mobile                String? // stored normalized to E.164 when parseable
+  email                 String?
+  address               String?
+  taxRegistrationNumber String?   @map("tax_registration_number")
+  notes                 String?
+  archivedAt            DateTime? @map("archived_at") @db.Timestamptz(6)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  quotations   Quotation[]
+  invoices     Invoice[]
+
+  // CHECK (name IS NOT NULL OR company IS NOT NULL) added in SQL migration.
+  @@index([organizationId, mobile])
+  @@index([organizationId, name])
+  @@index([organizationId, company])
+  @@index([organizationId, updatedAt])
+  @@map("customers")
+}
+
+// ───────────────────────── Document numbering ─────────────────────────
+
+// Gapless per-organization, per-type, per-year counters. Row is locked (SELECT … FOR UPDATE)
+// inside the transaction that creates the document.
+model DocumentSequence {
+  id             String       @id @default(uuid(7)) @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  type           DocumentType
+  year           Int          @db.SmallInt
+  prefix         String // "INV", "QT", "CN" — configurable
+  lastNumber     Int          @default(0) @map("last_number")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, type, year])
+  @@map("document_sequences")
+}
+
+// ───────────────────────── Quotations ─────────────────────────
+
+model Quotation {
+  id               String          @id @default(uuid(7)) @db.Uuid // may be client-generated
+  organizationId   String          @map("organization_id") @db.Uuid
+  branchId         String          @map("branch_id") @db.Uuid
+  number           String
+  status           QuotationStatus @default(OPEN)
+  customerId       String          @map("customer_id") @db.Uuid
+  // Customer snapshot at issue time
+  customerName     String?         @map("customer_name")
+  customerCompany  String?         @map("customer_company")
+  customerMobile   String?         @map("customer_mobile")
+  customerEmail    String?         @map("customer_email")
+  customerAddress  String?         @map("customer_address")
+  customerTrn      String?         @map("customer_trn")
+  salespersonId    String          @map("salesperson_id") @db.Uuid
+  currencyCode     String          @map("currency_code") @db.Char(3)
+  subtotalMinor    BigInt          @map("subtotal_minor")
+  discountMinor    BigInt          @default(0) @map("discount_minor")
+  taxRateId        String?         @map("tax_rate_id") @db.Uuid
+  taxName          String          @map("tax_name")
+  taxRateBp        Int             @map("tax_rate_bp")
+  taxMinor         BigInt          @map("tax_minor")
+  totalMinor       BigInt          @map("total_minor")
+  validUntil       DateTime?       @map("valid_until") @db.Date
+  notes            String?
+  issuedAt         DateTime        @default(now()) @map("issued_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?       @map("cancelled_at") @db.Timestamptz(6)
+  createdAt        DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch       Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  customer     Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  salesperson  OrganizationMember @relation(fields: [salespersonId], references: [id], onDelete: Restrict)
+  taxRate      TaxRate?           @relation(fields: [taxRateId], references: [id], onDelete: Restrict)
+  items        QuotationItem[]
+  invoice      Invoice? // set once converted
+
+  @@unique([organizationId, number])
+  @@index([organizationId, issuedAt])
+  @@index([organizationId, salespersonId, issuedAt])
+  @@index([organizationId, customerId])
+  @@index([organizationId, status])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id             String @id @default(uuid(7)) @db.Uuid
+  quotationId    String @map("quotation_id") @db.Uuid
+  lineNo         Int    @map("line_no") @db.SmallInt
+  productId      String @map("product_id") @db.Uuid
+  productName    String @map("product_name") // snapshot
+  productSku     String @map("product_sku") // snapshot
+  quantity       Int
+  unitCostMinor  BigInt @map("unit_cost_minor") // snapshot, manager-only in API
+  markupBp       Int    @map("markup_bp")
+  unitPriceMinor BigInt @map("unit_price_minor")
+  lineTotalMinor BigInt @map("line_total_minor")
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([quotationId, lineNo])
+  @@index([productId])
+  @@map("quotation_items")
+}
+
+// ───────────────────────── Invoices (a finalized sale) ─────────────────────────
+
+model Invoice {
+  id               String        @id @default(uuid(7)) @db.Uuid // may be client-generated
+  organizationId   String        @map("organization_id") @db.Uuid
+  branchId         String        @map("branch_id") @db.Uuid
+  number           String
+  status           InvoiceStatus @default(ISSUED)
+  quotationId      String?       @unique @map("quotation_id") @db.Uuid
+  customerId       String        @map("customer_id") @db.Uuid
+  customerName     String?       @map("customer_name")
+  customerCompany  String?       @map("customer_company")
+  customerMobile   String?       @map("customer_mobile")
+  customerEmail    String?       @map("customer_email")
+  customerAddress  String?       @map("customer_address")
+  customerTrn      String?       @map("customer_trn")
+  salespersonId    String        @map("salesperson_id") @db.Uuid
+  currencyCode     String        @map("currency_code") @db.Char(3)
+  // Immutable totals, fixed at issue.
+  subtotalMinor    BigInt        @map("subtotal_minor")
+  discountMinor    BigInt        @default(0) @map("discount_minor")
+  taxRateId        String?       @map("tax_rate_id") @db.Uuid
+  taxName          String        @map("tax_name")
+  taxRateBp        Int           @map("tax_rate_bp")
+  taxMinor         BigInt        @map("tax_minor")
+  totalMinor       BigInt        @map("total_minor")
+  costMinor        BigInt        @map("cost_minor") // Σ item cost, manager-only in API
+  // Derived caches, maintained transactionally from payments / returns.
+  paidMinor        BigInt        @default(0) @map("paid_minor") // Σ PAYMENT − Σ REFUND
+  returnedMinor    BigInt        @default(0) @map("returned_minor") // Σ credit notes (tax incl.)
+  paymentStatus    PaymentStatus @default(UNPAID) @map("payment_status")
+  creditDays       Int?          @map("credit_days")
+  dueDate          DateTime?     @map("due_date") @db.Date
+  notes            String?
+  issuedAt         DateTime      @default(now()) @map("issued_at") @db.Timestamptz(6)
+  cancelledAt      DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  cancelledById    String?       @map("cancelled_by_id") @db.Uuid
+  cancelReason     String?       @map("cancel_reason")
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  branch         Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  quotation      Quotation?         @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+  customer       Customer           @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  salesperson    OrganizationMember @relation(fields: [salespersonId], references: [id], onDelete: Restrict)
+  taxRate        TaxRate?           @relation(fields: [taxRateId], references: [id], onDelete: Restrict)
+  items          InvoiceItem[]
+  payments       Payment[]
+  returns        SalesReturn[]
+  stockMovements StockMovement[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, issuedAt])
+  @@index([organizationId, salespersonId, issuedAt])
+  @@index([organizationId, customerId])
+  @@index([organizationId, status, paymentStatus])
+  @@index([organizationId, dueDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id                  String @id @default(uuid(7)) @db.Uuid
+  invoiceId           String @map("invoice_id") @db.Uuid
+  lineNo              Int    @map("line_no") @db.SmallInt
+  productId           String @map("product_id") @db.Uuid
+  productName         String @map("product_name")
+  productSku          String @map("product_sku")
+  quantity            Int
+  unitCostMinor       BigInt @map("unit_cost_minor")
+  markupBp            Int    @map("markup_bp")
+  unitPriceMinor      BigInt @map("unit_price_minor")
+  lineTotalMinor      BigInt @map("line_total_minor")
+  discountAllocMinor  BigInt @default(0) @map("discount_alloc_minor") // share of order discount
+  taxMinor            BigInt @default(0) @map("tax_minor") // share of invoice tax
+  returnedQuantity    Int    @default(0) @map("returned_quantity") // derived cache
+
+  invoice     Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  returnItems ReturnItem[]
+
+  @@unique([invoiceId, lineNo])
+  @@index([productId])
+  @@map("invoice_items")
+}
+
+// Append-only. A payment belongs to exactly one invoice (no cross-invoice allocation in v1).
+model Payment {
+  id             String        @id @default(uuid(7)) @db.Uuid // may be client-generated
+  organizationId String        @map("organization_id") @db.Uuid
+  invoiceId      String        @map("invoice_id") @db.Uuid
+  kind           PaymentKind   @default(PAYMENT)
+  method         PaymentMethod
+  amountMinor    BigInt        @map("amount_minor") // always > 0; direction given by kind
+  reference      String? // bank transaction reference
+  note           String?
+  returnId       String?       @map("return_id") @db.Uuid // refund issued for a return
+  receivedAt     DateTime      @default(now()) @map("received_at") @db.Timestamptz(6)
+  recordedById   String        @map("recorded_by_id") @db.Uuid
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  invoice      Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  salesReturn  SalesReturn?       @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  recordedBy   OrganizationMember @relation(fields: [recordedById], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, receivedAt])
+  @@index([invoiceId])
+  @@map("payments")
+}
+
+// ───────────────────────── Returns (credit notes) ─────────────────────────
+
+model SalesReturn {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  invoiceId      String   @map("invoice_id") @db.Uuid
+  number         String // credit note number
+  reason         String
+  subtotalMinor  BigInt   @map("subtotal_minor") // net of allocated discount
+  taxMinor       BigInt   @map("tax_minor")
+  totalMinor     BigInt   @map("total_minor")
+  createdById    String   @map("created_by_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  invoice        Invoice            @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdBy      OrganizationMember @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  items          ReturnItem[]
+  refunds        Payment[]
+  stockMovements StockMovement[]
+
+  @@unique([organizationId, number])
+  @@index([invoiceId])
+  @@map("sales_returns")
+}
+
+model ReturnItem {
+  id            String  @id @default(uuid(7)) @db.Uuid
+  returnId      String  @map("return_id") @db.Uuid
+  invoiceItemId String  @map("invoice_item_id") @db.Uuid
+  quantity      Int
+  amountMinor   BigInt  @map("amount_minor") // net amount credited for this line
+  taxMinor      BigInt  @map("tax_minor")
+  restock       Boolean @default(true) // false = damaged, not returned to sellable stock
+
+  salesReturn SalesReturn @relation(fields: [returnId], references: [id], onDelete: Restrict)
+  invoiceItem InvoiceItem @relation(fields: [invoiceItemId], references: [id], onDelete: Restrict)
+
+  @@unique([returnId, invoiceItemId])
+  @@map("return_items")
+}
+
+// ───────────────────────── Cross-cutting ─────────────────────────
+
+// Stored result of a mutating request, so a retried request returns the original response.
+model IdempotencyKey {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  key            String
+  userId         String   @map("user_id") @db.Uuid
+  method         String
+  path           String
+  requestHash    String   @map("request_hash")
+  responseStatus Int?     @map("response_status") // null while in flight
+  responseBody   Json?    @map("response_body")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+// Append-only. No FK on actor/entity so history survives any future hard delete.
+model AuditLog {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  actorUserId    String?  @map("actor_user_id") @db.Uuid
+  action         String // e.g. "invoice.cancel", "product.update", "auth.login_failed"
+  entityType     String?  @map("entity_type")
+  entityId       String?  @map("entity_id") @db.Uuid
+  before         Json?
+  after          Json?
+  ipAddress      String?  @map("ip_address") @db.Inet
+  userAgent      String?  @map("user_agent")
+  requestId      String?  @map("request_id")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+  @@map("audit_logs")
+}

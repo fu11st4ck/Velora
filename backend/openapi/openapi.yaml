@@ -1,0 +1,2029 @@
+openapi: 3.1.0
+info:
+  title: Velora Sales & Inventory API
+  version: 1.0.0-draft.1
+  summary: REST API for the Velora mobile applications.
+  description: |
+    Sprint 0 contract. Prose specification: docs/api-specification.md. Errors: docs/api-error-handling.md.
+    Money is expressed in integer minor units (suffix `Minor`); rates in basis points (suffix `Bp`).
+    Fields marked `x-manager-only: true` are omitted from responses for the SALES role.
+    Once the backend exists this file is generated from the NestJS controllers and checked against this draft in CI.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Organization
+  - name: Products
+  - name: Inventory
+  - name: Customers
+  - name: Pricing
+  - name: Documents
+  - name: Quotations
+  - name: Invoices
+  - name: Reports
+  - name: Sync
+  - name: Health
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Sign in
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 1, maxLength: 200 }
+                deviceName: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/AuthSession' }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshSession
+      summary: Rotate the refresh token and get a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenBody' }
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/TokenPair' }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: Revoke the current session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshTokenBody' }
+      responses:
+        '204': { description: Session revoked }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Request a password reset email
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '202': { description: 'Accepted - returned whether or not the account exists' }
+        '429': { $ref: '#/components/responses/Error' }
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Set a new password using a reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 10, maxLength: 200 }
+      responses:
+        '204': { description: Password changed; all sessions revoked }
+        '422': { $ref: '#/components/responses/Error' }
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      operationId: changePassword
+      summary: Change own password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string, minLength: 10, maxLength: 200 }
+      responses:
+        '204': { description: Password changed }
+        '401': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getMe
+      summary: Current user, membership, permissions and app settings
+      responses:
+        '200':
+          description: Current session context
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /organization:
+    get:
+      tags: [Organization]
+      operationId: getOrganization
+      summary: Organization profile and settings
+      responses:
+        '200':
+          description: Organization
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Organization' }
+        '401': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Organization]
+      operationId: updateOrganization
+      summary: Update profile and settings (Owner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/OrganizationUpdate' }
+      responses:
+        '200':
+          description: Updated organization
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Organization' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /organization/members:
+    get:
+      tags: [Organization]
+      operationId: listMembers
+      summary: List staff (Manager)
+      responses:
+        '200':
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [Organization]
+      operationId: inviteMember
+      summary: Invite a staff member (Owner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [fullName, email, role]
+              properties:
+                fullName: { type: string, minLength: 1, maxLength: 120 }
+                email: { type: string, format: email }
+                role: { type: string, enum: [MANAGER, SALES] }
+                branchId: { type: [string, 'null'], format: uuid }
+      responses:
+        '201':
+          description: Member created and invited
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /organization/members/{id}:
+    patch:
+      tags: [Organization]
+      operationId: updateMember
+      summary: Change role or deactivate (Owner)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                role: { $ref: '#/components/schemas/Role' }
+                isActive: { type: boolean }
+                branchId: { type: [string, 'null'], format: uuid }
+      responses:
+        '200':
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /tax-rates:
+    get:
+      tags: [Organization]
+      operationId: listTaxRates
+      summary: List tax rates
+      responses:
+        '200':
+          description: Tax rates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/TaxRate' }
+    post:
+      tags: [Organization]
+      operationId: createTaxRate
+      summary: Create a tax rate (Owner)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name, rateBp]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                rateBp: { type: integer, minimum: 0, maximum: 10000 }
+                isDefault: { type: boolean }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/TaxRate' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /tax-rates/{id}:
+    patch:
+      tags: [Organization]
+      operationId: updateTaxRate
+      summary: Rename, set default or deactivate (Owner)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 60 }
+                isDefault: { type: boolean }
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/TaxRate' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /products:
+    get:
+      tags: [Products]
+      operationId: listProducts
+      summary: List and search products
+      parameters:
+        - { $ref: '#/components/parameters/Q' }
+        - name: stockStatus
+          in: query
+          schema: { type: string, enum: [in_stock, low, out, attention] }
+        - name: sellable
+          in: query
+          schema: { type: boolean }
+        - name: includeArchived
+          in: query
+          schema: { type: boolean }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [name, -name, quantity, -quantity, -createdAt], default: name }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of products
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Product' }
+                  meta:
+                    allOf:
+                      - { $ref: '#/components/schemas/PageMeta' }
+                      - type: object
+                        properties:
+                          counts:
+                            type: object
+                            properties:
+                              all: { type: integer }
+                              inStock: { type: integer }
+                              low: { type: integer }
+                              out: { type: integer }
+    post:
+      tags: [Products]
+      operationId: createProduct
+      summary: Create a product with opening stock (Manager)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /products/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Products]
+      operationId: getProduct
+      summary: Product detail
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Products]
+      operationId: updateProduct
+      summary: Edit a product (Manager)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductUpdate' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Product' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Products]
+      operationId: archiveProduct
+      summary: Archive a product (Manager)
+      responses:
+        '204': { description: Archived }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /products/{id}/image-upload-url:
+    post:
+      tags: [Products]
+      operationId: createProductImageUploadUrl
+      summary: Get a presigned URL to upload a product image (Manager)
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [contentType, sizeBytes]
+              properties:
+                contentType: { type: string, enum: [image/jpeg, image/png, image/webp] }
+                sizeBytes: { type: integer, minimum: 1, maximum: 5242880 }
+      responses:
+        '200':
+          description: Upload target
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [uploadUrl, imageKey, expiresAt]
+                    properties:
+                      uploadUrl: { type: string, format: uri }
+                      imageKey: { type: string }
+                      expiresAt: { type: string, format: date-time }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /inventory/movements:
+    get:
+      tags: [Inventory]
+      operationId: listStockMovements
+      summary: Stock movement ledger
+      parameters:
+        - name: productId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/StockMovementType' }
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of movements, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/StockMovement' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+  /inventory/receipts:
+    post:
+      tags: [Inventory]
+      operationId: receiveStock
+      summary: Receive stock for an existing product (Manager)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [productId, quantity, unitCostMinor]
+              properties:
+                productId: { type: string, format: uuid }
+                quantity: { type: integer, minimum: 1 }
+                unitCostMinor: { $ref: '#/components/schemas/Minor' }
+                supplierName: { type: string, maxLength: 120 }
+                referenceNote: { type: string, maxLength: 240 }
+                branchId: { type: string, format: uuid }
+      responses:
+        '201': { $ref: '#/components/responses/MovementResult' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /inventory/adjustments:
+    post:
+      tags: [Inventory]
+      operationId: adjustStock
+      summary: Adjust stock up or down with a reason (Manager)
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [productId, quantityDelta, reason]
+              properties:
+                productId: { type: string, format: uuid }
+                quantityDelta: { type: integer, description: Non-zero; negative removes stock }
+                reason: { type: string, minLength: 3, maxLength: 240 }
+                branchId: { type: string, format: uuid }
+      responses:
+        '201': { $ref: '#/components/responses/MovementResult' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /customers:
+    get:
+      tags: [Customers]
+      operationId: listCustomers
+      summary: List and search customers
+      parameters:
+        - { $ref: '#/components/parameters/Q' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [name, -createdAt, -lastInvoiceAt], default: name }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of customers
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Customer' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+    post:
+      tags: [Customers]
+      operationId: createCustomer
+      summary: Create a customer
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Customer' }
+                  meta:
+                    type: object
+                    properties:
+                      possibleDuplicates:
+                        type: array
+                        items: { $ref: '#/components/schemas/CustomerRef' }
+        '400': { $ref: '#/components/responses/Error' }
+  /customers/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get:
+      tags: [Customers]
+      operationId: getCustomer
+      summary: Customer detail with balances
+      responses:
+        '200':
+          description: Customer
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/CustomerDetail' }
+        '404': { $ref: '#/components/responses/Error' }
+    patch:
+      tags: [Customers]
+      operationId: updateCustomer
+      summary: Edit a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CustomerInput' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Customer' }
+        '404': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [Customers]
+      operationId: archiveCustomer
+      summary: Archive a customer (Manager)
+      responses:
+        '204': { description: Archived }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /pricing/preview:
+    post:
+      tags: [Pricing]
+      operationId: previewPricing
+      summary: Authoritative totals and per-line issues for a cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [lines]
+              properties:
+                lines:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/LineInput' }
+                discountMinor: { $ref: '#/components/schemas/Minor' }
+                taxRateId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Calculated totals
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/PricingPreview' }
+        '422': { $ref: '#/components/responses/Error' }
+
+  /documents:
+    get:
+      tags: [Documents]
+      operationId: listDocuments
+      summary: Combined list of quotations and invoices
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string, enum: [invoice, quotation] }
+        - name: status
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [paid, partial, unpaid, overdue, cancelled, quotation_open, quotation_converted, quotation_expired, quotation_cancelled]
+        - { $ref: '#/components/parameters/Q' }
+        - name: customerId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: salespersonId
+          in: query
+          schema: { type: string, format: uuid }
+        - { $ref: '#/components/parameters/From' }
+        - { $ref: '#/components/parameters/To' }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [-issuedAt, issuedAt, -totalMinor, dueDate], default: -issuedAt }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Page of documents
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/DocumentSummary' }
+                  meta: { $ref: '#/components/schemas/PageMeta' }
+
+  /quotations:
+    post:
+      tags: [Quotations]
+      operationId: createQuotation
+      summary: Create a quotation
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuotationCreate' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Quotation' }
+        '422': { $ref: '#/components/responses/Error' }
+  /quotations/{id}:
+    get:
+      tags: [Quotations]
+      operationId: getQuotation
+      summary: Quotation detail
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: Quotation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Quotation' }
+        '404': { $ref: '#/components/responses/Error' }
+  /quotations/{id}/cancel:
+    post:
+      tags: [Quotations]
+      operationId: cancelQuotation
+      summary: Cancel an open quotation
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                reason: { type: string, maxLength: 240 }
+      responses:
+        '200':
+          description: Cancelled quotation
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Quotation' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+  /quotations/{id}/pdf:
+    get:
+      tags: [Quotations]
+      operationId: getQuotationPdf
+      summary: Quotation as PDF
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/Pdf' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /invoices:
+    post:
+      tags: [Invoices]
+      operationId: createInvoice
+      summary: Issue an invoice (the sale), deduct stock and optionally record the first payment
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/InvoiceCreate' }
+      responses:
+        '201':
+          description: Issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Invoice' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}:
+    get:
+      tags: [Invoices]
+      operationId: getInvoice
+      summary: Invoice detail with payments and returns
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: Invoice
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Invoice' }
+        '404': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/payments:
+    post:
+      tags: [Invoices]
+      operationId: recordPayment
+      summary: Record a payment against an invoice
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [amountMinor, method]
+              properties:
+                id: { type: string, format: uuid }
+                amountMinor: { $ref: '#/components/schemas/PositiveMinor' }
+                method: { $ref: '#/components/schemas/PaymentMethod' }
+                reference: { type: string, maxLength: 80 }
+                receivedAt: { type: string, format: date-time }
+                note: { type: string, maxLength: 240 }
+      responses:
+        '201': { $ref: '#/components/responses/PaymentResult' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/refunds:
+    post:
+      tags: [Invoices]
+      operationId: recordRefund
+      summary: Record a refund that corrects a payment (Manager)
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [amountMinor, method, note]
+              properties:
+                amountMinor: { $ref: '#/components/schemas/PositiveMinor' }
+                method: { $ref: '#/components/schemas/PaymentMethod' }
+                reference: { type: string, maxLength: 80 }
+                note: { type: string, minLength: 3, maxLength: 240 }
+      responses:
+        '201': { $ref: '#/components/responses/PaymentResult' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/cancel:
+    post:
+      tags: [Invoices]
+      operationId: cancelInvoice
+      summary: Cancel an invoice, refund money received and restore stock (Manager)
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 240 }
+                refundMethod: { $ref: '#/components/schemas/PaymentMethod' }
+                refundReference: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: Cancelled invoice
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/Invoice' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/returns:
+    post:
+      tags: [Invoices]
+      operationId: createReturn
+      summary: Return items from an invoice and issue a credit note (Manager)
+      parameters:
+        - { $ref: '#/components/parameters/Id' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [reason, lines]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 240 }
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    additionalProperties: false
+                    required: [lineNo, quantity]
+                    properties:
+                      lineNo: { type: integer, minimum: 1 }
+                      quantity: { type: integer, minimum: 1 }
+                      restock: { type: boolean, default: true }
+                refund:
+                  type: object
+                  additionalProperties: false
+                  required: [method]
+                  properties:
+                    method: { $ref: '#/components/schemas/PaymentMethod' }
+                    reference: { type: [string, 'null'], maxLength: 80 }
+      responses:
+        '201':
+          description: Credit note created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [return, invoice]
+                    properties:
+                      return: { $ref: '#/components/schemas/SalesReturn' }
+                      invoice: { $ref: '#/components/schemas/Invoice' }
+        '403': { $ref: '#/components/responses/Error' }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /invoices/{id}/pdf:
+    get:
+      tags: [Invoices]
+      operationId: getInvoicePdf
+      summary: Invoice as PDF
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { $ref: '#/components/responses/Pdf' }
+        '404': { $ref: '#/components/responses/Error' }
+
+  /dashboard/summary:
+    get:
+      tags: [Reports]
+      operationId: getDashboardSummary
+      summary: Home screen figures
+      responses:
+        '200':
+          description: Dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/DashboardSummary' }
+  /reports/sales-summary:
+    get:
+      tags: [Reports]
+      operationId: getSalesSummary
+      summary: Sales KPIs for a period (CSV via Accept header, Manager)
+      parameters:
+        - { $ref: '#/components/parameters/FromRequired' }
+        - { $ref: '#/components/parameters/ToRequired' }
+        - name: salespersonId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: '#/components/schemas/SalesSummary' }
+            text/csv:
+              schema: { type: string }
+  /reports/sales-by-salesperson:
+    get:
+      tags: [Reports]
+      operationId: getSalesBySalesperson
+      summary: Sales per team member (Manager)
+      parameters:
+        - { $ref: '#/components/parameters/FromRequired' }
+        - { $ref: '#/components/parameters/ToRequired' }
+      responses:
+        '200':
+          description: Rows sorted by net sales
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [memberId, fullName, invoiceCount, invoicedMinor, netSalesMinor]
+                      properties:
+                        memberId: { type: string, format: uuid }
+                        fullName: { type: string }
+                        invoiceCount: { type: integer }
+                        invoicedMinor: { $ref: '#/components/schemas/Minor' }
+                        netSalesMinor: { $ref: '#/components/schemas/Minor' }
+                        grossProfitMinor: { $ref: '#/components/schemas/SignedMinor' }
+        '403': { $ref: '#/components/responses/Error' }
+  /reports/payment-status:
+    get:
+      tags: [Reports]
+      operationId: getPaymentStatusReport
+      summary: Invoice count and amounts by payment status
+      parameters:
+        - { $ref: '#/components/parameters/FromRequired' }
+        - { $ref: '#/components/parameters/ToRequired' }
+      responses:
+        '200':
+          description: One row per status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [status, count, totalMinor, balanceMinor]
+                      properties:
+                        status: { type: string, enum: [PAID, PARTIAL, UNPAID, OVERDUE] }
+                        count: { type: integer }
+                        totalMinor: { $ref: '#/components/schemas/Minor' }
+                        balanceMinor: { $ref: '#/components/schemas/Minor' }
+  /reports/inventory-valuation:
+    get:
+      tags: [Reports]
+      operationId: getInventoryValuation
+      summary: Stock value at cost (Manager; CSV via Accept header)
+      parameters:
+        - name: sort
+          in: query
+          schema: { type: string, enum: [-valueMinor, name], default: -valueMinor }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/Cursor' }
+      responses:
+        '200':
+          description: Valuation rows
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [productId, name, sku, quantity, costMinor, valueMinor]
+                      properties:
+                        productId: { type: string, format: uuid }
+                        name: { type: string }
+                        sku: { type: string }
+                        quantity: { type: integer }
+                        costMinor: { $ref: '#/components/schemas/Minor' }
+                        valueMinor: { $ref: '#/components/schemas/Minor' }
+                  meta:
+                    allOf:
+                      - { $ref: '#/components/schemas/PageMeta' }
+                      - type: object
+                        properties:
+                          summary:
+                            type: object
+                            properties:
+                              units: { type: integer }
+                              productCount: { type: integer }
+                              valueMinor: { $ref: '#/components/schemas/Minor' }
+            text/csv:
+              schema: { type: string }
+        '403': { $ref: '#/components/responses/Error' }
+
+  /sync/changes:
+    get:
+      tags: [Sync]
+      operationId: getSyncChanges
+      summary: Delta feed of products and customers for the offline cache
+      parameters:
+        - name: since
+          in: query
+          description: Opaque token from the previous response; omit for a full snapshot.
+          schema: { type: string }
+        - name: entities
+          in: query
+          schema: { type: string, default: 'products,customers' }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 200 }
+      responses:
+        '200':
+          description: Changes since the token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      products:
+                        type: object
+                        properties:
+                          upserted:
+                            type: array
+                            items: { $ref: '#/components/schemas/Product' }
+                          archivedIds:
+                            type: array
+                            items: { type: string, format: uuid }
+                      customers:
+                        type: object
+                        properties:
+                          upserted:
+                            type: array
+                            items: { $ref: '#/components/schemas/Customer' }
+                          archivedIds:
+                            type: array
+                            items: { type: string, format: uuid }
+                  meta:
+                    type: object
+                    required: [next, hasMore, serverTime]
+                    properties:
+                      next: { type: string }
+                      hasMore: { type: boolean }
+                      serverTime: { type: string, format: date-time }
+
+  /health/live:
+    get:
+      tags: [Health]
+      operationId: healthLive
+      summary: Liveness probe
+      security: []
+      responses:
+        '200': { description: Process is running }
+  /health/ready:
+    get:
+      tags: [Health]
+      operationId: healthReady
+      summary: Readiness probe
+      security: []
+      responses:
+        '200': { description: Ready to serve }
+        '503': { description: Database unavailable or migrations pending }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID. Replays return the original response.
+      schema: { type: string, format: uuid }
+    Q:
+      name: q
+      in: query
+      description: Case-insensitive substring search
+      schema: { type: string, maxLength: 100 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    From:
+      name: from
+      in: query
+      description: Inclusive start date in the organization timezone
+      schema: { type: string, format: date }
+    To:
+      name: to
+      in: query
+      description: Inclusive end date in the organization timezone
+      schema: { type: string, format: date }
+    FromRequired:
+      name: from
+      in: query
+      required: true
+      schema: { type: string, format: date }
+    ToRequired:
+      name: to
+      in: query
+      required: true
+      schema: { type: string, format: date }
+  responses:
+    Error:
+      description: Error envelope (see docs/api-error-handling.md)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+    Pdf:
+      description: PDF document
+      headers:
+        ETag:
+          schema: { type: string }
+      content:
+        application/pdf:
+          schema: { type: string, format: binary }
+    MovementResult:
+      description: Movement recorded
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [movement, product]
+                properties:
+                  movement: { $ref: '#/components/schemas/StockMovement' }
+                  product: { $ref: '#/components/schemas/Product' }
+    PaymentResult:
+      description: Payment or refund recorded
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: object
+                required: [payment, invoice]
+                properties:
+                  payment: { $ref: '#/components/schemas/Payment' }
+                  invoice: { $ref: '#/components/schemas/Invoice' }
+  schemas:
+    Minor:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Amount in minor units of the organization currency
+    PositiveMinor:
+      type: integer
+      format: int64
+      minimum: 1
+    SignedMinor:
+      type: integer
+      format: int64
+    Bp:
+      type: integer
+      minimum: 0
+      description: Basis points (100 = 1%)
+    Role:
+      type: string
+      enum: [OWNER, MANAGER, SALES]
+    PaymentMethod:
+      type: string
+      enum: [CASH, BANK_TRANSFER]
+    PaymentStatus:
+      type: string
+      enum: [UNPAID, PARTIAL, PAID]
+    StockStatus:
+      type: string
+      enum: [IN_STOCK, LOW, OUT]
+    StockMovementType:
+      type: string
+      enum: [OPENING, PURCHASE_RECEIPT, SALE, SALE_CANCELLATION, CUSTOMER_RETURN, ADJUSTMENT_IN, ADJUSTMENT_OUT]
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { type: string, examples: [INSUFFICIENT_STOCK] }
+            message: { type: string }
+            details:
+              type: array
+              items: { type: object, additionalProperties: true }
+            requestId: { type: string }
+    PageMeta:
+      type: object
+      required: [nextCursor, hasMore]
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+    MemberRef:
+      type: object
+      required: [memberId, fullName]
+      properties:
+        memberId: { type: string, format: uuid }
+        fullName: { type: string }
+    DocRef:
+      type: object
+      required: [id, number]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string }
+    RefreshTokenBody:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    TokenPair:
+      type: object
+      required: [accessToken, accessTokenExpiresAt, refreshToken, refreshTokenExpiresAt]
+      properties:
+        accessToken: { type: string }
+        accessTokenExpiresAt: { type: string, format: date-time }
+        refreshToken: { type: string }
+        refreshTokenExpiresAt: { type: string, format: date-time }
+    Membership:
+      type: object
+      required: [memberId, role, organization]
+      properties:
+        memberId: { type: string, format: uuid }
+        role: { $ref: '#/components/schemas/Role' }
+        branchId: { type: [string, 'null'], format: uuid }
+        organization:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+    UserRef:
+      type: object
+      required: [id, fullName, email]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+    AuthSession:
+      allOf:
+        - { $ref: '#/components/schemas/TokenPair' }
+        - type: object
+          required: [user, membership]
+          properties:
+            user: { $ref: '#/components/schemas/UserRef' }
+            membership: { $ref: '#/components/schemas/Membership' }
+    Me:
+      type: object
+      required: [user, membership, permissions, settings]
+      properties:
+        user: { $ref: '#/components/schemas/UserRef' }
+        membership: { $ref: '#/components/schemas/Membership' }
+        permissions:
+          type: array
+          items: { type: string, examples: ['product.manage'] }
+        settings:
+          type: object
+          required: [currencyCode, currencyExponent, timezone, locale, defaultCreditDays, quotationValidityDays, lowStockThreshold, allowOfflineSales]
+          properties:
+            currencyCode: { type: string, examples: [AED] }
+            currencyExponent: { type: integer }
+            timezone: { type: string, examples: [Asia/Dubai] }
+            locale: { type: string }
+            maxMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+            defaultCreditDays: { type: integer }
+            quotationValidityDays: { type: integer }
+            lowStockThreshold: { type: integer }
+            allowOfflineSales: { type: boolean }
+            defaultTaxRate: { $ref: '#/components/schemas/TaxRate' }
+    Organization:
+      type: object
+      required: [id, name, currencyCode, timezone]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        legalName: { type: [string, 'null'] }
+        taxRegistrationNumber: { type: [string, 'null'] }
+        phone: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        addressLine: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        countryCode: { type: [string, 'null'] }
+        logoUrl: { type: [string, 'null'] }
+        invoiceFooter: { type: [string, 'null'] }
+        currencyCode: { type: string }
+        currencyExponent: { type: integer }
+        timezone: { type: string }
+        locale: { type: string }
+        lowStockThreshold: { type: integer }
+        maxMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+        defaultMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+        defaultMinMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+        defaultCreditDays: { type: integer }
+        quotationValidityDays: { type: integer }
+        allowOfflineSales: { type: boolean }
+    OrganizationUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        legalName: { type: [string, 'null'], maxLength: 160 }
+        taxRegistrationNumber: { type: [string, 'null'], maxLength: 40 }
+        phone: { type: [string, 'null'], maxLength: 40 }
+        email: { type: [string, 'null'], format: email }
+        addressLine: { type: [string, 'null'], maxLength: 240 }
+        city: { type: [string, 'null'], maxLength: 80 }
+        countryCode: { type: [string, 'null'], minLength: 2, maxLength: 2 }
+        invoiceFooter: { type: [string, 'null'], maxLength: 500 }
+        currencyCode: { type: string, minLength: 3, maxLength: 3 }
+        timezone: { type: string }
+        lowStockThreshold: { type: integer, minimum: 0 }
+        maxMarkupBp: { type: integer, minimum: 0, maximum: 100000 }
+        defaultMarkupBp: { $ref: '#/components/schemas/Bp' }
+        defaultMinMarkupBp: { $ref: '#/components/schemas/Bp' }
+        defaultCreditDays: { type: integer, minimum: 0, maximum: 365 }
+        quotationValidityDays: { type: integer, minimum: 1, maximum: 365 }
+        allowOfflineSales: { type: boolean }
+    Member:
+      type: object
+      required: [memberId, fullName, email, role, isActive]
+      properties:
+        memberId: { type: string, format: uuid }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/Role' }
+        branchId: { type: [string, 'null'], format: uuid }
+        isActive: { type: boolean }
+        lastLoginAt: { type: [string, 'null'], format: date-time }
+    TaxRate:
+      type: object
+      required: [id, name, rateBp, isDefault, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, examples: ['VAT 5%'] }
+        rateBp: { $ref: '#/components/schemas/Bp' }
+        isDefault: { type: boolean }
+        isActive: { type: boolean }
+    Weight:
+      type: object
+      required: [value, unit]
+      properties:
+        value: { type: string, pattern: '^\d{1,9}(\.\d{1,3})?$', description: Decimal string }
+        unit: { type: string, enum: [G, KG] }
+    Product:
+      type: object
+      required: [id, sku, name, quantity, stockStatus, listPriceMinor, floorPriceMinor, ceilingPriceMinor, isActive, version, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        barcode: { type: [string, 'null'] }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        weight:
+          oneOf:
+            - { $ref: '#/components/schemas/Weight' }
+            - { type: 'null' }
+        imageUrl: { type: [string, 'null'], format: uri }
+        quantity: { type: integer, minimum: 0 }
+        stockStatus: { $ref: '#/components/schemas/StockStatus' }
+        reorderLevel: { type: [integer, 'null'] }
+        effectiveReorderLevel: { type: integer }
+        listPriceMinor: { $ref: '#/components/schemas/Minor' }
+        floorPriceMinor: { $ref: '#/components/schemas/Minor' }
+        ceilingPriceMinor: { $ref: '#/components/schemas/Minor' }
+        costMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], x-manager-only: true }
+        defaultMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+        minMarkupBp: { allOf: [{ $ref: '#/components/schemas/Bp' }], x-manager-only: true }
+        isActive: { type: boolean }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ProductDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Product' }
+        - type: object
+          properties:
+            stockByBranch:
+              type: array
+              items:
+                type: object
+                required: [branchId, branchName, quantity]
+                properties:
+                  branchId: { type: string, format: uuid }
+                  branchName: { type: string }
+                  quantity: { type: integer }
+    ProductCreate:
+      type: object
+      additionalProperties: false
+      required: [name, costMinor, defaultMarkupBp, minMarkupBp, openingQuantity]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        sku: { type: [string, 'null'], maxLength: 40, pattern: '^[A-Za-z0-9._-]+$' }
+        barcode: { type: [string, 'null'], maxLength: 64 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+        weight:
+          oneOf:
+            - { $ref: '#/components/schemas/Weight' }
+            - { type: 'null' }
+        costMinor: { $ref: '#/components/schemas/Minor' }
+        defaultMarkupBp: { $ref: '#/components/schemas/Bp' }
+        minMarkupBp: { $ref: '#/components/schemas/Bp' }
+        openingQuantity: { type: integer, minimum: 0 }
+        reorderLevel: { type: [integer, 'null'], minimum: 0 }
+        supplierName: { type: [string, 'null'], maxLength: 120 }
+        referenceNote: { type: [string, 'null'], maxLength: 240 }
+    ProductUpdate:
+      type: object
+      additionalProperties: false
+      required: [version]
+      properties:
+        version: { type: integer }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        sku: { type: string, maxLength: 40, pattern: '^[A-Za-z0-9._-]+$' }
+        barcode: { type: [string, 'null'], maxLength: 64 }
+        description: { type: [string, 'null'], maxLength: 1000 }
+        weight:
+          oneOf:
+            - { $ref: '#/components/schemas/Weight' }
+            - { type: 'null' }
+        defaultMarkupBp: { $ref: '#/components/schemas/Bp' }
+        minMarkupBp: { $ref: '#/components/schemas/Bp' }
+        reorderLevel: { type: [integer, 'null'], minimum: 0 }
+        imageKey: { type: [string, 'null'] }
+        isActive: { type: boolean }
+    StockMovement:
+      type: object
+      required: [id, productId, productName, productSku, type, quantityDelta, balanceAfter, createdBy, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        productName: { type: string }
+        productSku: { type: string }
+        type: { $ref: '#/components/schemas/StockMovementType' }
+        quantityDelta: { type: integer }
+        balanceAfter: { type: integer, minimum: 0 }
+        unitCostMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], x-manager-only: true }
+        invoice:
+          oneOf:
+            - { $ref: '#/components/schemas/DocRef' }
+            - { type: 'null' }
+        return:
+          oneOf:
+            - { $ref: '#/components/schemas/DocRef' }
+            - { type: 'null' }
+        supplierName: { type: [string, 'null'], x-manager-only: true }
+        referenceNote: { type: [string, 'null'] }
+        reason: { type: [string, 'null'] }
+        createdBy: { $ref: '#/components/schemas/MemberRef' }
+        createdAt: { type: string, format: date-time }
+    CustomerInput:
+      type: object
+      additionalProperties: false
+      description: At least one of name or company must be non-blank.
+      properties:
+        id: { type: string, format: uuid, description: Optional client-generated id (create only) }
+        name: { type: [string, 'null'], maxLength: 160 }
+        company: { type: [string, 'null'], maxLength: 160 }
+        mobile: { type: [string, 'null'], maxLength: 32 }
+        email: { type: [string, 'null'], format: email }
+        address: { type: [string, 'null'], maxLength: 240 }
+        taxRegistrationNumber: { type: [string, 'null'], maxLength: 40 }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+    CustomerRef:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [string, 'null'] }
+        company: { type: [string, 'null'] }
+        mobile: { type: [string, 'null'] }
+    Customer:
+      allOf:
+        - { $ref: '#/components/schemas/CustomerRef' }
+        - type: object
+          properties:
+            email: { type: [string, 'null'] }
+            address: { type: [string, 'null'] }
+            taxRegistrationNumber: { type: [string, 'null'] }
+            notes: { type: [string, 'null'] }
+            archivedAt: { type: [string, 'null'], format: date-time }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    CustomerDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Customer' }
+        - type: object
+          required: [summary]
+          properties:
+            summary:
+              type: object
+              required: [invoicedMinor, outstandingMinor, overdueMinor, invoiceCount]
+              properties:
+                invoicedMinor: { $ref: '#/components/schemas/Minor' }
+                outstandingMinor: { $ref: '#/components/schemas/Minor' }
+                overdueMinor: { $ref: '#/components/schemas/Minor' }
+                invoiceCount: { type: integer }
+                lastInvoiceAt: { type: [string, 'null'], format: date-time }
+    LineInput:
+      type: object
+      additionalProperties: false
+      required: [productId, quantity, unitPriceMinor]
+      properties:
+        productId: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1 }
+        unitPriceMinor: { $ref: '#/components/schemas/Minor' }
+        belowMinimumReason:
+          type: string
+          minLength: 3
+          maxLength: 240
+          description: Manager/Owner only; required to sell under the floor price.
+    TaxSnapshot:
+      type: object
+      required: [name, rateBp, amountMinor]
+      properties:
+        name: { type: string }
+        rateBp: { $ref: '#/components/schemas/Bp' }
+        amountMinor: { $ref: '#/components/schemas/Minor' }
+    PricingPreview:
+      type: object
+      required: [lines, subtotalMinor, discountMinor, tax, totalMinor, valid]
+      properties:
+        lines:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity, unitPriceMinor, lineTotalMinor, available, issues]
+            properties:
+              productId: { type: string, format: uuid }
+              quantity: { type: integer }
+              unitPriceMinor: { $ref: '#/components/schemas/Minor' }
+              lineTotalMinor: { $ref: '#/components/schemas/Minor' }
+              available: { type: integer }
+              issues:
+                type: array
+                items:
+                  type: object
+                  required: [code]
+                  properties:
+                    code: { type: string, enum: [INSUFFICIENT_STOCK, PRICE_BELOW_MINIMUM, PRICE_ABOVE_MAXIMUM, PRODUCT_UNAVAILABLE] }
+                    floorPriceMinor: { $ref: '#/components/schemas/Minor' }
+                    ceilingPriceMinor: { $ref: '#/components/schemas/Minor' }
+                    available: { type: integer }
+        subtotalMinor: { $ref: '#/components/schemas/Minor' }
+        discountMinor: { $ref: '#/components/schemas/Minor' }
+        tax: { $ref: '#/components/schemas/TaxSnapshot' }
+        totalMinor: { $ref: '#/components/schemas/Minor' }
+        valid: { type: boolean }
+    DocumentLine:
+      type: object
+      required: [lineNo, productId, name, sku, quantity, unitPriceMinor, lineTotalMinor]
+      properties:
+        lineNo: { type: integer }
+        productId: { type: string, format: uuid }
+        name: { type: string }
+        sku: { type: string }
+        quantity: { type: integer }
+        returnedQuantity: { type: integer }
+        unitPriceMinor: { $ref: '#/components/schemas/Minor' }
+        lineTotalMinor: { $ref: '#/components/schemas/Minor' }
+        unitCostMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], x-manager-only: true }
+        markupBp: { type: integer, x-manager-only: true }
+    CustomerSnapshot:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [string, 'null'] }
+        company: { type: [string, 'null'] }
+        mobile: { type: [string, 'null'] }
+        email: { type: [string, 'null'] }
+        address: { type: [string, 'null'] }
+        taxRegistrationNumber: { type: [string, 'null'] }
+    DocumentSummary:
+      type: object
+      required: [type, id, number, issuedAt, customer, salesperson, lineCount, totalMinor]
+      properties:
+        type: { type: string, enum: [INVOICE, QUOTATION] }
+        id: { type: string, format: uuid }
+        number: { type: string, examples: [INV-2026-00126] }
+        issuedAt: { type: string, format: date-time }
+        customer: { $ref: '#/components/schemas/CustomerRef' }
+        salesperson: { $ref: '#/components/schemas/MemberRef' }
+        lineCount: { type: integer }
+        totalMinor: { $ref: '#/components/schemas/Minor' }
+        status: { type: string, enum: [ISSUED, CANCELLED], description: Invoices only }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+        isOverdue: { type: boolean }
+        balanceMinor: { $ref: '#/components/schemas/Minor' }
+        dueDate: { type: [string, 'null'], format: date }
+        quotationStatus: { type: string, enum: [OPEN, CONVERTED, EXPIRED, CANCELLED], description: Quotations only }
+        validUntil: { type: [string, 'null'], format: date }
+    QuotationCreate:
+      type: object
+      additionalProperties: false
+      required: [customerId, lines]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/LineInput' }
+        discountMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], default: 0 }
+        taxRateId: { type: string, format: uuid, description: Defaults to the organization default rate }
+        validUntil: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+    Quotation:
+      type: object
+      required: [id, number, status, issuedAt, currencyCode, customer, salesperson, lines, subtotalMinor, discountMinor, tax, totalMinor]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, examples: [QT-2026-00124] }
+        status: { type: string, enum: [OPEN, CONVERTED, EXPIRED, CANCELLED] }
+        issuedAt: { type: string, format: date-time }
+        validUntil: { type: [string, 'null'], format: date }
+        currencyCode: { type: string }
+        customer: { $ref: '#/components/schemas/CustomerSnapshot' }
+        salesperson: { $ref: '#/components/schemas/MemberRef' }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentLine' }
+        subtotalMinor: { $ref: '#/components/schemas/Minor' }
+        discountMinor: { $ref: '#/components/schemas/Minor' }
+        tax: { $ref: '#/components/schemas/TaxSnapshot' }
+        totalMinor: { $ref: '#/components/schemas/Minor' }
+        notes: { type: [string, 'null'] }
+        invoice:
+          oneOf:
+            - { $ref: '#/components/schemas/DocRef' }
+            - { type: 'null' }
+    InvoiceCreate:
+      type: object
+      additionalProperties: false
+      required: [customerId, lines]
+      properties:
+        id: { type: string, format: uuid }
+        customerId: { type: string, format: uuid }
+        quotationId: { type: [string, 'null'], format: uuid }
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: { $ref: '#/components/schemas/LineInput' }
+        discountMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], default: 0 }
+        taxRateId: { type: string, format: uuid }
+        notes: { type: [string, 'null'], maxLength: 1000 }
+        payment:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [amountMinor, method]
+          properties:
+            amountMinor: { $ref: '#/components/schemas/PositiveMinor' }
+            method: { $ref: '#/components/schemas/PaymentMethod' }
+            reference: { type: [string, 'null'], maxLength: 80 }
+        creditDays: { type: [integer, 'null'], minimum: 0, maximum: 365 }
+        dueDate: { type: [string, 'null'], format: date }
+        offline:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [createdAt, deviceId]
+          properties:
+            createdAt: { type: string, format: date-time }
+            deviceId: { type: string, maxLength: 80 }
+    Payment:
+      type: object
+      required: [id, kind, method, amountMinor, receivedAt, recordedBy]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [PAYMENT, REFUND] }
+        method: { $ref: '#/components/schemas/PaymentMethod' }
+        amountMinor: { $ref: '#/components/schemas/PositiveMinor' }
+        reference: { type: [string, 'null'] }
+        note: { type: [string, 'null'] }
+        receivedAt: { type: string, format: date-time }
+        recordedBy: { $ref: '#/components/schemas/MemberRef' }
+    SalesReturn:
+      type: object
+      required: [id, number, reason, subtotalMinor, taxMinor, totalMinor, refundMinor, lines, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, examples: [CN-2026-00003] }
+        reason: { type: string }
+        subtotalMinor: { $ref: '#/components/schemas/Minor' }
+        taxMinor: { $ref: '#/components/schemas/Minor' }
+        totalMinor: { $ref: '#/components/schemas/Minor' }
+        refundMinor: { $ref: '#/components/schemas/Minor' }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [lineNo, quantity, restock, amountMinor, taxMinor]
+            properties:
+              lineNo: { type: integer }
+              quantity: { type: integer }
+              restock: { type: boolean }
+              amountMinor: { $ref: '#/components/schemas/Minor' }
+              taxMinor: { $ref: '#/components/schemas/Minor' }
+        createdAt: { type: string, format: date-time }
+    Invoice:
+      type: object
+      required: [id, number, status, issuedAt, currencyCode, customer, salesperson, lines, subtotalMinor, discountMinor, tax, totalMinor, returnedMinor, paidMinor, balanceMinor, paymentStatus, isOverdue, payments, returns]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: string, examples: [INV-2026-00126] }
+        status: { type: string, enum: [ISSUED, CANCELLED] }
+        issuedAt: { type: string, format: date-time }
+        currencyCode: { type: string }
+        customer: { $ref: '#/components/schemas/CustomerSnapshot' }
+        salesperson: { $ref: '#/components/schemas/MemberRef' }
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/DocumentLine' }
+        subtotalMinor: { $ref: '#/components/schemas/Minor' }
+        discountMinor: { $ref: '#/components/schemas/Minor' }
+        tax: { $ref: '#/components/schemas/TaxSnapshot' }
+        totalMinor: { $ref: '#/components/schemas/Minor' }
+        returnedMinor: { $ref: '#/components/schemas/Minor' }
+        paidMinor: { $ref: '#/components/schemas/Minor' }
+        balanceMinor: { $ref: '#/components/schemas/Minor' }
+        paymentStatus: { $ref: '#/components/schemas/PaymentStatus' }
+        isOverdue: { type: boolean }
+        creditDays: { type: [integer, 'null'] }
+        dueDate: { type: [string, 'null'], format: date }
+        notes: { type: [string, 'null'] }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/Payment' }
+        returns:
+          type: array
+          items: { $ref: '#/components/schemas/SalesReturn' }
+        quotation:
+          oneOf:
+            - { $ref: '#/components/schemas/DocRef' }
+            - { type: 'null' }
+        cancellation:
+          type: [object, 'null']
+          properties:
+            at: { type: string, format: date-time }
+            by: { $ref: '#/components/schemas/MemberRef' }
+            reason: { type: string }
+        profit:
+          type: object
+          x-manager-only: true
+          properties:
+            costMinor: { $ref: '#/components/schemas/Minor' }
+            grossProfitMinor: { $ref: '#/components/schemas/SignedMinor' }
+            marginBp: { type: integer }
+    DashboardSummary:
+      type: object
+      required: [asOf, currencyCode, todaySales, stock, outstanding, attentionProducts, recentDocuments]
+      properties:
+        asOf: { type: string, format: date-time }
+        currencyCode: { type: string }
+        todaySales:
+          type: object
+          required: [invoicedMinor, invoiceCount, yesterdayInvoicedMinor]
+          properties:
+            invoicedMinor: { $ref: '#/components/schemas/Minor' }
+            invoiceCount: { type: integer }
+            yesterdayInvoicedMinor: { $ref: '#/components/schemas/Minor' }
+            changeBp: { type: [integer, 'null'] }
+        stock:
+          type: object
+          required: [units, productCount, lowCount, outCount]
+          properties:
+            units: { type: integer }
+            productCount: { type: integer }
+            lowCount: { type: integer }
+            outCount: { type: integer }
+        outstanding:
+          type: object
+          required: [balanceMinor, invoiceCount, overdueMinor, overdueCount]
+          properties:
+            balanceMinor: { $ref: '#/components/schemas/Minor' }
+            invoiceCount: { type: integer }
+            overdueMinor: { $ref: '#/components/schemas/Minor' }
+            overdueCount: { type: integer }
+        monthProfit:
+          type: object
+          x-manager-only: true
+          properties:
+            netSalesMinor: { $ref: '#/components/schemas/SignedMinor' }
+            grossProfitMinor: { $ref: '#/components/schemas/SignedMinor' }
+            marginBp: { type: [integer, 'null'] }
+        inventoryValueMinor: { allOf: [{ $ref: '#/components/schemas/Minor' }], x-manager-only: true }
+        attentionProducts:
+          type: array
+          items:
+            type: object
+            required: [id, name, quantity, stockStatus]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              quantity: { type: integer }
+              stockStatus: { $ref: '#/components/schemas/StockStatus' }
+        recentDocuments:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/DocumentSummary' }
+    SalesSummary:
+      type: object
+      required: [invoiceCount, invoicedMinor, netSalesMinor, taxMinor, discountMinor, returnsMinor, receivedMinor, outstandingNowMinor, overdueNowMinor]
+      properties:
+        invoiceCount: { type: integer }
+        invoicedMinor: { $ref: '#/components/schemas/Minor' }
+        netSalesMinor: { $ref: '#/components/schemas/SignedMinor' }
+        taxMinor: { $ref: '#/components/schemas/SignedMinor' }
+        discountMinor: { $ref: '#/components/schemas/Minor' }
+        returnsMinor: { $ref: '#/components/schemas/Minor' }
+        cogsMinor: { allOf: [{ $ref: '#/components/schemas/SignedMinor' }], x-manager-only: true }
+        grossProfitMinor: { allOf: [{ $ref: '#/components/schemas/SignedMinor' }], x-manager-only: true }
+        marginBp: { type: [integer, 'null'], x-manager-only: true }
+        receivedMinor: { $ref: '#/components/schemas/SignedMinor' }
+        outstandingNowMinor: { $ref: '#/components/schemas/Minor' }
+        overdueNowMinor: { $ref: '#/components/schemas/Minor' }
