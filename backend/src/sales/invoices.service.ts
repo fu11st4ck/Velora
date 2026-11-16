@@ -397,6 +397,8 @@ export class InvoicesService {
         taxMinor: tax,
         totalMinor: total,
         createdById: ctx.memberId,
+        // The application clock, like every other business timestamp, so reports date the return consistently.
+        createdAt: this.clock.now(),
         items: {
           create: lines.map((l) => ({ invoiceItemId: l.item.id, quantity: l.quantity, amountMinor: l.net, taxMinor: l.tax, restock: l.restock })),
         },

@@ -26,7 +26,11 @@ import { PdfService } from './sales/pdf.service';
 import { PricingService } from './sales/pricing.service';
 import { QuotationsService } from './sales/quotations.service';
 import { DocumentsController, InvoicesController, PricingController, QuotationsController } from './sales/sales.controller';
-import { TaxRatesController } from './sales/tax-rates.controller';
+import { OrganizationController, SessionsController } from './organization/organization.controller';
+import { OrganizationService } from './organization/organization.service';
+import { TaxRatesController } from './organization/tax-rates.controller';
+import { DashboardController, ReportsController } from './reports/reports.controller';
+import { ReportsService } from './reports/reports.service';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -37,6 +41,10 @@ import { PrismaModule } from './prisma/prisma.module';
     QuotationsController,
     InvoicesController,
     TaxRatesController,
+    OrganizationController,
+    SessionsController,
+    DashboardController,
+    ReportsController,
   ],
   providers: [
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
@@ -56,6 +64,8 @@ import { PrismaModule } from './prisma/prisma.module';
     QuotationsService,
     InvoicesService,
     DocumentsService,
+    OrganizationService,
+    ReportsService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
     { provide: APP_FILTER, useClass: GlobalErrorFilter },
