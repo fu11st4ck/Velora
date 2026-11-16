@@ -1,6 +1,6 @@
 # Velora — Implementation Roadmap
 
-Status at 2026-11-16: **Sprint 0 approved (all defaults in §1 accepted on 2026-11-15). Sprint 1 delivered** — see `TASKS.md` and `CHANGELOG.md` for what was built, verified and carried over.
+Status at 2026-11-16: **Sprint 0 approved (all defaults in §1 accepted on 2026-11-15). Sprints 1 and 2 delivered** (product photos, camera scanning and the offline product cache moved from Sprint 2 to Sprint 6) — see `TASKS.md` and `CHANGELOG.md` for what was built, verified and carried over.
 
 ## 1. Decisions needed
 

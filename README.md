@@ -2,7 +2,7 @@
 
 Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend for jewellery sales and inventory: stock, customer pricing, quotations, invoices, payments and reports.
 
-> **Status (2026-11-16): Sprint 0 approved; Sprint 1 (foundation) delivered** — a tested backend with authentication and tenant isolation, and a Flutter app that signs in against it. Product features start in Sprint 2. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
+> **Status (2026-11-16): Sprints 0–2 delivered** — a tested backend (authentication, tenant isolation, products and inventory) and a Flutter app with sign-in and the inventory screens. Customers are next (Sprint 3), then sales and documents. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 
@@ -24,14 +24,14 @@ The product is derived from the reference web demo at <https://velora-sales-inve
 
 ```
 backend/                   NestJS API
-  src/                     common, prisma, authz, auth, idempotency, audit, mail, health
+  src/                     common, prisma, authz, auth, catalog, inventory, idempotency, audit, mail, health
   prisma/                  schema, migrations (incl. constraints + row-level security), seed
   openapi/openapi.yaml     API contract
   test/                    unit, HTTP integration and direct-SQL tests
 mobile/                    Flutter app
   lib/app/                 config, router, theme
   lib/core/                api client, auth/session, money, shared widgets
-  lib/features/            auth, shell, home, more
+  lib/features/            auth, shell, home, products (inventory), more
   test/                    unit, widget, app-flow, golden and live contract tests
 docs/                      Product, design, architecture, API, strategy documents
   reference-screenshots/   Evidence from the audit of the reference app + the audit script

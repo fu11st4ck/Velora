@@ -108,7 +108,7 @@ describe('create product', () => {
 
   it('lets only one of two simultaneous creates with the same SKU succeed', async () => {
     const results = await Promise.all([1, 2].map(() => call('POST', '/products', idem(manager), valid({ sku: 'RACE-1' }))));
-    expect(results.map((r) => r.statusCode).sort()).toEqual([201, 409]);
+    expect(results.map((r) => r.statusCode).sort(), results.map((r) => r.body).join(' | ')).toEqual([201, 409]);
     expect(results.find((r) => r.statusCode === 409)?.json().error.code).toBe('SKU_TAKEN');
     expect((await db.query('SELECT 1 FROM products')).rowCount).toBe(1);
   });
@@ -354,6 +354,12 @@ describe('product detail, edit and archive', () => {
     expect((await db.query('SELECT archived_at IS NOT NULL AS archived, is_active FROM products WHERE id = $1', [id])).rows[0]).toEqual({ archived: true, is_active: false });
     expect((await call('PATCH', `/products/${id}`, manager, { version: 2, name: 'x' })).json().error.code).toBe('INVALID_STATE');
     expect((await db.query(`SELECT 1 FROM audit_logs WHERE action = 'product.archive'`)).rowCount).toBe(1);
+  });
+
+  it('accepts a bodiless DELETE that still carries a JSON content type, as mobile HTTP clients send', async () => {
+    await db.query('UPDATE stock_levels SET quantity = 0 WHERE product_id = $1', [id]);
+    const res = await t.app.inject({ method: 'DELETE', url: `${api}/products/${id}`, headers: { ...manager, 'content-type': 'application/json' } });
+    expect(res.statusCode).toBe(204);
   });
 
   it('keeps edit and archive away from the sales role', async () => {

@@ -66,7 +66,15 @@ void main() {
 
     // All five destinations exist and respond.
     expect(find.byType(NavigationBar), findsOneWidget);
-    for (final tab in ['Inventory', 'Sell', 'Documents']) {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Inventory'),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('inventory-search')), findsOneWidget);
+    for (final tab in ['Sell', 'Documents']) {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),

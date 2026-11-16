@@ -71,17 +71,22 @@ class AppShell extends StatelessWidget {
             ),
           ),
         ),
-        child: NavigationBar(
-          selectedIndex: shell.currentIndex,
-          onDestinationSelected: _go,
-          destinations: [
-            for (final d in _destinations)
-              NavigationDestination(
-                icon: Icon(d.icon),
-                selectedIcon: Icon(d.selectedIcon),
-                label: d.label,
-              ),
-          ],
+        // Five labels share the width. They grow with the system text size only as far as the
+        // width allows without wrapping; the icons and the screen title carry the meaning beyond that.
+        child: MediaQuery.withClampedTextScaling(
+          maxScaleFactor: MediaQuery.sizeOf(context).width >= 480 ? 1.3 : 1.0,
+          child: NavigationBar(
+            selectedIndex: shell.currentIndex,
+            onDestinationSelected: _go,
+            destinations: [
+              for (final d in _destinations)
+                NavigationDestination(
+                  icon: Icon(d.icon),
+                  selectedIcon: Icon(d.selectedIcon),
+                  label: d.label,
+                ),
+            ],
+          ),
         ),
       ),
     );

@@ -4,5 +4,10 @@ import { execSync } from 'node:child_process';
 export default function setup(): void {
   const url =
     process.env.TEST_OWNER_DATABASE_URL ?? 'postgresql://velora_owner:velora_owner_dev@localhost:5432/velora_test';
-  execSync('npx prisma migrate deploy', { env: { ...process.env, DATABASE_URL: url }, stdio: 'pipe' });
+  try {
+    execSync('npx prisma migrate deploy', { env: { ...process.env, DATABASE_URL: url }, stdio: 'pipe' });
+  } catch (e) {
+    const stderr = String((e as { stderr?: Buffer }).stderr ?? e);
+    throw new Error(`Could not prepare the test database (is PostgreSQL running? see DEVELOPMENT.md):\n${stderr}`);
+  }
 }

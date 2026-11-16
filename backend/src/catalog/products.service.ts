@@ -123,6 +123,7 @@ export class ProductsService {
     assertPolicy(dto.minMarkupBp, dto.defaultMarkupBp, org.maxMarkupBp);
     const branchId = await resolveBranch(tx, ctx);
 
+    await lockIdentifiers(tx, ctx);
     const sku = dto.sku ?? (await this.generateSku(tx));
     if (await tx.product.findFirst({ where: { sku: { equals: sku, mode: 'insensitive' } }, select: { id: true } })) {
       throw Errors.skuTaken();
@@ -192,7 +193,10 @@ export class ProductsService {
       if (dto.minMarkupBp !== undefined || dto.defaultMarkupBp !== undefined) {
         assertPolicy(minMarkupBp, defaultMarkupBp, org.maxMarkupBp);
       }
-      if (dto.sku !== undefined && dto.sku.toLowerCase() !== current.sku.toLowerCase()) {
+      const skuChanges = dto.sku !== undefined && dto.sku.toLowerCase() !== current.sku.toLowerCase();
+      const barcodeChanges = Boolean(dto.barcode) && dto.barcode !== current.barcode;
+      if (skuChanges || barcodeChanges) await lockIdentifiers(tx, ctx);
+      if (skuChanges && dto.sku !== undefined) {
         const taken = await tx.product.findFirst({
           where: { sku: { equals: dto.sku, mode: 'insensitive' }, NOT: { id } },
           select: { id: true },
@@ -287,6 +291,15 @@ export class ProductsService {
     }
     throw new Error('Could not generate a unique SKU');
   }
+}
+
+/**
+ * Serializes changes to SKUs and barcodes within one organization for the rest of the transaction,
+ * so the uniqueness checks that follow cannot be raced and always produce the specific error
+ * (SKU_TAKEN / BARCODE_TAKEN). The database constraints remain the final guarantee.
+ */
+async function lockIdentifiers(tx: Tx, ctx: RequestContext): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`product-identifiers:${ctx.organizationId}`}, 0))`;
 }
 
 /** Business rule P3. */

@@ -14,8 +14,7 @@
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "sourceMap": true,
-    "incremental": true
+    "sourceMap": true
   },
   "include": ["src/**/*.ts", "test/**/*.ts", "prisma/seed.ts", "vitest.config.ts"]
 }

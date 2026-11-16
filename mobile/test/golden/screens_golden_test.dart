@@ -2,9 +2,11 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:velora/app/app.dart';
 import 'package:velora/core/auth/token_store.dart';
 
+import '../support/fake_inventory_server.dart';
 import '../support/fakes.dart';
 import '../support/harness.dart';
 
@@ -97,6 +99,99 @@ void main() {
       find.byType(VeloraAppRoot),
       matchesGoldenFile('goldens/home_tablet_light.png'),
     );
+  });
+
+  group('inventory', () {
+    Future<FakeInventoryServer> openInventory(
+      WidgetTester tester, {
+      String role = 'MANAGER',
+      bool dark = false,
+    }) async {
+      setScreenSize(tester, const Size(390, 844));
+      tester.platformDispatcher.platformBrightnessTestValue = dark
+          ? Brightness.dark
+          : Brightness.light;
+      addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+      final server = FakeInventoryServer(role: role)..seedReferenceCatalogue();
+      server.seed(
+        sku: 'VLR-PD-030',
+        name: 'Pearl Drop Pendant',
+        quantity: 0,
+        costMinor: 98000,
+      );
+      await tester.pumpWidget(
+        AppHarness(server: inventoryHandler(server), tokens: stored).build(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Inventory'));
+      await tester.pumpAndSettle();
+      return server;
+    }
+
+    testWidgets('list, manager', (tester) async {
+      await openInventory(tester);
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/inventory_manager_light.png'),
+      );
+    });
+
+    testWidgets('list, sales, dark', (tester) async {
+      await openInventory(tester, role: 'SALES', dark: true);
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/inventory_sales_dark.png'),
+      );
+    });
+
+    testWidgets('product detail', (tester) async {
+      await openInventory(tester);
+      await tester.tap(find.text('Alhambra Gold Bracelet'));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/product_detail_manager_light.png'),
+      );
+    });
+
+    testWidgets('receive stock with preview', (tester) async {
+      await openInventory(tester);
+      await tester.tap(find.text('Alhambra Gold Bracelet'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('receive-stock')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('field-quantity')),
+          matching: find.byType(TextFormField),
+        ),
+        '10',
+      );
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('field-cost')),
+          matching: find.byType(TextFormField),
+        ),
+        '2900',
+      );
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/receive_stock_light.png'),
+      );
+    });
+
+    testWidgets('new product with validation errors', (tester) async {
+      await openInventory(tester);
+      await tester.tap(find.byKey(const Key('new-product')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('save-product')));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/new_product_errors_light.png'),
+      );
+    });
   });
 }
 

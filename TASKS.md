@@ -29,18 +29,25 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 ### Carried over from Sprint 1
 - [ ] Android and iOS builds and on-device runs — **blocked here** (no Android SDK, no macOS); CI jobs `mobile-android` and `mobile-ios` are defined and will run on the first push
 - [ ] Native build flavours (Android `productFlavors`, iOS schemes) and the `velora://` deep-link registration — need the native toolchains to verify; Dart entry points and `--dart-define` config are in place
-- [ ] Drift local database — moved to S2-06, where the product cache is its first real use
-- [ ] Freezed / json_serializable — deferred until model count justifies code generation (Sprint 2); current models are hand-written
+- [ ] Drift local database — moves with the product cache to Sprint 6 (see below)
+- [ ] Freezed / json_serializable — still deferred; models remain hand-written and small
 - [ ] Localisation via ARB files — strings are English literals in widgets for now; extract before Sprint 4
-- [ ] Pagination helper and role-aware field serializer — built with their first consumer (S2-01)
+- [x] Pagination helper and role-aware product view — built with S2-01
 - [ ] Appearance setting (System/Light/Dark) — app follows the system theme today
-- [ ] Remove `NotBuiltYetScreen` from Inventory (S2), Sell and Documents (S4)
+- [ ] Remove `NotBuiltYetScreen` from Sell and Documents (S4) — Inventory is now real
 
-## Sprint 2 — Products and inventory ← next
-- [ ] S2-01 Products API · S2-02 Image upload · S2-03 Receipts, adjustments, ledger
-- [ ] S2-04 Inventory screens · S2-05 Barcode scanning · S2-06 Product cache and delta sync
+## Sprint 2 — Products and inventory
+- [x] S2-01 Products API: list with search, stock filters, sorting, keyset paging and counts; create with opening stock; detail; edit under optimistic locking; archive; cost fields omitted for the sales role
+- [x] S2-03 Stock receipts with weighted-average cost, adjustments with mandatory reason, stock movement ledger
+- [x] S2-04 Inventory screens C1–C6: list, product detail, new/edit product, receive stock, adjust stock, stock history
+- [x] Barcode as a product field (typed entry and search)
 
-## Sprint 3 — Customers
+### Moved out of Sprint 2
+- [ ] S2-02 Product photos — needs object storage, which this workspace cannot run (no Docker/MinIO), and the camera/gallery picker needs a device. Products show the monogram tile; `imageUrl` is always null. Scheduled with deployment storage in Sprint 6
+- [ ] S2-05 Camera barcode scanning — needs a device to build and verify; scheduled with the first device-capable environment
+- [ ] S2-06 Product cache and delta sync (`GET /sync/changes`, Drift) — moved to Sprint 6 with the rest of offline support, so the cache and the sync engine are designed together
+
+## Sprint 3 — Customers ← next
 - [ ] S3-01 Customers API · S3-02 Customer screens and picker · S3-03 Cache and offline create
 
 ## Sprint 4 — Sales and documents (D7 tax rule needs accountant confirmation)

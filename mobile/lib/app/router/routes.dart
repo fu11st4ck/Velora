@@ -10,6 +10,13 @@ abstract final class Routes {
   static const documents = '/documents';
   static const more = '/more';
 
+  static const newProduct = '/inventory/new';
+  static String product(String id) => '/inventory/$id';
+  static String editProduct(String id) => '/inventory/$id/edit';
+  static String receiveStock(String id) => '/inventory/$id/receive';
+  static String adjustStock(String id) => '/inventory/$id/adjust';
+  static String stockHistory(String id) => '/inventory/$id/movements';
+
   /// Reachable without a session.
   static const public = {login, forgotPassword, resetPassword};
 }

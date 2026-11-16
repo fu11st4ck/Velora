@@ -78,10 +78,22 @@ function isFastifyClientError(e: unknown): e is { statusCode: number } {
   return typeof code === 'number' && code >= 400 && code < 500;
 }
 
-/** Returns the constraint/columns of a PostgreSQL unique violation surfaced by Prisma, else null. */
+/**
+ * Returns the columns or constraint named by a PostgreSQL unique violation surfaced by Prisma, else null.
+ * Only the part of the message that names the constraint is used: the full message also quotes the
+ * failing query, which mentions unrelated column names.
+ */
 function uniqueViolation(e: unknown): string | null {
   const err = e as { code?: string; meta?: { target?: unknown; message?: unknown; code?: unknown }; message?: string } | null;
-  if (err?.code === 'P2002') return JSON.stringify(err.meta?.target ?? err.message ?? '').toLowerCase() || 'unknown';
-  if (err?.code === 'P2010' && err.meta?.code === '23505') return String(err.meta?.message ?? '').toLowerCase() || 'unknown';
+  if (err?.code === 'P2002') {
+    // `target` is null when the violation is detected while waiting on a concurrent insert.
+    if (err.meta?.target != null) return JSON.stringify(err.meta.target).toLowerCase();
+    const named = /Unique constraint failed on the (?:fields|constraint): ([^\n]+)/.exec(err.message ?? '');
+    return (named?.[1] ?? 'unknown').toLowerCase();
+  }
+  if (err?.code === 'P2010' && err.meta?.code === '23505') {
+    const named = /constraint "([^"]+)"/.exec(String(err.meta.message ?? ''));
+    return (named?.[1] ?? 'unknown').toLowerCase();
+  }
   return null;
 }

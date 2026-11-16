@@ -9,7 +9,7 @@ import { APP_CONFIG, type AppConfig } from './common/config';
 const REQUEST_ID = /^[A-Za-z0-9_-]{8,64}$/;
 
 export function createAdapter(trustProxy: boolean): FastifyAdapter {
-  return new FastifyAdapter({
+  const adapter = new FastifyAdapter({
     bodyLimit: 1_048_576,
     trustProxy,
     // A well-formed client request id is kept for tracing; anything else is replaced.
@@ -18,6 +18,17 @@ export function createAdapter(trustProxy: boolean): FastifyAdapter {
       return typeof supplied === 'string' && REQUEST_ID.test(supplied) ? supplied : `req_${randomUUID()}`;
     },
   });
+  // HTTP clients commonly send `Content-Type: application/json` on requests that carry no body
+  // (a DELETE, for example), which the JSON parser rejects as an empty document. Such a request
+  // has no content to type, so the header is dropped before parsing. Requests with a body are
+  // untouched and still go through the standard parser.
+  adapter.getInstance().addHook('onRequest', (req, _reply, done) => {
+    const length = req.headers['content-length'];
+    const bodiless = length === '0' || (length === undefined && req.headers['transfer-encoding'] === undefined);
+    if (bodiless) delete req.headers['content-type'];
+    done();
+  });
+  return adapter;
 }
 
 /** Applies everything that must be identical in production and in tests. */

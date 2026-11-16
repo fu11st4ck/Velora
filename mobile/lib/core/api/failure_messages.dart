@@ -17,6 +17,7 @@ String describeFailure(Failure failure) => switch (failure) {
     'Some details are not valid. Check the form and try again.',
   BusinessFailure(:final code, :final details, :final serverMessage) =>
     _business[code] ??
+        _withNumbers(code, details) ??
         _weakPassword(code, details) ??
         serverMessage ??
         'This action could not be completed.',
@@ -31,6 +32,12 @@ const _business = <String, String>{
   'RESET_TOKEN_INVALID':
       'This reset link is invalid or has expired. Request a new one.',
   'CURRENT_PASSWORD_INCORRECT': 'The current password is incorrect.',
+  'SKU_TAKEN': 'Another product already uses this SKU.',
+  'BARCODE_TAKEN': 'Another product already uses this barcode.',
+  'PRODUCT_ARCHIVED': 'This product is archived.',
+  'VERSION_CONFLICT': 'Someone else changed this product. Reload it and make your change again.',
+  'IDEMPOTENCY_KEY_REUSED':
+      'This request could not be repeated. Check whether it was already saved.',
 };
 
 const _passwordRules = <String, String>{
@@ -52,4 +59,27 @@ String _wait(Duration d) {
   if (d.inSeconds < 60) return '${d.inSeconds} seconds';
   final minutes = (d.inSeconds / 60).ceil();
   return minutes == 1 ? '1 minute' : '$minutes minutes';
+}
+
+/// Messages that quote the numbers the server returned, so the user knows exactly what to change.
+String? _withNumbers(String code, List<Map<String, dynamic>> details) {
+  final d = details.isEmpty ? const <String, dynamic>{} : details.first;
+  switch (code) {
+    case 'INSUFFICIENT_STOCK':
+      final available = d['available'];
+      return available is int
+          ? 'Only $available in stock.'
+          : 'Not enough stock.';
+    case 'PRODUCT_HAS_STOCK':
+      final quantity = d['quantity'];
+      return quantity is int
+          ? 'This product still has $quantity in stock. Adjust the stock to zero before archiving.'
+          : 'A product with stock on hand cannot be archived.';
+    case 'MARKUP_POLICY_INVALID':
+      final max = d['maxMarkupBp'];
+      return max is int
+          ? 'Minimum markup must not exceed the default, and the default must not exceed ${max ~/ 100}%.'
+          : 'Minimum markup must not exceed the default markup.';
+  }
+  return null;
 }

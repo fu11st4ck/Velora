@@ -14,12 +14,12 @@ final tokenStoreProvider = Provider<TokenStore>((ref) => SecureTokenStore());
 /// Invoked when the server has ended the session. Wired to the session controller in `app.dart`.
 final sessionEndedCallbackProvider = Provider<void Function()>((ref) => () {});
 
+// No default content type: Dio sets JSON only on requests that actually carry a body.
 BaseOptions _options(AppConfig config) => BaseOptions(
   baseUrl: config.apiBaseUrl,
   connectTimeout: const Duration(seconds: 10),
   sendTimeout: const Duration(seconds: 20),
   receiveTimeout: const Duration(seconds: 20),
-  contentType: Headers.jsonContentType,
   headers: {'Accept': 'application/json'},
 );
 

@@ -4,6 +4,28 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Sprint 2 (2026-11-16)
+**Backend**
+- Products API: list with search (name, SKU, barcode), stock-status filters, five sort orders, keyset pagination and per-status counts; create with opening stock; detail with stock per branch; edit with optimistic locking; archive.
+- Inventory API: stock receipts that re-average cost, adjustments with a mandatory reason, and the stock movement ledger with type filters.
+- Cost, markup and supplier fields are omitted for the sales role by a single product/movement view.
+- SKUs are unique per organization regardless of case; a generated SKU has the form `SKU-` plus six digits.
+
+**Mobile**
+- Inventory list (search, filter chips with counts, sort, paging, pull to refresh), product detail, new/edit product, receive stock, adjust stock and stock history screens.
+- Live previews in forms (list and lowest price, purchase total, new stock level, new average cost) computed with integer arithmetic that mirrors the server.
+- Idempotency keys on every stock-changing request: reused on a network retry, renewed after the input changes.
+
+### Fixed
+- A request with a JSON content type and no body (the app's "archive product") was rejected by the API. The API now treats an empty body as no body, and the app no longer sends a content type on bodiless requests. Found by running the app's API client against the live backend.
+- Two simultaneous product creations with the same SKU could be answered with the wrong error code (`BARCODE_TAKEN` or a generic conflict) instead of `SKU_TAKEN`; SKU and barcode checks are now serialized per organization.
+- Forms validated only the fields currently scrolled into view; all fields are now always built and validated.
+- At large system text sizes on small phones, inventory rows, navigation labels and the "New product" button overlapped or wrapped badly.
+- Repeated backend builds could produce no output (`dist/` deleted, incremental build skipped); the build no longer uses incremental state.
+
+### Not included
+- Product photos, camera barcode scanning, and the offline product cache moved out of this sprint — see `TASKS.md`.
+
 ### Added — Sprint 1 (2026-11-16)
 **Backend** (`backend/`)
 - NestJS/Fastify API under `/api/v1` with validated environment configuration, a single error envelope, `{ data, meta }` success envelope, request ids, security headers, rate limits and health probes.
