@@ -705,6 +705,95 @@ describe('scenario 14 — access to documents', () => {
   });
 });
 
+describe('PDF documents', () => {
+  const pdf = (url: string, headers: Record<string, string>, extra: Record<string, string> = {}) =>
+    t.app.inject({ method: 'GET', url: `${api}${url}`, headers: { ...headers, ...extra } });
+  /** Text of a PDF via poppler's pdftotext, to check what the customer can read. */
+  const textOf = async (body: Buffer) => {
+    const { execFileSync } = await import('node:child_process');
+    return execFileSync('pdftotext', ['-layout', '-', '-'], { input: body }).toString();
+  };
+
+  it('renders an invoice the customer can read, without cost, markup or profit', async () => {
+    await db.query(`UPDATE organizations SET legal_name = 'Test Jewellers LLC', city = 'Dubai', phone = '+971567252392', tax_registration_number = '100999888700003', invoice_footer = 'Thank you for choosing us.' WHERE id = $1`, [org.id]);
+    const inv = data(
+      await post('/invoices', manager, {
+        customerId,
+        lines: [{ productId: bracelet, quantity: 2, unitPriceMinor: 364000 }, { productId: cuff, quantity: 1, unitPriceMinor: 298900 }],
+        discountMinor: 15000,
+        payment: { amountMinor: 500000, method: 'BANK_TRANSFER', reference: 'FT26319XK2' },
+        notes: 'Gift wrapped',
+      }),
+    );
+    const res = await pdf(`/invoices/${inv.id}/pdf`, manager);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('application/pdf');
+    expect(res.headers['content-disposition']).toContain(`${inv.number}.pdf`);
+    expect(res.rawPayload.subarray(0, 5).toString()).toBe('%PDF-');
+
+    const text = await textOf(res.rawPayload);
+    for (const expected of [
+      'TAX INVOICE', inv.number, 'Test Jewellers LLC', 'TRN 100999888700003', 'Maison Luxe', 'Maya Farah', 'TRN 100123456700003',
+      'Alhambra Gold Bracelet', 'VLR-BR-001', 'Rose Gold Cuff', '3,640.00', '7,280.00', '2,989.00',
+      'AED 10,269.00', '- AED 150.00', 'VAT 5%', 'AED 505.95', 'AED 10,624.95', 'AED 5,000.00', 'AED 5,624.95',
+      'Partially paid', 'Bank transfer', 'Ref FT26319XK2', 'Gift wrapped', 'Thank you for choosing us.',
+    ]) {
+      expect(text, expected).toContain(expected);
+    }
+    // The reference printed the seller's profit percentage on every line of the customer's invoice.
+    for (const secret of ['profit', 'Profit', 'markup', 'Markup', 'Cost', '2,800.00', '2,450.00', '30%']) {
+      expect(text, secret).not.toContain(secret);
+    }
+  });
+
+  it('serves a new version after a payment, and 304 while unchanged', async () => {
+    const inv = data(await post('/invoices', ahmed, sale()));
+    const first = await pdf(`/invoices/${inv.id}/pdf`, ahmed);
+    const etag = first.headers.etag as string;
+    expect(etag).toBeTruthy();
+    expect((await pdf(`/invoices/${inv.id}/pdf`, ahmed, { 'if-none-match': etag })).statusCode).toBe(304);
+    expect(await textOf(first.rawPayload)).toContain('Payment due');
+
+    data(await post(`/invoices/${inv.id}/payments`, ahmed, { amountMinor: 382200, method: 'CASH' }));
+    const second = await pdf(`/invoices/${inv.id}/pdf`, ahmed, { 'if-none-match': etag });
+    expect(second.statusCode).toBe(200);
+    expect(second.headers.etag).not.toBe(etag);
+    expect(await textOf(second.rawPayload)).toContain('Paid in full');
+  });
+
+  it('marks a cancelled invoice and renders a quotation with its validity', async () => {
+    const inv = data(await post('/invoices', ahmed, sale()));
+    data(await post(`/invoices/${inv.id}/cancel`, manager, { reason: 'Entered twice' }), 200);
+    expect(await textOf((await pdf(`/invoices/${inv.id}/pdf`, manager)).rawPayload)).toContain('CANCELLED');
+
+    const q = data(await post('/quotations', ahmed, { customerId, lines: [{ productId: cuff, quantity: 1, unitPriceMinor: 318500 }] }));
+    const res = await pdf(`/quotations/${q.id}/pdf`, ahmed);
+    expect(res.statusCode).toBe(200);
+    const text = await textOf(res.rawPayload);
+    expect(text).toContain('QUOTATION');
+    expect(text).toContain(q.number);
+    expect(text).toContain('Valid until');
+    expect(text).not.toContain('Balance due');
+  });
+
+  it('keeps long invoices readable across pages', async () => {
+    const lines = Array.from({ length: 24 }, () => ({ productId: bracelet, quantity: 1, unitPriceMinor: 364000 }));
+    const inv = data(await post('/invoices', ahmed, { customerId, lines }));
+    const res = await pdf(`/invoices/${inv.id}/pdf`, ahmed);
+    const text = await textOf(res.rawPayload);
+    expect(text.split('Alhambra Gold Bracelet').length - 1).toBe(24);
+    expect(text).toContain('AED 91,728.00'); // 24 × 3,640.00 × 1.05
+    expect(text.split('\f').length).toBeGreaterThan(2); // more than one page
+  });
+
+  it("is not available for another salesperson's or organization's documents", async () => {
+    const inv = data(await post('/invoices', manager, sale()));
+    expect((await pdf(`/invoices/${inv.id}/pdf`, ahmed)).statusCode).toBe(404);
+    expect((await pdf(`/invoices/${randomUUID()}/pdf`, manager)).statusCode).toBe(404);
+    expect((await t.app.inject({ method: 'GET', url: `${api}/invoices/${inv.id}/pdf` })).statusCode).toBe(401);
+  });
+});
+
 describe('documents list', () => {
   let paid: string, partial: string, unpaid: string, cancelled: string, openQuote: string;
   beforeEach(async () => {

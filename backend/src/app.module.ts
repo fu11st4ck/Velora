@@ -22,6 +22,7 @@ import { MailService } from './mail/mail.service';
 import { DocumentsService } from './sales/documents.service';
 import { InvoicesService } from './sales/invoices.service';
 import { NumberingService } from './sales/numbering.service';
+import { PdfService } from './sales/pdf.service';
 import { PricingService } from './sales/pricing.service';
 import { QuotationsService } from './sales/quotations.service';
 import { DocumentsController, InvoicesController, PricingController, QuotationsController } from './sales/sales.controller';
@@ -48,6 +49,7 @@ import { PrismaModule } from './prisma/prisma.module';
     InventoryService,
     CustomersService,
     PricingService,
+    PdfService,
     NumberingService,
     QuotationsService,
     InvoicesService,

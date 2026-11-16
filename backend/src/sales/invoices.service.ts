@@ -10,6 +10,7 @@ import { InventoryService } from '../inventory/inventory.service';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import type { CancelInvoiceDto, CreateInvoiceDto, CreateReturnDto, RecordPaymentDto, RecordRefundDto } from './dto';
 import { NumberingService } from './numbering.service';
+import { PdfService, sellerOf, type PrintableDocument } from './pdf.service';
 import { PricingService } from './pricing.service';
 import { belowMinimum, customerSnapshotFor, ownFilter } from './quotations.service';
 import { balanceOf, INVOICE_INCLUDE, invoiceView, paymentStatusOf } from './views';
@@ -27,6 +28,7 @@ export class InvoicesService {
     private readonly inventory: InventoryService,
     private readonly audit: AuditService,
     private readonly clock: Clock,
+    private readonly pdf: PdfService,
   ) {}
 
   /** Issues the invoice: prices it, takes the stock, numbers it and records any money received now. */
@@ -177,6 +179,56 @@ export class InvoicesService {
     return this.prisma.tenantTx(ctx.organizationId, async (tx) => {
       await this.requireVisible(tx, ctx, id);
       return this.view(tx, ctx, id, await this.today(tx, ctx));
+    });
+  }
+
+  /** The customer-facing PDF, with a version tag that changes whenever the invoice does. */
+  async pdfOf(ctx: RequestContext, id: string): Promise<{ filename: string; etag: string; render: () => Promise<Buffer> }> {
+    return this.prisma.tenantTx(ctx.organizationId, async (tx) => {
+      await this.requireVisible(tx, ctx, id);
+      const invoice = await tx.invoice.findUniqueOrThrow({ where: { id }, include: INVOICE_INCLUDE });
+      const org = await tx.organization.findUniqueOrThrow({ where: { id: ctx.organizationId } });
+      const balance = balanceOf(invoice);
+      const cancelled = invoice.status === 'CANCELLED';
+      const printable: PrintableDocument = {
+        kind: 'INVOICE',
+        number: invoice.number,
+        issuedAt: invoice.issuedAt,
+        cancelled,
+        seller: sellerOf(org),
+        customer: {
+          name: invoice.customerName,
+          company: invoice.customerCompany,
+          mobile: invoice.customerMobile,
+          email: invoice.customerEmail,
+          address: invoice.customerAddress,
+          trn: invoice.customerTrn,
+        },
+        salesperson: invoice.salesperson.user.fullName,
+        currencyCode: invoice.currencyCode,
+        currencyExponent: org.currencyExponent,
+        timezone: org.timezone,
+        lines: invoice.items.map((i) => ({ name: i.productName, sku: i.productSku, quantity: i.quantity, unitPriceMinor: i.unitPriceMinor, lineTotalMinor: i.lineTotalMinor })),
+        subtotalMinor: invoice.subtotalMinor,
+        discountMinor: invoice.discountMinor,
+        taxName: invoice.taxName,
+        taxMinor: invoice.taxMinor,
+        totalMinor: invoice.totalMinor,
+        notes: invoice.notes,
+        settlement: {
+          payments: invoice.payments.map((p) => ({ kind: p.kind, method: p.method, amountMinor: p.amountMinor, receivedAt: p.receivedAt, reference: p.reference })),
+          returnedMinor: invoice.returnedMinor,
+          paidMinor: invoice.paidMinor,
+          balanceMinor: cancelled ? 0n : balance,
+          dueDate: invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null,
+          statusLabel: cancelled ? 'Cancelled' : balance === 0n ? 'Paid in full' : invoice.paidMinor > 0n ? 'Partially paid' : 'Payment due',
+        },
+      };
+      return {
+        filename: `${invoice.number}.pdf`,
+        etag: `"${invoice.id}-${invoice.updatedAt.getTime()}"`,
+        render: () => this.pdf.render(printable),
+      };
     });
   }
 

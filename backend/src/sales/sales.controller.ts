@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Query, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query, Req, Res, StreamableFile } from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { RequirePermission } from '../authz/decorators';
 import { Page } from '../common/envelope.interceptor';
@@ -22,6 +22,20 @@ import {
 import { InvoicesService } from './invoices.service';
 import { PricingService } from './pricing.service';
 import { QuotationsService } from './quotations.service';
+
+/** Sends a PDF, or 304 when the client already holds this version. */
+async function sendPdf(
+  req: FastifyRequest,
+  reply: FastifyReply,
+  doc: { filename: string; etag: string; render: () => Promise<Buffer> },
+): Promise<StreamableFile | undefined> {
+  void reply.header('ETag', doc.etag).header('Cache-Control', 'private, no-cache');
+  if (req.headers['if-none-match'] === doc.etag) {
+    void reply.status(304);
+    return undefined;
+  }
+  return new StreamableFile(await doc.render(), { type: 'application/pdf', disposition: `inline; filename="${doc.filename}"` });
+}
 
 @Controller('pricing')
 export class PricingController {
@@ -80,6 +94,12 @@ export class QuotationsController {
     return this.quotations.get(ctx, id);
   }
 
+  @RequirePermission('document.read_own')
+  @Get(':id/pdf')
+  async pdf(@Ctx() ctx: RequestContext, @IdParam() id: string, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    return sendPdf(req, reply, await this.quotations.pdfOf(ctx, id));
+  }
+
   @RequirePermission('sale.create')
   @Post(':id/cancel')
   @HttpCode(200)
@@ -113,6 +133,12 @@ export class InvoicesController {
   @Get(':id')
   get(@Ctx() ctx: RequestContext, @IdParam() id: string) {
     return this.invoices.get(ctx, id);
+  }
+
+  @RequirePermission('document.read_own')
+  @Get(':id/pdf')
+  async pdf(@Ctx() ctx: RequestContext, @IdParam() id: string, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    return sendPdf(req, reply, await this.invoices.pdfOf(ctx, id));
   }
 
   @RequirePermission('payment.record')

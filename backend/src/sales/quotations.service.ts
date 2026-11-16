@@ -7,6 +7,7 @@ import type { RequestContext } from '../common/request-context';
 import { PrismaService, type Tx } from '../prisma/prisma.service';
 import type { CreateQuotationDto } from './dto';
 import { NumberingService } from './numbering.service';
+import { PdfService, sellerOf } from './pdf.service';
 import { PricingService } from './pricing.service';
 import { QUOTATION_INCLUDE, quotationStatusOf, quotationView } from './views';
 
@@ -39,6 +40,7 @@ export class QuotationsService {
     private readonly numbering: NumberingService,
     private readonly audit: AuditService,
     private readonly clock: Clock,
+    private readonly pdf: PdfService,
   ) {}
 
   /** A quotation fixes prices for a customer. It does not check, reserve or change stock (rule D4). */
@@ -110,6 +112,39 @@ export class QuotationsService {
       const quotation = await tx.quotation.findFirst({ where: { id, ...ownFilter(ctx) }, include: QUOTATION_INCLUDE });
       if (!quotation) throw Errors.notFound('Quotation');
       return quotationView(quotation, ctx.role, await this.today(tx, ctx));
+    });
+  }
+
+  async pdfOf(ctx: RequestContext, id: string): Promise<{ filename: string; etag: string; render: () => Promise<Buffer> }> {
+    return this.prisma.tenantTx(ctx.organizationId, async (tx) => {
+      const q = await tx.quotation.findFirst({ where: { id, ...ownFilter(ctx) }, include: QUOTATION_INCLUDE });
+      if (!q) throw Errors.notFound('Quotation');
+      const org = await tx.organization.findUniqueOrThrow({ where: { id: ctx.organizationId } });
+      return {
+        filename: `${q.number}.pdf`,
+        etag: `"${q.id}-${q.updatedAt.getTime()}"`,
+        render: () =>
+          this.pdf.render({
+            kind: 'QUOTATION',
+            number: q.number,
+            issuedAt: q.issuedAt,
+            cancelled: q.status === 'CANCELLED',
+            seller: sellerOf(org),
+            customer: { name: q.customerName, company: q.customerCompany, mobile: q.customerMobile, email: q.customerEmail, address: q.customerAddress, trn: q.customerTrn },
+            salesperson: q.salesperson.user.fullName,
+            currencyCode: q.currencyCode,
+            currencyExponent: org.currencyExponent,
+            timezone: org.timezone,
+            lines: q.items.map((i) => ({ name: i.productName, sku: i.productSku, quantity: i.quantity, unitPriceMinor: i.unitPriceMinor, lineTotalMinor: i.lineTotalMinor })),
+            subtotalMinor: q.subtotalMinor,
+            discountMinor: q.discountMinor,
+            taxName: q.taxName,
+            taxMinor: q.taxMinor,
+            totalMinor: q.totalMinor,
+            notes: q.notes,
+            validUntil: q.validUntil ? q.validUntil.toISOString().slice(0, 10) : null,
+          }),
+      };
     });
   }
 
