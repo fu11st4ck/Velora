@@ -68,7 +68,8 @@ export class DocumentsService {
       if (query.to) common.push(Prisma.sql`${localDay} <= ${query.to}::date`);
       if (query.cursor) {
         const [us, id] = decodeCursor(query.cursor, 2);
-        common.push(Prisma.sql`(${ISSUED_US}, d.id) < (${String(us)}::bigint, ${String(id)}::uuid)`);
+        // Compared as a timestamp (exactly, microsecond by microsecond) so the (organization, issued_at) index serves it.
+        common.push(Prisma.sql`(d.issued_at, d.id) < (timestamptz 'epoch' + ${String(us)}::bigint * interval '1 microsecond', ${String(id)}::uuid)`);
       }
 
       const statuses = new Set<DocumentStatusFilter>(query.status ?? []);
@@ -94,31 +95,34 @@ export class DocumentsService {
       const wantQuotations = query.type !== 'invoice' && (statuses.size === 0 || quotationChosen.length > 0);
 
       const where = (extra: Prisma.Sql[]) => Prisma.join([...common, ...(extra.length ? [Prisma.sql`(${Prisma.join(extra, ' OR ')})`] : [])], ' AND ');
+      // Each kind takes only its newest page straight from the (organization, issued_at) index; the
+      // two short lists are then merged. Sorting all documents first made this list slow at volume.
+      const newestFirst = Prisma.sql`ORDER BY d.issued_at DESC, d.id DESC LIMIT ${limit + 1}`;
       const parts: Prisma.Sql[] = [];
       if (wantInvoices) {
         parts.push(Prisma.sql`
-          SELECT 'INVOICE' AS type, d.id, d.number, d.issued_at AS "issuedAt", ${ISSUED_US} AS "issuedUs",
+          (SELECT 'INVOICE' AS type, d.id, d.number, d.issued_at AS "issuedAt", ${ISSUED_US} AS "issuedUs",
                  d.customer_id AS "customerId", d.customer_name AS "customerName", d.customer_company AS "customerCompany",
                  d.customer_mobile AS "customerMobile", d.salesperson_id AS "salespersonId",
-                 (SELECT count(*)::int FROM invoice_items x WHERE x.invoice_id = d.id) AS "lineCount",
                  d.total_minor AS "totalMinor", d.status::text AS status, d.payment_status::text AS "paymentStatus",
                  ${balance} AS "balanceMinor", to_char(d.due_date, 'YYYY-MM-DD') AS "dueDate", NULL::text AS "validUntil"
-          FROM invoices d WHERE ${where(invoiceChosen)}`);
+          FROM invoices d WHERE ${where(invoiceChosen)} ${newestFirst})`);
       }
       if (wantQuotations) {
         parts.push(Prisma.sql`
-          SELECT 'QUOTATION' AS type, d.id, d.number, d.issued_at AS "issuedAt", ${ISSUED_US} AS "issuedUs",
+          (SELECT 'QUOTATION' AS type, d.id, d.number, d.issued_at AS "issuedAt", ${ISSUED_US} AS "issuedUs",
                  d.customer_id AS "customerId", d.customer_name AS "customerName", d.customer_company AS "customerCompany",
                  d.customer_mobile AS "customerMobile", d.salesperson_id AS "salespersonId",
-                 (SELECT count(*)::int FROM quotation_items x WHERE x.quotation_id = d.id) AS "lineCount",
                  d.total_minor AS "totalMinor", d.status::text AS status, NULL::text AS "paymentStatus",
                  NULL::bigint AS "balanceMinor", NULL::text AS "dueDate", to_char(d.valid_until, 'YYYY-MM-DD') AS "validUntil"
-          FROM quotations d WHERE ${where(quotationChosen)}`);
+          FROM quotations d WHERE ${where(quotationChosen)} ${newestFirst})`);
       }
       if (parts.length === 0) return { items: [], meta: { nextCursor: null, hasMore: false } };
 
       const rows = await tx.$queryRaw<Row[]>`
-        SELECT u.*, usr.full_name AS "salespersonName"
+        SELECT u.*, usr.full_name AS "salespersonName",
+               CASE u.type WHEN 'INVOICE' THEN (SELECT count(*)::int FROM invoice_items x WHERE x.invoice_id = u.id)
+                           ELSE (SELECT count(*)::int FROM quotation_items x WHERE x.quotation_id = u.id) END AS "lineCount"
         FROM (${Prisma.join(parts, ' UNION ALL ')}) u
         JOIN organization_members om ON om.id = u."salespersonId"
         JOIN users usr ON usr.id = om.user_id

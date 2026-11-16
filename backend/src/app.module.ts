@@ -31,6 +31,8 @@ import { OrganizationService } from './organization/organization.service';
 import { TaxRatesController } from './organization/tax-rates.controller';
 import { DashboardController, ReportsController } from './reports/reports.controller';
 import { ReportsService } from './reports/reports.service';
+import { SyncController } from './sync/sync.controller';
+import { SyncService } from './sync/sync.service';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -45,6 +47,7 @@ import { PrismaModule } from './prisma/prisma.module';
     SessionsController,
     DashboardController,
     ReportsController,
+    SyncController,
   ],
   providers: [
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
@@ -66,6 +69,7 @@ import { PrismaModule } from './prisma/prisma.module';
     DocumentsService,
     OrganizationService,
     ReportsService,
+    SyncService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
     { provide: APP_FILTER, useClass: GlobalErrorFilter },

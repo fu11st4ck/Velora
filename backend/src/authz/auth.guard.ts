@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import { Errors } from '../common/errors';
 import type { AuthedRequest } from '../common/request-context';
 import { TokenService } from '../auth/token.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ACCESS_KEY, type AccessRule } from './decorators';
 import { hasPermission } from './permissions';
 
@@ -15,6 +16,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly tokens: TokenService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -29,6 +31,15 @@ export class AuthGuard implements CanActivate {
     const header = req.headers.authorization;
     if (typeof header !== 'string' || !header.startsWith('Bearer ')) throw Errors.tokenInvalid();
     const claims = await this.tokens.verifyAccessToken(header.slice(7));
+
+    // A signed token alone is not enough: the session it belongs to must still be open. Signing out,
+    // a password change, a role change or removal of access close it, and take effect at once
+    // rather than when the token expires. One primary-key-sized index lookup per request.
+    const open = await this.prisma.refreshToken.findFirst({
+      where: { familyId: claims.fam, userId: claims.sub, revokedAt: null },
+      select: { id: true },
+    });
+    if (!open) throw Errors.sessionRevoked();
 
     const ua = req.headers['user-agent'];
     req.ctx = {
