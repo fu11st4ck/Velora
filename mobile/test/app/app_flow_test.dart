@@ -74,7 +74,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('inventory-search')), findsOneWidget);
-    for (final tab in ['Sell', 'Documents']) {
+    for (final (tab, key) in [
+      ('Sell', 'sell-search'),
+      ('Documents', 'document-search'),
+    ]) {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),
@@ -82,11 +85,7 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(
-        find.textContaining('is not built yet'),
-        findsOneWidget,
-        reason: tab,
-      );
+      expect(find.byKey(Key(key)), findsOneWidget, reason: tab);
     }
 
     await tester.tap(

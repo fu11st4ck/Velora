@@ -22,6 +22,12 @@ abstract final class Routes {
   static String customer(String id) => '/more/customers/$id';
   static String editCustomer(String id) => '/more/customers/$id/edit';
 
+  static const cart = '/sell/cart';
+  static const payment = '/sell/payment';
+  static String invoice(String id) => '/documents/invoices/$id';
+  static String returnItems(String id) => '/documents/invoices/$id/return';
+  static String quotation(String id) => '/documents/quotations/$id';
+
   /// Reachable without a session.
   static const public = {login, forgotPassword, resetPassword};
 }

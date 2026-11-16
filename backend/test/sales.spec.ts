@@ -154,6 +154,16 @@ describe('pricing preview', () => {
     expect((await post('/pricing/preview', ahmed, { lines: [line], taxRateId: zero })).json().error.code).toBe('TAX_RATE_INACTIVE');
   });
 
+  it('lists the active tax rates for the cart, default first, within the organization only', async () => {
+    await db.query(`INSERT INTO tax_rates (id, organization_id, name, rate_bp, updated_at) VALUES (gen_random_uuid(), $1, 'Zero rated 0%', 0, now()), (gen_random_uuid(), $1, 'Old rate', 700, now())`, [org.id]);
+    await db.query(`UPDATE tax_rates SET is_active = false WHERE name = 'Old rate'`);
+    const other = await createOrg(db, 'Other Jewellers');
+    await db.query(`UPDATE tax_rates SET name = 'Their VAT' WHERE organization_id = $1`, [other.id]);
+    const rates = data(await get('/tax-rates', ahmed), 200);
+    expect(rates.map((r: { name: string; rateBp: number; isDefault: boolean }) => [r.name, r.rateBp, r.isDefault])).toEqual([['VAT 5%', 500, true], ['Zero rated 0%', 0, false]]);
+    expect((await t.app.inject({ method: 'GET', url: `${api}/tax-rates` })).statusCode).toBe(401);
+  });
+
   it('never reveals cost or markup to the sales role', async () => {
     const res = await post('/pricing/preview', ahmed, { lines: [{ productId: bracelet, quantity: 1, unitPriceMinor: 300000 }] });
     expect(hasKeyDeep(res.json(), CONFIDENTIAL_KEYS)).toBeNull();

@@ -32,6 +32,20 @@ const _business = <String, String>{
   'RESET_TOKEN_INVALID':
       'This reset link is invalid or has expired. Request a new one.',
   'CURRENT_PASSWORD_INCORRECT': 'The current password is incorrect.',
+  'INVOICE_ALREADY_PAID': 'This invoice is already paid in full.',
+  'INVOICE_CANCELLED': 'This invoice was cancelled.',
+  'INVOICE_HAS_RETURNS': 'An invoice with returns cannot be cancelled. Return the remaining items instead.',
+  'QUOTATION_ALREADY_CONVERTED':
+      'This quotation was already converted to an invoice.',
+  'CUSTOMER_ARCHIVED': 'This customer is archived. Choose another customer.',
+  'TAX_RATE_INACTIVE': 'This tax rate is no longer available. Choose another.',
+  'PRODUCT_UNAVAILABLE': 'A product in this sale is no longer available.',
+  'DISCOUNT_EXCEEDS_SUBTOTAL': 'The discount cannot be more than the subtotal.',
+  'RETURN_QUANTITY_EXCEEDS_SOLD':
+      'More items were selected than can still be returned.',
+  'REFUND_METHOD_REQUIRED': 'Choose how the money is refunded.',
+  'PRICE_BELOW_MINIMUM': 'A price is below the lowest allowed price.',
+  'PRICE_ABOVE_MAXIMUM': 'A price is above the highest allowed price.',
   'SKU_TAKEN': 'Another product already uses this SKU.',
   'BARCODE_TAKEN': 'Another product already uses this barcode.',
   'PRODUCT_ARCHIVED': 'This product is archived.',

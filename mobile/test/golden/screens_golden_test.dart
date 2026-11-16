@@ -5,9 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:velora/app/app.dart';
 import 'package:velora/core/auth/token_store.dart';
+import 'package:velora/core/storage/key_value_store.dart';
 
 import '../support/fake_customer_server.dart';
 import '../support/fake_inventory_server.dart';
+import '../support/fake_shop_server.dart';
 import '../support/fakes.dart';
 import '../support/harness.dart';
 
@@ -250,6 +252,107 @@ void main() {
         find.byType(VeloraAppRoot),
         matchesGoldenFile('goldens/customer_form_light.png'),
       );
+    });
+  });
+
+  group('sales', () {
+    Future<FakeShopServer> openSell(
+      WidgetTester tester, {
+      String role = 'MANAGER',
+    }) async {
+      setScreenSize(tester, const Size(390, 844));
+      final server = FakeShopServer()..role = role;
+      await tester.pumpWidget(
+        AppHarness(
+          server: shopHandler(server),
+          tokens: stored,
+          overrides: [
+            keyValueStoreProvider.overrideWithValue(InMemoryKeyValueStore()),
+          ],
+        ).build(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Sell'));
+      await tester.pumpAndSettle();
+      return server;
+    }
+
+    Future<void> tapKey(WidgetTester tester, String key) async {
+      await tester.ensureVisible(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(key)));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> add(WidgetTester tester, String sku) async {
+      await tapKey(tester, 'sell-$sku');
+      await tapKey(tester, 'price-submit');
+    }
+
+    Future<void> toPayment(WidgetTester tester) async {
+      await add(tester, 'VLR-BR-001');
+      await add(tester, 'VLR-BG-014');
+      await tapKey(tester, 'review-cart');
+      await tapKey(tester, 'cart-customer');
+      await tester.tap(find.text('Maya Farah').last);
+      await tester.pumpAndSettle();
+      await tapKey(tester, 'take-payment');
+    }
+
+    Future<void> shot(String name) => expectLater(
+      find.byType(VeloraAppRoot),
+      matchesGoldenFile('goldens/$name.png'),
+    );
+
+    testWidgets('sell with a cart in progress', (tester) async {
+      await openSell(tester, role: 'SALES');
+      await add(tester, 'VLR-BR-001');
+      await shot('sell_sales_light');
+    });
+
+    testWidgets('price sheet, manager', (tester) async {
+      await openSell(tester);
+      await tapKey(tester, 'sell-VLR-BR-001');
+      await shot('price_sheet_manager_light');
+    });
+
+    testWidgets('cart', (tester) async {
+      await openSell(tester);
+      await add(tester, 'VLR-BR-001');
+      await add(tester, 'VLR-BG-014');
+      await tapKey(tester, 'review-cart');
+      await tapKey(tester, 'cart-customer');
+      await tester.tap(find.text('Maya Farah').last);
+      await tester.pumpAndSettle();
+      await shot('cart_manager_light');
+    });
+
+    testWidgets('payment, partial by bank transfer', (tester) async {
+      await openSell(tester, role: 'SALES');
+      await toPayment(tester);
+      await tester.enterText(
+        find.descendant(
+          of: find.byKey(const Key('payment-amount')),
+          matching: find.byType(TextFormField),
+        ),
+        '3000',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bank transfer'));
+      await tester.pumpAndSettle();
+      await shot('payment_partial_light');
+    });
+
+    testWidgets('invoice and documents', (tester) async {
+      await openSell(tester);
+      await toPayment(tester);
+      await tapKey(tester, 'amount-half');
+      await tapKey(tester, 'create-invoice');
+      await tapKey(tester, 'confirm-invoice');
+      await shot('invoice_partial_manager_light');
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await shot('documents_light');
     });
   });
 }

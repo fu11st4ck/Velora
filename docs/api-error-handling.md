@@ -91,6 +91,7 @@ Stack traces, SQL, and internal identifiers are never returned. Unknown exceptio
 | `TAX_RATE_INACTIVE` | 422 | Chosen tax rate deactivated |
 | `CUSTOMER_ARCHIVED` | 422 | Document for an archived customer |
 | `CUSTOMER_EXISTS` | 409 | Create with a client-generated id that is already used |
+| `DOCUMENT_EXISTS` | 409 | Quotation, invoice or payment created with a client-generated id that is already used |
 | `QUOTATION_ALREADY_CONVERTED` | 409 | Second conversion attempt (`details.invoiceId`) |
 | `PAYMENT_EXCEEDS_BALANCE` | 422 | Amount > balance (`details.balanceMinor`) |
 | `INVOICE_ALREADY_PAID` | 422 | Payment on a zero-balance invoice |

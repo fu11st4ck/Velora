@@ -756,7 +756,7 @@ paths:
         - { $ref: '#/components/parameters/To' }
         - name: sort
           in: query
-          schema: { type: string, enum: [-issuedAt, issuedAt, -totalMinor, dueDate], default: -issuedAt }
+          schema: { type: string, enum: [-issuedAt], default: -issuedAt }
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Cursor' }
       responses:

@@ -93,6 +93,8 @@ Each screen lists route, access, layout, components, actions, navigation, states
 
 ## D. Sell
 
+> **As built (Sprint 4):** D1–D5 and F1–F6 are implemented. Differences: no Drafts action or D6 screen (one cart in progress is kept on the device); the customer picker is a sheet, not a route; D1 lists the first 50 matches and asks the user to search for more; tax is chosen with chips on the cart; F1 has status chips and search but no date/salesperson filter sheet; printing goes through the system share sheet; offline invoicing is not available yet.
+
 ### D1 Sell — `/sell` (all roles)
 - **App bar:** title "New sale"; action "Drafts" when saved drafts exist.
 - **Header:** search bar with scan icon.

@@ -20,6 +20,7 @@ class LabeledField extends StatelessWidget {
     this.suffix,
     this.enabled = true,
     this.onSubmitted,
+    this.onChanged,
     this.inputFormatters,
     this.helperText,
   });
@@ -37,6 +38,7 @@ class LabeledField extends StatelessWidget {
   final Widget? suffix;
   final bool enabled;
   final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onChanged;
   final List<TextInputFormatter>? inputFormatters;
 
   @override
@@ -68,6 +70,7 @@ class LabeledField extends StatelessWidget {
             autocorrect: false,
             enableSuggestions: !obscureText,
             onFieldSubmitted: onSubmitted,
+            onChanged: onChanged,
             inputFormatters: inputFormatters,
             style: theme.textTheme.bodyLarge,
             decoration: InputDecoration(

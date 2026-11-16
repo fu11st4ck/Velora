@@ -62,7 +62,7 @@ Product audit, flows, design audit and system, screen specifications, business r
 | S3-03 | Customer cache + offline create | S3-01, S2-06 |
 (Suppliers: not built — decision D6.)
 
-### Sprint 4 — Sales and documents
+### Sprint 4 — Sales and documents (delivered 2026-11-16; D7 awaiting accountant)
 | ID | Item | Depends on |
 |---|---|---|
 | S4-01 | Pricing engine (bounds, totals, allocation) + `/pricing/preview`; property tests | S2, **D1, D3, D7** |

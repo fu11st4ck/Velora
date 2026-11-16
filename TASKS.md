@@ -34,7 +34,7 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Localisation via ARB files — strings are English literals in widgets for now; extract before Sprint 4
 - [x] Pagination helper and role-aware product view — built with S2-01
 - [ ] Appearance setting (System/Light/Dark) — app follows the system theme today
-- [ ] Remove `NotBuiltYetScreen` from Sell and Documents (S4) — Inventory is now real
+- [x] Remove `NotBuiltYetScreen` from Sell and Documents (S4) — every tab is now real
 
 ## Sprint 2 — Products and inventory
 - [x] S2-01 Products API: list with search, stock filters, sorting, keyset paging and counts; create with opening stock; detail; edit under optimistic locking; archive; cost fields omitted for the sales role
@@ -51,14 +51,29 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [x] S3-01 Customers API: list with search (name, company, email, phone digits), exact lookup by mobile, create with optional client id, detail with invoiced / outstanding / overdue totals, edit, manager-only archive
 - [x] S3-02 Customer screens E1–E3 (directory, detail, new/edit) and the reusable customer picker (D4) for the sale flow
 - [ ] S3-03 Customer cache and offline create — moved to Sprint 6 with the rest of offline support
-- [ ] Customer's document list on the detail screen — added with the documents feature in Sprint 4
+- [ ] Customer's document list on the detail screen — listed under Sprint 4 "Not in Sprint 4"
 
-## Sprint 4 — Sales and documents ← next (D7 tax rule needs accountant confirmation)
-- [ ] S4-01 Pricing engine · S4-02 Numbering and quotations · S4-03 Invoice issue transaction
-- [ ] S4-04 Payments and refunds · S4-05 Cancellation and returns · S4-06 Documents list and PDF
-- [ ] S4-07 Sell flow screens · S4-08 Documents screens
+## Sprint 4 — Sales and documents
+- [x] S4-01 Pricing engine (price bounds, integer totals, tax on the discounted total) and `POST /pricing/preview`
+- [x] S4-02 Document numbering; quotations API (create, detail, cancel, expiry)
+- [x] S4-03 Invoice issue in one transaction: stock, number, optional first payment, audit, idempotency; concurrency tests
+- [x] S4-04 Payments and refunds · S4-05 Cancellation and returns (credit notes) · S4-06 Combined documents list and PDFs
+- [x] `GET /tax-rates` (read side, for choosing a rate on a sale; managing rates is S5-04)
+- [x] S4-07 Sell flow screens D1–D5: product picker, price sheet, cart (kept across restarts), customer picker, payment
+- [x] S4-08 Documents screens F1–F6: list with filters and search, invoice and quotation detail, record payment, cancel, return items, share PDF / WhatsApp
+- [x] Live contract test: the app's API client runs the whole sale against the real backend
 
-## Sprint 5 — Dashboard, reports, settings
+### Not in Sprint 4
+- [ ] **D7 tax rule still needs the accountant's confirmation** — implemented as accepted (one tax-exclusive rate on the discounted total)
+- [ ] D6 Drafts screen — the app keeps one cart in progress on the device; several named drafts were not built. Decide in Sprint 6 whether they are still wanted
+- [ ] Offline invoices (`offline` field on `POST /invoices`) — Sprint 6 with the outbox
+- [ ] Documents list: date range and salesperson filters exist in the API but have no filter sheet in the app; only `-issuedAt` sorting is implemented
+- [ ] Sell product list shows the first 50 matches and asks the user to search for more (no infinite scroll)
+- [ ] Printing goes through the system share sheet (share PDF → Print); no in-app print preview
+- [ ] Customer's document list on the customer detail screen (API supports `customerId`)
+- [ ] Sale and document screens have not been run on a physical device (no Android SDK / macOS here) — widget tests, rendered goldens and live API tests only
+
+## Sprint 5 — Dashboard, reports, settings ← next
 - [ ] S5-01 Dashboard · S5-02 Reports API and CSV · S5-03 Reports screen
 - [ ] S5-04 Settings, tax rates, team · S5-05 Sessions and appearance
 

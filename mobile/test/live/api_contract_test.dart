@@ -13,8 +13,11 @@ import 'package:velora/core/api/idempotency.dart';
 import 'package:velora/features/auth/data/auth_api.dart';
 import 'package:velora/features/customers/data/customer.dart';
 import 'package:velora/features/customers/data/customers_api.dart';
+import 'package:velora/features/documents/data/document.dart';
+import 'package:velora/features/documents/data/documents_api.dart';
 import 'package:velora/features/products/data/product.dart';
 import 'package:velora/features/products/data/products_api.dart';
+import 'package:velora/features/sell/data/sales_api.dart';
 
 /// Runs the app's real API client against a running backend seeded with the demo data.
 /// Skipped unless VELORA_LIVE_API is set, e.g.
@@ -28,6 +31,8 @@ void main() {
   late AuthApi api;
   late ProductsApi products;
   late CustomersApi customers;
+  late SalesApi sales;
+  late DocumentsApi documents;
   var sessionEnded = 0;
 
   setUp(() {
@@ -49,6 +54,8 @@ void main() {
     api = AuthApi(dio);
     products = ProductsApi(dio);
     customers = CustomersApi(dio);
+    sales = SalesApi(dio);
+    documents = DocumentsApi(dio);
   });
 
   test('sign in as sales, load profile, sign out', () async {
@@ -357,4 +364,179 @@ void main() {
     expect(await customers.findByMobile(local), isEmpty);
     expect((await customers.get(created.id)).isArchived, isTrue);
   }, skip: skip);
+
+  test(
+    'sales: preview, quotation, invoice, payment, PDF, return and cancel',
+    () async {
+      Future<void> signIn(String who) async => store.write(
+        await api.login(email: '$who@velora.example', password: password),
+      );
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+
+      // A product of its own, so stock assertions do not depend on other runs.
+      await signIn('manager');
+      final product = await products.create(
+        NewProduct(
+          name: 'Contract Sale Ring',
+          sku: 'SALE-$stamp',
+          costMinor: 100000,
+          defaultMarkupBp: 3000,
+          minMarkupBp: 1500,
+          openingQuantity: 5,
+        ),
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(product.listPriceMinor, 130000);
+      expect(product.floorPriceMinor, 115000);
+
+      await signIn('ahmed');
+      final customer = await customers.create(
+        CustomerInput(
+          name: 'Sale Customer',
+          mobile: '052${(stamp % 10000000).toString().padLeft(7, '0')}',
+        ),
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(await sales.taxRates(), isNotEmpty);
+
+      SaleLine line(int quantity, [int price = 130000]) => SaleLine(
+        productId: product.id,
+        quantity: quantity,
+        unitPriceMinor: price,
+      );
+      final preview = await sales.preview(
+        lines: [line(2)],
+        discountMinor: 10000,
+      );
+      expect(preview.valid, isTrue);
+      expect(preview.subtotalMinor, 260000);
+      // Tax on the discounted total, half-up, in integer minor units.
+      final tax = (250000 * preview.tax.rateBp + 5000) ~/ 10000;
+      expect(preview.tax.amountMinor, tax);
+      expect(preview.totalMinor, 250000 + tax);
+
+      final tooLow = await sales.preview(
+        lines: [line(1, 100000)],
+        discountMinor: 0,
+      );
+      expect(tooLow.valid, isFalse);
+      expect(tooLow.issues.single.single.code, 'PRICE_BELOW_MINIMUM');
+      expect(tooLow.issues.single.single.floorPriceMinor, 115000);
+      final tooMany = await sales.preview(lines: [line(6)], discountMinor: 0);
+      expect(tooMany.issues.single.single.code, 'INSUFFICIENT_STOCK');
+      expect(tooMany.issues.single.single.available, 5);
+
+      final quotation = await sales.createQuotation(
+        customerId: customer.id,
+        lines: [line(2)],
+        discountMinor: 10000,
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(quotation.status, QuotationStatus.open);
+      expect(quotation.totalMinor, preview.totalMinor);
+      expect((await products.get(product.id)).quantity, 5, reason: 'no stock');
+
+      final key = newIdempotencyKey();
+      Future<Invoice> create() => sales.createInvoice(
+        customerId: customer.id,
+        quotationId: quotation.id,
+        lines: [line(2)],
+        discountMinor: 10000,
+        receivedMinor: 100000,
+        method: PaymentMethod.cash,
+        creditDays: 14,
+        idempotencyKey: key,
+      );
+      final invoice = await create();
+      expect((await create()).id, invoice.id, reason: 'same key, one invoice');
+      expect(invoice.totalMinor, preview.totalMinor);
+      expect(invoice.paymentStatus, PaymentStatus.partial);
+      expect(invoice.balanceMinor, preview.totalMinor - 100000);
+      expect(invoice.quotationNumber, quotation.number);
+      expect(invoice.profit, isNull, reason: 'sales never receive profit');
+      expect(invoice.lines.single.unitCostMinor, isNull);
+      expect((await products.get(product.id)).quantity, 3);
+      expect(
+        (await documents.quotation(quotation.id)).status,
+        QuotationStatus.converted,
+      );
+
+      await expectLater(
+        documents.recordPayment(
+          invoice.id,
+          amountMinor: invoice.balanceMinor + 1,
+          method: PaymentMethod.cash,
+          idempotencyKey: newIdempotencyKey(),
+        ),
+        throwsA(isA<Failure>()),
+        reason: 'cannot pay more than the balance',
+      );
+      final paid = await documents.recordPayment(
+        invoice.id,
+        amountMinor: invoice.balanceMinor,
+        method: PaymentMethod.bankTransfer,
+        reference: 'LIVE-$stamp',
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(paid.paymentStatus, PaymentStatus.paid);
+      expect(paid.payments, hasLength(2));
+
+      final listed = await documents.list(q: invoice.number);
+      expect(listed.items.single.id, invoice.id);
+      expect(listed.items.single.paymentStatus, PaymentStatus.paid);
+      final pdf = await documents.pdf(isInvoice: true, id: invoice.id);
+      expect(String.fromCharCodes(pdf.take(5)), '%PDF-');
+
+      await expectLater(
+        documents.cancelInvoice(
+          invoice.id,
+          reason: 'not allowed',
+          refundMethod: PaymentMethod.cash,
+          idempotencyKey: newIdempotencyKey(),
+        ),
+        throwsA(isA<ForbiddenFailure>()),
+        reason: 'sales cannot cancel',
+      );
+
+      // A second, unpaid invoice for the manager to cancel.
+      final credit = await sales.createInvoice(
+        customerId: customer.id,
+        lines: [line(1)],
+        discountMinor: 0,
+        creditDays: 30,
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(credit.paymentStatus, PaymentStatus.unpaid);
+      expect(credit.payments, isEmpty);
+
+      await signIn('manager');
+      final seen = await documents.invoice(invoice.id);
+      expect(seen.profit, isNotNull, reason: 'managers receive profit');
+      expect(seen.lines.single.unitCostMinor, 100000);
+
+      final returned = await documents.createReturn(
+        invoice.id,
+        reason: 'Contract test return',
+        lines: [(lineNo: seen.lines.single.lineNo, quantity: 1, restock: true)],
+        refundMethod: PaymentMethod.cash,
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(returned.returns.single.units, 1);
+      expect(returned.returnedMinor, returned.returns.single.totalMinor);
+      expect(returned.returns.single.refundMinor, returned.returnedMinor);
+      expect(returned.lines.single.returnedQuantity, 1);
+      expect(returned.balanceMinor, 0);
+      expect((await products.get(product.id)).quantity, 3, reason: '5−2−1+1');
+
+      final cancelled = await documents.cancelInvoice(
+        credit.id,
+        reason: 'Contract test cancel',
+        idempotencyKey: newIdempotencyKey(),
+      );
+      expect(cancelled.cancelled, isTrue);
+      expect(cancelled.cancelReason, 'Contract test cancel');
+      expect((await products.get(product.id)).quantity, 4);
+    },
+    skip: skip,
+  );
 }

@@ -4,6 +4,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Sprint 4 (2026-11-16)
+**Backend**
+- Pricing preview: server-authoritative totals for a cart, with per-line problems (below the lowest price, above the highest, not enough stock, product unavailable). Managers may sell below the lowest price with a reason, which is audited.
+- Quotations (numbered `QT-YYYY-NNNNN`, hold prices not stock, expire, can be cancelled or converted) and invoices (`INV-…`) issued in one transaction that takes stock, assigns the number, records an optional first payment and writes the audit entry. Concurrent sales of the last units cannot oversell.
+- Later payments, manager-only refunds, cancellation (stock restored, money received recorded as refunded) and returns with credit notes (`CN-…`; optional restock; refund only of what exceeds the balance).
+- Combined documents list with status filters and search; invoice and quotation PDFs; `GET /tax-rates`.
+- Cost and profit are never sent to the sales role on any sales response.
+
+**Mobile**
+- Sell flow: pick in-stock products, choose a price between the lowest and highest allowed (managers also see cost and profit), cart with discount, tax rate and notes, customer picker, and a payment step that states the outcome (paid, partially paid, credit sale with due date) before anything is saved. The cart survives closing the app.
+- Documents: list with filters and search; invoice and quotation detail; record payment; cancel; return items; share the PDF or message the customer on WhatsApp. Cancel and return are offered to managers only.
+- A sale that fails because stock or prices changed meanwhile saves nothing and returns to the cart, which shows what to fix. Retrying after a lost connection cannot create a second invoice.
+
+### Changed
+- Each tab has its own snackbar area, so messages no longer cover a screen's pinned action buttons.
+- After a sale the Sell tab returns to the product list while the new document opens under Documents.
+
+### Not included
+- Named drafts (D6), offline invoices, date/salesperson filter sheet, in-app print preview — see `TASKS.md`.
+
 ### Added — Sprint 3 (2026-11-16)
 **Backend**
 - Customers API: list with search across name, company, email and phone digits; exact lookup by mobile number in any spelling; create (idempotent, optional client-generated id); detail with totals over issued invoices (invoiced, outstanding, overdue — own invoices only for the sales role); edit; manager-only archive.

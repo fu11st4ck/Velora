@@ -26,6 +26,7 @@ import { PdfService } from './sales/pdf.service';
 import { PricingService } from './sales/pricing.service';
 import { QuotationsService } from './sales/quotations.service';
 import { DocumentsController, InvoicesController, PricingController, QuotationsController } from './sales/sales.controller';
+import { TaxRatesController } from './sales/tax-rates.controller';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { PrismaModule } from './prisma/prisma.module';
     DocumentsController,
     QuotationsController,
     InvoicesController,
+    TaxRatesController,
   ],
   providers: [
     { provide: APP_CONFIG, useFactory: () => loadConfig() },

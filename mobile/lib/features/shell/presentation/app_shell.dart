@@ -1,5 +1,8 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+
+import '../../sell/presentation/cart_controller.dart';
 
 /// Width at which the bottom bar becomes a navigation rail (design system: tablets ≥ 840 dp).
 const railBreakpoint = 840.0;
@@ -25,7 +28,7 @@ const _destinations = <({String label, IconData icon, IconData selectedIcon})>[
 ];
 
 /// Primary navigation: five destinations, each keeping its own stack.
-class AppShell extends StatelessWidget {
+class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
 
@@ -34,7 +37,12 @@ class AppShell extends StatelessWidget {
       shell.goBranch(index, initialLocation: index == shell.currentIndex);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The Sell tab shows how many units are in the cart, wherever the user is.
+    final cartUnits = ref.watch(cartProvider.select((c) => c.units));
+    Widget badge(int index, Widget icon) => index == 2 && cartUnits > 0
+        ? Badge(label: Text('$cartUnits'), child: icon)
+        : icon;
     final wide = MediaQuery.sizeOf(context).width >= railBreakpoint;
     if (wide) {
       return Scaffold(
@@ -46,10 +54,10 @@ class AppShell extends StatelessWidget {
                 onDestinationSelected: _go,
                 labelType: NavigationRailLabelType.all,
                 destinations: [
-                  for (final d in _destinations)
+                  for (final (i, d) in _destinations.indexed)
                     NavigationRailDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.selectedIcon),
+                      icon: badge(i, Icon(d.icon)),
+                      selectedIcon: badge(i, Icon(d.selectedIcon)),
                       label: Text(d.label),
                     ),
                 ],
@@ -79,10 +87,10 @@ class AppShell extends StatelessWidget {
             selectedIndex: shell.currentIndex,
             onDestinationSelected: _go,
             destinations: [
-              for (final d in _destinations)
+              for (final (i, d) in _destinations.indexed)
                 NavigationDestination(
-                  icon: Icon(d.icon),
-                  selectedIcon: Icon(d.selectedIcon),
+                  icon: badge(i, Icon(d.icon)),
+                  selectedIcon: badge(i, Icon(d.selectedIcon)),
                   label: d.label,
                 ),
             ],

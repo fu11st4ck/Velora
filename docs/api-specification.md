@@ -87,6 +87,14 @@ Changes from the brief's starting list, with reasons:
 - **`/reports/profit-loss`** not provided — there are no expenses, so a P&L would be misleading; gross profit is in `sales-summary`.
 - **`/pricing/preview`, `/sync/changes`, `/tax-rates`, `/organization*`** added for server-authoritative totals, offline cache and configurable settings.
 
+### Implementation status (after Sprint 4)
+
+Implemented and tested: authentication, `GET /tax-rates`, products, inventory, customers, `/pricing/preview`, `/documents`, quotations, invoices, payments, refunds, cancel, returns, PDFs, health. Differences from the details below, all deliberate and tracked in `TASKS.md`:
+- `GET /documents` sorts by `-issuedAt` only; the other sort values are not implemented.
+- `POST /invoices` does not accept `offline` yet (Sprint 6); the field is rejected as unknown.
+- `POST /tax-rates`, `PATCH /tax-rates/{id}`, `/organization*`, `/dashboard/summary`, `/reports/*` arrive in Sprint 5; `/sync/changes` and the image upload URL in Sprint 6.
+- Creating a quotation, invoice or payment with a client-generated `id` that already exists returns `409 DOCUMENT_EXISTS`.
+
 ## 3. Endpoint details
 
 For every endpoint: auth is Bearer unless "public"; authorization per the table above; generic errors (`400 VALIDATION_ERROR`, `401`, `403 FORBIDDEN`, `404 NOT_FOUND`, `429`) always apply and are not repeated.

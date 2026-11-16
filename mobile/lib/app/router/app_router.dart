@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -11,6 +10,10 @@ import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/customers/presentation/customer_detail_screen.dart';
 import '../../features/customers/presentation/customer_form_screen.dart';
 import '../../features/customers/presentation/customers_screen.dart';
+import '../../features/documents/presentation/documents_screen.dart';
+import '../../features/documents/presentation/invoice_detail_screen.dart';
+import '../../features/documents/presentation/quotation_detail_screen.dart';
+import '../../features/documents/presentation/return_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/products/presentation/adjust_stock_screen.dart';
@@ -20,7 +23,9 @@ import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/products/presentation/receive_stock_screen.dart';
 import '../../features/products/presentation/stock_history_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
-import '../../features/shell/presentation/not_built_yet_screen.dart';
+import '../../features/sell/presentation/cart_screen.dart';
+import '../../features/sell/presentation/payment_screen.dart';
+import '../../features/sell/presentation/sell_screen.dart';
 import '../../features/shell/presentation/startup_screen.dart';
 import 'routes.dart';
 
@@ -74,8 +79,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             ResetPasswordScreen(token: state.uri.queryParameters['token']),
       ),
       // Five tabs, each with its own navigation stack.
-      StatefulShellRoute.indexedStack(
+      StatefulShellRoute(
         builder: (_, _, shell) => AppShell(shell: shell),
+        // Each tab gets its own messenger: a snackbar belongs to the tab that raised it and sits
+        // above that screen's pinned action bar, instead of covering it from the shell.
+        navigatorContainerBuilder: (_, shell, children) => IndexedStack(
+          index: shell.currentIndex,
+          children: [
+            for (final (i, child) in children.indexed)
+              TickerMode(
+                enabled: i == shell.currentIndex,
+                child: ScaffoldMessenger(child: child),
+              ),
+          ],
+        ),
         branches: [
           StatefulShellBranch(
             routes: [
@@ -137,8 +154,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.sell,
-                builder: (_, _) =>
-                    const NotBuiltYetScreen(title: 'New sale', sprint: 4),
+                builder: (_, _) => const SellScreen(),
+                routes: [
+                  GoRoute(path: 'cart', builder: (_, _) => const CartScreen()),
+                  GoRoute(
+                    path: 'payment',
+                    builder: (_, _) => const PaymentScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -146,8 +169,38 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: Routes.documents,
-                builder: (_, _) =>
-                    const NotBuiltYetScreen(title: 'Documents', sprint: 4),
+                builder: (_, _) => const DocumentsScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'invoices/:invoiceId',
+                    builder: (_, state) => InvoiceDetailScreen(
+                      invoiceId: state.pathParameters['invoiceId']!,
+                    ),
+                    routes: [
+                      GoRoute(
+                        path: 'return',
+                        redirect: (context, state) =>
+                            (ref
+                                    .read(currentUserProvider)
+                                    ?.can('invoice.return') ??
+                                false)
+                            ? null
+                            : Routes.invoice(
+                                state.pathParameters['invoiceId']!,
+                              ),
+                        builder: (_, state) => ReturnScreen(
+                          invoiceId: state.pathParameters['invoiceId']!,
+                        ),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'quotations/:quotationId',
+                    builder: (_, state) => QuotationDetailScreen(
+                      quotationId: state.pathParameters['quotationId']!,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
