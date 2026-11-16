@@ -1,6 +1,6 @@
 # ADR-0002 — Modular monolith on NestJS/Fastify, PostgreSQL and Prisma; no Redis in v1
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 Sales, stock and payments must change together in one transaction. The team and load are small. The brief prefers Node.js/NestJS, PostgreSQL and Prisma, and asks that Redis and microservices be justified rather than assumed.

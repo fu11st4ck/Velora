@@ -1,50 +1,58 @@
 # Development Guide
 
-> Sprint 0 state: there is no runnable application yet. The commands under "Available today" work now; the rest describes the workflow that Sprint 1 sets up and will be updated as it lands.
-
-## Available today
-
-```bash
-# Validate the database schema
-cd backend && DATABASE_URL="postgresql://u:p@localhost:5432/velora" npx prisma@6 validate --schema prisma/schema.prisma
-
-# Lint the API contract
-npx @redocly/cli@1 lint backend/openapi/openapi.yaml
-
-# Re-run the reference-application audit (Node 22 + Playwright with Chromium)
-node docs/reference-screenshots/audit-script.js <output-directory>
-```
-
-Both validations were run on 2026-11-15: the Prisma schema is valid; the OpenAPI document is valid (style warnings only).
-
-## Prerequisites (from Sprint 1)
+## Prerequisites
 
 | Tool | Version | Notes |
 |---|---|---|
-| Flutter | stable 3.x (pinned in `mobile/.fvmrc`) | Android SDK for Android builds; Xcode on macOS for iOS |
-| Node.js | 22 LTS | |
-| PostgreSQL | 16 | via Docker Compose or local install |
-| Docker + Compose | recent | optional when PostgreSQL is installed locally |
+| Node.js | 22 | |
+| PostgreSQL | 16 with `citext` and `pg_trgm` | local install, or `docker compose up -d postgres` |
+| Flutter | stable 3.50 (Dart 3.14) | Material comes from the `material_ui` package in this Flutter version — import `package:material_ui/material_ui.dart`, not `package:flutter/material.dart` |
+| Android SDK / Xcode | current | for device builds |
 
-## Planned workflow (Sprint 1)
+## Backend
 
 ```bash
-# Backend
 cd backend
-cp .env.example .env
-docker compose up -d            # postgres, minio, mailpit
+cp .env.example .env                 # local values only
+bash scripts/db-setup.sh             # creates roles velora_owner / velora_app and databases velora_dev / velora_test
 npm ci
-npx prisma migrate dev
-SEED_DEMO=true npx prisma db seed
-npm run start:dev               # http://localhost:3000/api/v1, Swagger UI at /docs
-npm test                        # unit + integration + scenarios (needs PostgreSQL)
+npx prisma generate
+DATABASE_URL=postgresql://velora_owner:velora_owner_dev@localhost:5432/velora_dev npx prisma migrate deploy
+SEED_DEMO=true SEED_PASSWORD='<choose one, 10+ chars>' \
+  DATABASE_MIGRATION_URL=postgresql://velora_owner:velora_owner_dev@localhost:5432/velora_dev npm run db:seed
+npm run start:dev                    # http://localhost:3000/api/v1
 
-# Mobile
+npm run lint && npm run typecheck && npm test && npm run build
+```
+
+- Two database roles on purpose: migrations and the seed run as the **owner**; the API connects as **`velora_app`**, which is subject to row-level security and cannot update or delete ledgers. Never point `DATABASE_URL` at the owner role.
+- Tests use the `velora_test` database and apply migrations automatically. Override with `TEST_DATABASE_URL` / `TEST_OWNER_DATABASE_URL`.
+- Demo accounts after seeding: `owner@velora.example`, `manager@velora.example`, `ahmed@velora.example` (sales), all with the `SEED_PASSWORD` you chose.
+- New migration: edit `prisma/schema.prisma`, run `npx prisma migrate dev --name <change>` as the owner, then add anything Prisma cannot express (checks, policies, grants) to the generated SQL and cover it in `test/database.spec.ts`. **Every new tenant table needs a row-level security policy** — a test fails otherwise.
+
+## Mobile
+
+```bash
 cd mobile
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs
-flutter run --flavor dev -t lib/main_dev.dart
 flutter analyze && flutter test
+flutter run -t lib/main_dev.dart                                   # Android emulator → http://10.0.2.2:3000/api/v1
+flutter run -t lib/main_dev.dart --dart-define=API_BASE_URL=http://localhost:3000/api/v1   # iOS simulator
+
+# Golden screenshots (review the images before committing)
+flutter test --update-goldens test/golden
+
+# The app's API client against a running, seeded backend
+VELORA_LIVE_API=http://localhost:3000/api/v1 VELORA_LIVE_PASSWORD='<seed password>' flutter test test/live
+```
+
+Staging and production builds require `--dart-define=API_BASE_URL=https://…` and refuse to start without it.
+
+## Other checks
+
+```bash
+npx @redocly/cli@1 lint backend/openapi/openapi.yaml                # API contract
+node docs/reference-screenshots/audit-script.js <output-directory>  # re-run the reference audit (Playwright)
 ```
 
 ## Conventions
@@ -58,6 +66,6 @@ flutter analyze && flutter test
 - **Architecture decisions** get an ADR.
 - **Definition of done:** see `docs/mobile-screen-specifications.md` (acceptance checklist) and `docs/testing-strategy.md`.
 
-## Workspace limitations noted during Sprint 0
+## Workspace limitations
 
-- The cloud workspace used for Sprint 0 has Node 22, PostgreSQL 16 and Chromium/Playwright, but **no Flutter SDK, no Android SDK/emulator, no Docker daemon and no macOS**. See risk R2/R3 in `docs/implementation-roadmap.md`.
+Sprints 0–1 were built in a cloud workspace with Node 22, PostgreSQL 16, the Flutter SDK and Chromium, but **no Android SDK or emulator, no macOS/Xcode and no Docker daemon**. Everything listed as verified in `CHANGELOG.md` was actually run there; device builds, the Docker image and the CI workflow were not. See risks R2/R3 in `docs/implementation-roadmap.md`.

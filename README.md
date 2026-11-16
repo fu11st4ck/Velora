@@ -2,7 +2,7 @@
 
 Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend for jewellery sales and inventory: stock, customer pricing, quotations, invoices, payments and reports.
 
-> **Status (2026-11-15): Sprint 0 — discovery and architecture — is complete and awaiting approval. No application code exists yet.** This repository currently contains the design documents, the database schema and the API contract.
+> **Status (2026-11-16): Sprint 0 approved; Sprint 1 (foundation) delivered** — a tested backend with authentication and tenant isolation, and a Flutter app that signs in against it. Product features start in Sprint 2. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 
@@ -23,16 +23,22 @@ The product is derived from the reference web demo at <https://velora-sales-inve
 ## Repository layout
 
 ```
-backend/
-  prisma/schema.prisma     PostgreSQL schema (validated)
-  openapi/openapi.yaml     API contract (linted)
+backend/                   NestJS API
+  src/                     common, prisma, authz, auth, idempotency, audit, mail, health
+  prisma/                  schema, migrations (incl. constraints + row-level security), seed
+  openapi/openapi.yaml     API contract
+  test/                    unit, HTTP integration and direct-SQL tests
+mobile/                    Flutter app
+  lib/app/                 config, router, theme
+  lib/core/                api client, auth/session, money, shared widgets
+  lib/features/            auth, shell, home, more
+  test/                    unit, widget, app-flow, golden and live contract tests
 docs/                      Product, design, architecture, API, strategy documents
   reference-screenshots/   Evidence from the audit of the reference app + the audit script
   architecture-decision-records/
-mobile/                    Flutter app — created in Sprint 1
 DEVELOPMENT.md  ENVIRONMENT.md  CHANGELOG.md  TASKS.md
 ```
 
-## Stack (proposed)
+## Stack
 
 Flutter · Riverpod · go_router · Dio · Drift — NestJS (Fastify) · Prisma · PostgreSQL 16 — REST `/api/v1` with OpenAPI 3.1. Rationale and trade-offs: [`docs/system-architecture.md`](docs/system-architecture.md).

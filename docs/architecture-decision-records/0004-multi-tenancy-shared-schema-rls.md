@@ -1,6 +1,6 @@
 # ADR-0004 — Shared-schema multi-tenancy with row-level security
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The brief requires organization-level isolation. The reference has a single hardcoded company.

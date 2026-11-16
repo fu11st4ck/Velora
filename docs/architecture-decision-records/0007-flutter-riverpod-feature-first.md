@@ -1,6 +1,6 @@
 # ADR-0007 — Flutter with Riverpod, go_router, Dio and Drift; feature-first structure
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Decision
 - Riverpod (generated providers) for state and dependency injection; go_router with a stateful shell for five tabs; Dio with auth, idempotency and error interceptors; Freezed/json_serializable models; Drift for cache, drafts and outbox; flutter_secure_storage for tokens.

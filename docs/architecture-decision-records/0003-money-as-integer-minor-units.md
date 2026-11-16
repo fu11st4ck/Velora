@@ -1,6 +1,6 @@
 # ADR-0003 — Money as integer minor units; rates as basis points; half-up rounding
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The reference computes money in JavaScript floating point and displays zero decimals, so a document can show a total that its own lines do not add up to (VAT 141.95 shown as "AED 142").

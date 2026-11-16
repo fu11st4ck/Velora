@@ -128,9 +128,10 @@ Stack traces, SQL, and internal identifiers are never returned. Unknown exceptio
 
 ## 6. Idempotency behaviour in detail
 
-1. First request with a key: a row is inserted (`response_status = null`) in the same transaction as the business change; the response is stored on commit.
-2. Replay after completion: stored status and body are returned with `Idempotent-Replayed: true`.
-3. Replay while in flight: `409 REQUEST_IN_PROGRESS`.
-4. Same key with a different body hash: `409 IDEMPOTENCY_KEY_REUSED`.
-5. A request that failed with 4xx stores that failure too — the same key always yields the same outcome. To try again after correcting input, the client generates a new key.
-6. Failures from 5xx/transaction rollback store nothing, so the retry executes normally.
+As implemented in `backend/src/idempotency/idempotency.service.ts` (Sprint 1):
+
+1. The key row, the business change and the stored response are written in **one database transaction** — either all exist or none do.
+2. Replay after completion: the stored status and body are returned with `Idempotent-Replayed: true`.
+3. A concurrent request with the same key waits on the unique index until the first commits, then replays its response. (`REQUEST_IN_PROGRESS` is therefore returned only if that wait times out.)
+4. Same key with a different body, or from a different user: `409 IDEMPOTENCY_KEY_REUSED`. Bodies are compared in canonical form, so key order does not matter.
+5. Any failure (4xx or 5xx) rolls the transaction back and stores nothing: retrying with the same key executes normally and, for an unchanged request, deterministically produces the same rejection.

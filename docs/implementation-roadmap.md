@@ -1,8 +1,10 @@
 # Velora — Implementation Roadmap
 
-Status at 2026-11-15: **Sprint 0 complete, awaiting approval.** No application code has been written; Sprint 1 starts after the decisions in §1 are confirmed.
+Status at 2026-11-16: **Sprint 0 approved (all defaults in §1 accepted on 2026-11-15). Sprint 1 delivered** — see `TASKS.md` and `CHANGELOG.md` for what was built, verified and carried over.
 
 ## 1. Decisions needed
+
+> **Resolved 2026-11-15:** the owner accepted the recommended default for every decision below (D1–D11). The table is kept as the record of what was decided and what the alternatives were. D7 (tax) still needs the accountant's confirmation before Sprint 4.
 
 Each has a recommended default. Approving "all defaults" is sufficient to start Sprint 1; D1–D4 are the ones that change what gets built.
 

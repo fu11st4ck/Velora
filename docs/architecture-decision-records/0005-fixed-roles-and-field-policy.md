@@ -1,6 +1,6 @@
 # ADR-0005 — Three fixed roles and server-side field confidentiality
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The reference distinguishes Manager and Sales, and intends to hide purchase prices and profit from Sales — but exposes the markup percentage next to the selling price and applies the distinction only in the browser.

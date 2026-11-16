@@ -42,7 +42,7 @@ Business settings are columns here, not a separate `business_settings` table: th
 Unique `(organization_id, code)`. Partial unique index on `(organization_id) WHERE is_default` (SQL migration). One default branch is created with the organization; v1 UI is single-branch.
 
 ### users
-`email` citext **unique** · `password_hash` text (Argon2id) · `full_name` text · `phone` text null · `is_active` bool default true · `last_login_at` timestamptz null.
+`email` citext **unique** · `password_hash` text (Argon2id) · `full_name` text · `phone` text null · `is_active` bool default true · `failed_login_count` int default 0 · `locked_until` timestamptz null (account lockout) · `last_login_at` timestamptz null.
 Users are global identities; access to a tenant comes only from `organization_members`.
 
 ### organization_members
@@ -52,7 +52,7 @@ Unique `(organization_id, user_id)`. Index `(user_id)`. This row — not the use
 Roles are an enum with a permission map in code. `roles`, `permissions` and `user_roles` tables are not created: three fixed roles do not justify runtime-configurable RBAC (ADR-0005).
 
 ### refresh_tokens
-`user_id` FK cascade · `family_id` uuid · `token_hash` text **unique** · `device_name` text null · `ip_address` inet null · `expires_at` · `rotated_at` null · `revoked_at` null · `revoke_reason` text null.
+`user_id` FK cascade · `member_id` FK cascade (the membership the session acts as) · `family_id` uuid · `token_hash` text **unique** · `device_name` text null · `ip_address` inet null · `expires_at` · `rotated_at` null · `revoked_at` null · `revoke_reason` text null.
 Indexes `(user_id)`, `(family_id)`. A token family is the session; no separate `sessions` table.
 
 ### password_reset_tokens
@@ -161,7 +161,7 @@ Item: `return_id` FK, `invoice_item_id` FK (unique with return), `quantity` (`CH
 `organization_id` FK cascade · `key` text · `user_id` · `method`, `path` · `request_hash` · `response_status` int null · `response_body` jsonb null · `expires_at`. Unique `(organization_id, key)`; index `(expires_at)` for the cleanup job (retain 7 days — longer than the maximum offline replay window the app allows).
 
 ### audit_logs  *(append-only)*
-`organization_id` FK · `actor_user_id` uuid null · `action` text · `entity_type` text null · `entity_id` uuid null · `before`, `after` jsonb null · `ip_address` inet null · `user_agent`, `request_id` text null.
+`organization_id` FK **null** (null only for pre-tenant authentication events such as a failed sign-in for an unknown account) · `actor_user_id` uuid null · `action` text · `entity_type` text null · `entity_id` uuid null · `before`, `after` jsonb null · `ip_address` inet null · `user_agent`, `request_id` text null.
 Indexes `(organization_id, created_at)`, `(organization_id, entity_type, entity_id)`. No foreign keys on actor/entity so entries can never block or be removed by other changes.
 
 ## 3. Multi-tenant isolation

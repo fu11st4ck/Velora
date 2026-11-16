@@ -1,6 +1,6 @@
 # Velora — System Architecture
 
-Status: **proposed** (Sprint 0). Decisions are recorded as ADRs in [`architecture-decision-records/`](architecture-decision-records/).
+Status: **accepted** with the Sprint 0 approval (2026-11-15). Decisions are recorded as ADRs in [`architecture-decision-records/`](architecture-decision-records/).
 
 ## 1. Context
 

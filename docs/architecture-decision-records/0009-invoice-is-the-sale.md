@@ -1,6 +1,6 @@
 # ADR-0009 — An invoice is the sale; quotations are separate; a payment belongs to one invoice
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The brief lists sales, sale items, invoices, invoice items, payments and payment allocations as candidates. In the reference, completing a sale *is* generating the invoice; quotations are saved carts; "Credit" and "Partial" are presented as payment methods.

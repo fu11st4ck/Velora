@@ -1,6 +1,6 @@
 # ADR-0001 — Server-authoritative backend
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The reference application has no backend. All data is in one browser's `localStorage`, roles are a dropdown, and three dashboard figures are literals. It cannot support two devices, real access control, or trustworthy stock.

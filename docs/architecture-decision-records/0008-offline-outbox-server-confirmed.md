@@ -1,6 +1,6 @@
 # ADR-0008 — Offline via local cache and outbox; stock and money confirmed by the server
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 Shops may have unreliable connectivity. Offline writes to shared stock and money can create inconsistent records.

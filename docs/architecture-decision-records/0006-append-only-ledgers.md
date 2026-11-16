@@ -1,6 +1,6 @@
 # ADR-0006 — Append-only stock and payment ledgers; invoices are immutable
 
-**Status:** Proposed · **Date:** 2026-11-15
+**Status:** Accepted (2026-11-15) · **Date:** 2026-11-15
 
 ## Context
 The reference overwrites product quantities in place and stores one "amount received" on the invoice. There is no history, and overselling silently clamps stock to zero.
