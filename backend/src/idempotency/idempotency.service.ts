@@ -70,7 +70,7 @@ export class IdempotencyService {
         where: { id: (inserted[0] as { id: string }).id },
         data: { responseStatus: successStatus, responseBody: body ?? Prisma.JsonNull },
       });
-      // The stored (JSON-safe) form is returned so first response and replay are byte-identical.
+      // The stored (JSON-safe) form is returned so the first response and a replay have the same content.
       return { status: successStatus, body: body as T, replayed: false };
     });
   }

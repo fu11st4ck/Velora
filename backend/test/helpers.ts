@@ -143,3 +143,60 @@ export async function login(t: TestApp, user: Pick<SeededUser, 'email' | 'passwo
 }
 
 export const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
+
+import { randomUUID as uuid } from 'node:crypto';
+
+export interface SeededProduct {
+  id: string;
+  sku: string;
+}
+
+/** Inserts a product with stock and its opening ledger entry directly, bypassing the API. */
+export async function createProduct(
+  db: Client,
+  org: SeededOrg,
+  memberId: string,
+  p: Partial<{ sku: string; name: string; quantity: number; costMinor: number; defaultMarkupBp: number; minMarkupBp: number; reorderLevel: number | null; barcode: string | null; archived: boolean; createdAt: string }> = {},
+): Promise<SeededProduct> {
+  const id = uuid();
+  const sku = p.sku ?? `T-${id.slice(0, 8)}`;
+  const quantity = p.quantity ?? 10;
+  const cost = p.costMinor ?? 280000;
+  await db.query(
+    `INSERT INTO products (id, organization_id, sku, barcode, name, cost_minor, default_markup_bp, min_markup_bp, reorder_level, archived_at, is_active, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12::timestamptz, now()), now())`,
+    [id, org.id, sku, p.barcode ?? null, p.name ?? `Product ${sku}`, cost, p.defaultMarkupBp ?? 3000, p.minMarkupBp ?? 1500, p.reorderLevel ?? null, p.archived ? new Date() : null, !p.archived, p.createdAt ?? null],
+  );
+  await db.query(
+    `INSERT INTO stock_levels (id, organization_id, product_id, branch_id, quantity, updated_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, now())`,
+    [org.id, id, org.branchId, quantity],
+  );
+  if (quantity > 0) {
+    await db.query(
+      `INSERT INTO stock_movements (id, organization_id, product_id, branch_id, type, quantity_delta, balance_after, unit_cost_minor, created_by_id)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'OPENING', $4, $4, $5, $6)`,
+      [org.id, id, org.branchId, quantity, cost, memberId],
+    );
+  }
+  return { id, sku };
+}
+
+/** True when any key anywhere in the JSON value matches one of the names. */
+export function hasKeyDeep(value: unknown, names: readonly string[]): string | null {
+  if (Array.isArray(value)) {
+    for (const v of value) {
+      const hit = hasKeyDeep(v, names);
+      if (hit) return hit;
+    }
+  } else if (value !== null && typeof value === 'object') {
+    for (const [k, v] of Object.entries(value)) {
+      if (names.includes(k)) return k;
+      const hit = hasKeyDeep(v, names);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+/** Fields that reveal cost, markup, profit or purchasing details (business rule P7). */
+export const CONFIDENTIAL_KEYS = ['costMinor', 'unitCostMinor', 'defaultMarkupBp', 'minMarkupBp', 'maxMarkupBp', 'markupBp', 'supplierName', 'profit', 'grossProfitMinor', 'cogsMinor', 'marginBp', 'inventoryValueMinor'] as const;

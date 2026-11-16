@@ -33,4 +33,26 @@ export const Errors = {
     new DomainError('IDEMPOTENCY_KEY_REQUIRED', 400, 'An Idempotency-Key header (UUID) is required.'),
   idempotencyKeyReused: () =>
     new DomainError('IDEMPOTENCY_KEY_REUSED', 409, 'This Idempotency-Key was already used with a different request.'),
+  validation: (field: string, rule: string) =>
+    new DomainError('VALIDATION_ERROR', 400, 'The request is not valid.', [{ field, rule }]),
+  versionConflict: (currentVersion: number) =>
+    new DomainError('VERSION_CONFLICT', 409, 'This record was changed by someone else. Reload and try again.', [
+      { currentVersion },
+    ]),
+  invalidState: (state: string, message: string) => new DomainError('INVALID_STATE', 409, message, [{ state }]),
+  skuTaken: () => new DomainError('SKU_TAKEN', 409, 'Another product already uses this SKU.', [{ field: 'sku' }]),
+  barcodeTaken: () =>
+    new DomainError('BARCODE_TAKEN', 409, 'Another product already uses this barcode.', [{ field: 'barcode' }]),
+  markupPolicyInvalid: (maxMarkupBp: number) =>
+    new DomainError(
+      'MARKUP_POLICY_INVALID',
+      422,
+      'Minimum markup must not exceed the default, and the default must not exceed the maximum.',
+      [{ maxMarkupBp }],
+    ),
+  productHasStock: (quantity: number) =>
+    new DomainError('PRODUCT_HAS_STOCK', 409, 'A product with stock on hand cannot be archived.', [{ quantity }]),
+  productArchived: () => new DomainError('PRODUCT_ARCHIVED', 422, 'This product is archived.'),
+  insufficientStock: (details: { productId: string; requested: number; available: number; lineNo?: number }[]) =>
+    new DomainError('INSUFFICIENT_STOCK', 409, 'Not enough stock.', details),
 } as const;

@@ -36,6 +36,12 @@ export class GlobalErrorFilter implements ExceptionFilter {
       status = exception.status;
       body = { error: { code: exception.code, message: exception.message, details: exception.details, requestId } };
       for (const [k, v] of Object.entries(exception.headers ?? {})) void reply.header(k, v);
+    } else if (uniqueViolation(exception)) {
+      // Two requests raced past the friendly pre-check; the database constraint decided.
+      const target = uniqueViolation(exception) as string;
+      const code = target.includes('barcode') ? 'BARCODE_TAKEN' : target.includes('sku') ? 'SKU_TAKEN' : 'INVALID_STATE';
+      status = 409;
+      body = { error: { code, message: 'This value is already in use.', requestId } };
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
@@ -70,4 +76,12 @@ export class GlobalErrorFilter implements ExceptionFilter {
 function isFastifyClientError(e: unknown): e is { statusCode: number } {
   const code = (e as { statusCode?: unknown } | null)?.statusCode;
   return typeof code === 'number' && code >= 400 && code < 500;
+}
+
+/** Returns the constraint/columns of a PostgreSQL unique violation surfaced by Prisma, else null. */
+function uniqueViolation(e: unknown): string | null {
+  const err = e as { code?: string; meta?: { target?: unknown; message?: unknown; code?: unknown }; message?: string } | null;
+  if (err?.code === 'P2002') return JSON.stringify(err.meta?.target ?? err.message ?? '').toLowerCase() || 'unknown';
+  if (err?.code === 'P2010' && err.meta?.code === '23505') return String(err.meta?.message ?? '').toLowerCase() || 'unknown';
+  return null;
 }

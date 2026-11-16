@@ -5,6 +5,10 @@ import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { PasswordService } from './auth/password.service';
 import { TokenService } from './auth/token.service';
+import { ProductsController } from './catalog/products.controller';
+import { ProductsService } from './catalog/products.service';
+import { InventoryController } from './inventory/inventory.controller';
+import { InventoryService } from './inventory/inventory.service';
 import { AuthGuard } from './authz/auth.guard';
 import { Clock } from './common/clock';
 import { APP_CONFIG, loadConfig } from './common/config';
@@ -17,7 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [AuthController, HealthController],
+  controllers: [AuthController, HealthController, ProductsController, InventoryController],
   providers: [
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
     Clock,
@@ -27,6 +31,8 @@ import { PrismaModule } from './prisma/prisma.module';
     PasswordService,
     AuthService,
     IdempotencyService,
+    ProductsService,
+    InventoryService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
     { provide: APP_FILTER, useClass: GlobalErrorFilter },
