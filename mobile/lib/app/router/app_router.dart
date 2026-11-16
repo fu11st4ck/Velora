@@ -8,6 +8,9 @@ import '../../core/auth/session_controller.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
+import '../../features/customers/presentation/customer_detail_screen.dart';
+import '../../features/customers/presentation/customer_form_screen.dart';
+import '../../features/customers/presentation/customers_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/more/presentation/more_screen.dart';
 import '../../features/products/presentation/adjust_stock_screen.dart';
@@ -150,7 +153,38 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(
             routes: [
-              GoRoute(path: Routes.more, builder: (_, _) => const MoreScreen()),
+              GoRoute(
+                path: Routes.more,
+                builder: (_, _) => const MoreScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'customers',
+                    builder: (_, _) => const CustomersScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'new',
+                        builder: (_, state) => CustomerFormScreen(
+                          initialText: state.extra as String?,
+                        ),
+                      ),
+                      GoRoute(
+                        path: ':customerId',
+                        builder: (_, state) => CustomerDetailScreen(
+                          customerId: state.pathParameters['customerId']!,
+                        ),
+                        routes: [
+                          GoRoute(
+                            path: 'edit',
+                            builder: (_, state) => CustomerFormScreen(
+                              customerId: state.pathParameters['customerId'],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           ),
         ],

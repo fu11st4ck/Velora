@@ -47,10 +47,13 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] S2-05 Camera barcode scanning — needs a device to build and verify; scheduled with the first device-capable environment
 - [ ] S2-06 Product cache and delta sync (`GET /sync/changes`, Drift) — moved to Sprint 6 with the rest of offline support, so the cache and the sync engine are designed together
 
-## Sprint 3 — Customers ← next
-- [ ] S3-01 Customers API · S3-02 Customer screens and picker · S3-03 Cache and offline create
+## Sprint 3 — Customers
+- [x] S3-01 Customers API: list with search (name, company, email, phone digits), exact lookup by mobile, create with optional client id, detail with invoiced / outstanding / overdue totals, edit, manager-only archive
+- [x] S3-02 Customer screens E1–E3 (directory, detail, new/edit) and the reusable customer picker (D4) for the sale flow
+- [ ] S3-03 Customer cache and offline create — moved to Sprint 6 with the rest of offline support
+- [ ] Customer's document list on the detail screen — added with the documents feature in Sprint 4
 
-## Sprint 4 — Sales and documents (D7 tax rule needs accountant confirmation)
+## Sprint 4 — Sales and documents ← next (D7 tax rule needs accountant confirmation)
 - [ ] S4-01 Pricing engine · S4-02 Numbering and quotations · S4-03 Invoice issue transaction
 - [ ] S4-04 Payments and refunds · S4-05 Cancellation and returns · S4-06 Documents list and PDF
 - [ ] S4-07 Sell flow screens · S4-08 Documents screens
@@ -65,5 +68,5 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] S6-06 Store preparation · S6-07 Device end-to-end and accessibility pass
 
 ## Open blockers
-- **Nothing has been pushed.** GitHub refuses pushes from this session to `fu11st4ck/Velora` (the Claude GitHub App has no write access). All work is committed locally on `claude/velora-flutter-mobile-nmc3b4`.
+- CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.
 - Android SDK download host is not reachable from the current workspace; iOS builds need macOS (CI).

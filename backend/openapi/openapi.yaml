@@ -608,7 +608,11 @@ paths:
         - { $ref: '#/components/parameters/Q' }
         - name: sort
           in: query
-          schema: { type: string, enum: [name, -createdAt, -lastInvoiceAt], default: name }
+          schema: { type: string, enum: [name, -createdAt], default: name }
+        - name: mobile
+          in: query
+          description: Exact match on the normalized mobile number, in any spelling.
+          schema: { type: string, maxLength: 32 }
         - { $ref: '#/components/parameters/Limit' }
         - { $ref: '#/components/parameters/Cursor' }
       responses:
@@ -644,12 +648,7 @@ paths:
                 required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/Customer' }
-                  meta:
-                    type: object
-                    properties:
-                      possibleDuplicates:
-                        type: array
-                        items: { $ref: '#/components/schemas/CustomerRef' }
+        '409': { $ref: '#/components/responses/Error' }
         '400': { $ref: '#/components/responses/Error' }
   /customers/{id}:
     parameters: [{ $ref: '#/components/parameters/Id' }]

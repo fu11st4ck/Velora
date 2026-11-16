@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:velora/app/app.dart';
 import 'package:velora/core/auth/token_store.dart';
 
+import '../support/fake_customer_server.dart';
 import '../support/fake_inventory_server.dart';
 import '../support/fakes.dart';
 import '../support/harness.dart';
@@ -190,6 +191,64 @@ void main() {
       await expectLater(
         find.byType(VeloraAppRoot),
         matchesGoldenFile('goldens/new_product_errors_light.png'),
+      );
+    });
+  });
+
+  group('customers', () {
+    Future<FakeCustomerServer> openCustomers(
+      WidgetTester tester, {
+      String role = 'MANAGER',
+    }) async {
+      setScreenSize(tester, const Size(390, 844));
+      final server = FakeCustomerServer(role: role)..seedReference();
+      server.seed(company: 'Zenith Gems LLC');
+      final maya = server.byName('Maya Farah');
+      maya['address'] = 'Jumeirah Lake Towers, Dubai';
+      maya['taxRegistrationNumber'] = '100123456700003';
+      server.summaries[maya['id'] as String] = {
+        'invoicedMinor': 1663400,
+        'outstandingMinor': 1131200,
+        'overdueMinor': 350000,
+        'invoiceCount': 3,
+        'lastInvoiceAt': '2026-11-10T08:00:00.000Z',
+      };
+      await tester.pumpWidget(
+        AppHarness(server: customerHandler(server), tokens: stored).build(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('open-customers')));
+      await tester.pumpAndSettle();
+      return server;
+    }
+
+    testWidgets('directory', (tester) async {
+      await openCustomers(tester);
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/customers_light.png'),
+      );
+    });
+
+    testWidgets('detail with an overdue balance', (tester) async {
+      await openCustomers(tester);
+      await tester.tap(find.text('Maya Farah'));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/customer_detail_light.png'),
+      );
+    });
+
+    testWidgets('new customer form', (tester) async {
+      await openCustomers(tester);
+      await tester.tap(find.byKey(const Key('new-customer')));
+      await tester.pumpAndSettle();
+      await expectLater(
+        find.byType(VeloraAppRoot),
+        matchesGoldenFile('goldens/customer_form_light.png'),
       );
     });
   });

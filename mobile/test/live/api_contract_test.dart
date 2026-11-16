@@ -11,6 +11,8 @@ import 'package:velora/core/auth/session.dart';
 import 'package:velora/core/auth/token_store.dart';
 import 'package:velora/core/api/idempotency.dart';
 import 'package:velora/features/auth/data/auth_api.dart';
+import 'package:velora/features/customers/data/customer.dart';
+import 'package:velora/features/customers/data/customers_api.dart';
 import 'package:velora/features/products/data/product.dart';
 import 'package:velora/features/products/data/products_api.dart';
 
@@ -25,6 +27,7 @@ void main() {
   late InMemoryTokenStore store;
   late AuthApi api;
   late ProductsApi products;
+  late CustomersApi customers;
   var sessionEnded = 0;
 
   setUp(() {
@@ -45,6 +48,7 @@ void main() {
       );
     api = AuthApi(dio);
     products = ProductsApi(dio);
+    customers = CustomersApi(dio);
   });
 
   test('sign in as sales, load profile, sign out', () async {
@@ -270,4 +274,87 @@ void main() {
     },
     skip: skip,
   );
+
+  test('customers: create, find by mobile, search, edit, detail and archive', () async {
+    await store.write(
+      await api.login(email: 'ahmed@velora.example', password: password),
+    );
+    // A unique UAE mobile number per run: 050 + seven digits.
+    final local =
+        '050${(DateTime.now().millisecondsSinceEpoch % 10000000).toString().padLeft(7, '0')}';
+    final e164 = '+971${local.substring(1)}';
+    final key = newIdempotencyKey();
+    final input = CustomerInput(
+      name: 'Contract Customer',
+      company: 'Contract Co',
+      mobile: local,
+      email: 'contract@example.com',
+    );
+    final created = await customers.create(input, idempotencyKey: key);
+    expect(
+      (await customers.create(input, idempotencyKey: key)).id,
+      created.id,
+      reason: 'same key creates nothing new',
+    );
+    expect(created.mobile, e164, reason: 'stored in international format');
+
+    expect((await customers.findByMobile(local)).map((c) => c.id), [
+      created.id,
+    ]);
+    expect(
+      (await customers.list(q: local.substring(3))).items.map((c) => c.id),
+      contains(created.id),
+    );
+
+    await expectLater(
+      customers.create(
+        const CustomerInput(name: 'Bad Phone', mobile: '12345'),
+        idempotencyKey: newIdempotencyKey(),
+      ),
+      throwsA(
+        isA<ValidationFailure>().having((f) => f.fields, 'fields', {
+          'mobile': 'phone',
+        }),
+      ),
+    );
+    await expectLater(
+      customers.create(
+        const CustomerInput(mobile: '+971501234567'),
+        idempotencyKey: newIdempotencyKey(),
+      ),
+      throwsA(
+        isA<ValidationFailure>().having((f) => f.fields, 'fields', {
+          'name': 'nameOrCompanyRequired',
+        }),
+      ),
+    );
+
+    final edited = await customers.update(
+      created.id,
+      CustomerInput(
+        name: 'Contract Customer',
+        company: 'Contract Co',
+        mobile: e164,
+        address: 'Dubai',
+      ),
+    );
+    expect(edited.email, isNull, reason: 'a field sent as null is cleared');
+    expect(edited.address, 'Dubai');
+
+    final detail = await customers.get(created.id);
+    expect(detail.summary?.invoiceCount, 0);
+    expect(detail.summary?.outstandingMinor, 0);
+
+    await expectLater(
+      customers.archive(created.id),
+      throwsA(isA<ForbiddenFailure>()),
+      reason: 'sales cannot archive',
+    );
+    await store.write(
+      await api.login(email: 'manager@velora.example', password: password),
+    );
+    await customers.archive(created.id);
+    expect(await customers.findByMobile(local), isEmpty);
+    expect((await customers.get(created.id)).isArchived, isTrue);
+  }, skip: skip);
 }

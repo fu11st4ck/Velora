@@ -4,6 +4,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Sprint 3 (2026-11-16)
+**Backend**
+- Customers API: list with search across name, company, email and phone digits; exact lookup by mobile number in any spelling; create (idempotent, optional client-generated id); detail with totals over issued invoices (invoiced, outstanding, overdue — own invoices only for the sales role); edit; manager-only archive.
+- Mobile numbers are validated and stored in international (E.164) form, reading local numbers in the organization's country.
+
+**Mobile**
+- Customer directory with search and paging, customer detail with account totals and call / WhatsApp / email actions, new/edit form, and a customer picker that returns an existing or newly created customer (used by the sale flow in Sprint 4).
+- Before creating a customer the app checks whether the mobile number is already saved and offers the existing customer instead.
+
+### Changed
+- `POST /customers` no longer returns `meta.possibleDuplicates`; duplicates are found beforehand with `GET /customers?mobile=`. Customer sort options are `name` and `-createdAt` (`-lastInvoiceAt` follows with invoices in Sprint 4). Balances are shown on the customer detail, not in the list.
+- Label/value rows give the value more room, so long values such as email addresses no longer break mid-word.
+
 ### Added — Sprint 2 (2026-11-16)
 **Backend**
 - Products API: list with search (name, SKU, barcode), stock-status filters, five sort orders, keyset pagination and per-status counts; create with opening stock; detail with stock per branch; edit with optimistic locking; archive.

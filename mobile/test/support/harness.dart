@@ -12,12 +12,18 @@ import 'fakes.dart';
 
 /// The real app (router, session, HTTP interceptors) running against a fake transport.
 class AppHarness {
-  AppHarness({required Handler server, StoredTokens? tokens})
-    : adapter = FakeAdapter(server),
-      store = InMemoryTokenStore(tokens);
+  AppHarness({
+    required Handler server,
+    StoredTokens? tokens,
+    this.overrides = const [],
+  }) : adapter = FakeAdapter(server),
+       store = InMemoryTokenStore(tokens);
 
   final FakeAdapter adapter;
   final InMemoryTokenStore store;
+
+  /// Extra provider overrides for a test (for example a fake link opener).
+  final List<Object> overrides;
 
   Widget build() => ProviderScope(
     overrides: [
@@ -27,6 +33,7 @@ class AppHarness {
       tokenStoreProvider.overrideWithValue(store),
       httpClientAdapterProvider.overrideWithValue(adapter),
       clockProvider.overrideWithValue(() => DateTime(2026, 11, 16, 9, 30)),
+      ...overrides.cast(),
     ],
     child: const VeloraApp(),
   );

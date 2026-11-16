@@ -217,15 +217,18 @@ For every endpoint: auth is Bearer unless "public"; authorization per the table 
 **Representation:** `{ id, name, company, mobile, email, address, taxRegistrationNumber, notes, archivedAt, createdAt, updatedAt }`; detail adds `summary: { invoicedMinor, outstandingMinor, overdueMinor, invoiceCount, lastInvoiceAt }`.
 
 #### GET /customers
-- **Query:** `q` (name, company, mobile, email), `sort` = `name|-createdAt|-lastInvoiceAt`, `limit`, `cursor`.
+- **Query:** `q` (name, company, email as case-insensitive text; phone by digits, ignoring spaces, punctuation and a leading zero), `mobile` (exact match on the normalized number, in any spelling — used to find an existing customer before creating one), `sort` = `name` (default; the displayed name: person, else company) `|-createdAt`, `limit`, `cursor`. Archived customers are excluded. (`-lastInvoiceAt` is added with invoices in Sprint 4.)
 
 #### POST /customers ⟳
-- **Body:** `{ "id"?: uuid, "name"?: string, "company"?: string, "mobile"?: string, "email"?: string, "address"?: string, "taxRegistrationNumber"?: string, "notes"?: string }`
-- **Validation:** at least one of `name`, `company` (non-blank); `mobile` parseable as a phone number (stored E.164); `email` format; lengths ≤ 160.
-- **201:** customer + `meta.possibleDuplicates: [{ id, name, company, mobile }]` (same mobile) — informational, not an error.
+- **Body:** `{ "id"?: uuid, "name"?: string, "company"?: string, "mobile"?: string, "email"?: string, "address"?: string, "taxRegistrationNumber"?: string, "notes"?: string }` — a blank string is treated as no value.
+- **Validation:** at least one of `name`, `company` (`400` with `details: [{ field: "name", rule: "nameOrCompanyRequired" }]`); `mobile` must be a valid phone number — a number without a country prefix is read in the organization's country — and is stored E.164 (`details: [{ field: "mobile", rule: "phone" }]`); `email` format; length limits.
+- **201:** customer. **Errors:** `409 CUSTOMER_EXISTS` when a supplied `id` is already used.
+- Duplicate detection is the client's job before creating: `GET /customers?mobile=…`. The mobile number is deliberately not unique (families and companies share numbers).
 
 #### GET /customers/{id} · PATCH /customers/{id} · DELETE /customers/{id} (M)
-- PATCH: same fields as POST; editing never changes issued documents (D2). DELETE archives; **204**.
+- GET adds `summary` over issued (not cancelled) invoices; for role S only the caller's own invoices. Overdue = balance of invoices whose due date is before today in the organization timezone. Archived customers remain readable by id.
+- PATCH: any of the POST fields except `id`; a field sent as `null` or blank is cleared, an omitted field is unchanged. Editing never changes issued documents (D2). **Errors:** `409 INVALID_STATE` for an archived customer.
+- DELETE archives; **204**; idempotent.
 
 ### 3.6 Pricing
 

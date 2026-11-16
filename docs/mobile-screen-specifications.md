@@ -143,7 +143,7 @@ Each screen lists route, access, layout, components, actions, navigation, states
 ## E. Customers (under More)
 
 ### E1 Customers — `/more/customers` (all roles)
-- Search; rows with name / company, mobile and (M) outstanding balance. FAB "New customer". Cursor-paginated.
+- Search; rows with name, company and mobile. FAB "New customer". Cursor-paginated. Balances are shown on the detail screen (E2), not in the list.
 
 ### E2 Customer detail — `/more/customers/:customerId`
 - **Header:** name, company, mobile (tap to call / WhatsApp), email, address, TRN.

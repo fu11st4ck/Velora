@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/router/routes.dart';
 import '../../../app/theme/tokens.dart';
 import '../../../core/auth/session_controller.dart';
 
@@ -86,6 +88,17 @@ class MoreScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+            ),
+          ),
+          const SizedBox(height: Space.lg),
+          Card(
+            clipBehavior: Clip.antiAlias,
+            child: ListTile(
+              key: const Key('open-customers'),
+              leading: const Icon(Icons.people_outline),
+              title: const Text('Customers'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push(Routes.customers),
             ),
           ),
           const SizedBox(height: Space.lg),

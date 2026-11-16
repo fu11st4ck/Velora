@@ -89,9 +89,32 @@ Map<String, dynamic> meJson({
     'branchId': null,
     'organization': {'id': 'o1', 'name': 'Velora Fine Jewellery LLC'},
   },
-  'permissions': role == 'SALES'
-      ? ['product.read', 'sale.create']
-      : ['product.read', 'product.read_cost', 'product.manage'],
+  // The same sets the backend grants (backend/src/authz/permissions.ts).
+  'permissions': [
+    'product.read',
+    'inventory.read',
+    'customer.read',
+    'customer.write',
+    'sale.create',
+    'document.read_own',
+    'payment.record',
+    'report.read_own',
+    if (role != 'SALES') ...[
+      'product.read_cost',
+      'product.manage',
+      'inventory.manage',
+      'customer.archive',
+      'sale.below_minimum',
+      'document.read_all',
+      'payment.refund',
+      'invoice.cancel',
+      'invoice.return',
+      'report.read_all',
+      'settings.read',
+      'team.read',
+    ],
+    if (role == 'OWNER') ...['settings.manage', 'team.manage'],
+  ],
   'settings': {
     'currencyCode': 'AED',
     'currencyExponent': 2,
