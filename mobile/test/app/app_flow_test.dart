@@ -55,9 +55,8 @@ void main() {
     // Home, with the signed-in context from the server.
     expect(find.textContaining(', Maya'), findsOneWidget);
     expect(find.text('VELORA FINE JEWELLERY LLC'), findsOneWidget);
-    expect(find.text('Manager'), findsOneWidget);
-    expect(find.text('VAT 5% (5%)'), findsOneWidget);
-    expect(find.text('Maximum markup'), findsOneWidget);
+    expect(find.byKey(const Key('kpi-today')), findsOneWidget);
+    expect(find.byKey(const Key('inventory-value')), findsOneWidget);
     expect(app.store.tokens!.refreshToken, 'refresh-1');
     expect(
       app.adapter.requests.firstWhere((r) => r.path == '/auth/login').data,
@@ -130,9 +129,12 @@ void main() {
     expect(app.adapter.count('/auth/login'), 0);
   });
 
-  testWidgets('the sales role is not shown the markup ceiling', (tester) async {
+  testWidgets('the sales role is not shown profit or stock value', (
+    tester,
+  ) async {
     final app = AppHarness(
       server: server(role: 'SALES'),
+      dashboard: dashboardJson(role: 'SALES'),
       tokens: const StoredTokens(
         accessToken: 'access-1',
         refreshToken: 'refresh-1',
@@ -140,8 +142,8 @@ void main() {
     );
     await tester.pumpWidget(app.build());
     await tester.pumpAndSettle();
-    expect(find.text('Sales'), findsOneWidget);
-    expect(find.text('Maximum markup'), findsNothing);
+    expect(find.text('Shown to managers'), findsOneWidget);
+    expect(find.byKey(const Key('inventory-value')), findsNothing);
   });
 
   testWidgets(

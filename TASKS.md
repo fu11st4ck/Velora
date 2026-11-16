@@ -33,7 +33,7 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Freezed / json_serializable — still deferred; models remain hand-written and small
 - [ ] Localisation via ARB files — strings are English literals in widgets for now; extract before Sprint 4
 - [x] Pagination helper and role-aware product view — built with S2-01
-- [ ] Appearance setting (System/Light/Dark) — app follows the system theme today
+- [x] Appearance setting (System/Light/Dark) — done in Sprint 5
 - [x] Remove `NotBuiltYetScreen` from Sell and Documents (S4) — every tab is now real
 
 ## Sprint 2 — Products and inventory
@@ -73,11 +73,26 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Customer's document list on the customer detail screen (API supports `customerId`)
 - [ ] Sale and document screens have not been run on a physical device (no Android SDK / macOS here) — widget tests, rendered goldens and live API tests only
 
-## Sprint 5 — Dashboard, reports, settings ← next
-- [ ] S5-01 Dashboard · S5-02 Reports API and CSV · S5-03 Reports screen
-- [ ] S5-04 Settings, tax rates, team · S5-05 Sessions and appearance
+## Sprint 5 — Dashboard, reports, settings
+- [x] S5-01 Dashboard API and Home screen (KPIs, needs attention, recent documents; sales role sees own figures and nothing cost-based)
+- [x] S5-02 Reports API: sales summary, sales by salesperson, payment status, inventory valuation; CSV exports for managers
+- [x] S5-03 Reports screen: Today / 7 days / This month / Last month / Custom, status breakdown, team comparison, stock value, CSV export through the share sheet
+- [x] S5-04 Business settings (owner edits, manager reads), tax-rate management, team (invite by email, change role, remove and restore access)
+- [x] S5-05 Signed-in devices list with remote sign-out; appearance setting (same as device / light / dark)
+- [x] Live contract test covers every Sprint 5 endpoint with the sales, manager and owner accounts
 
-## Sprint 6 — Production readiness
+### Not in Sprint 5
+- [ ] **Invitation and password-reset emails need SMTP** (`MAIL_SMTP_URL`). Without it the server only logs that a mail was due, so an invited person cannot get their link. Blocked on hosting (D11)
+- [ ] Company logo upload — needs object storage (Sprint 6, with product photos)
+- [ ] `allowOfflineSales` is not editable — offline invoicing does not exist yet (Sprint 6)
+- [ ] Branch assignment for team members — the UI is single-branch (D9)
+- [ ] Reports while offline (last loaded figures with a timestamp) — Sprint 6 with the local cache
+- [ ] Report ranges use the device's calendar date; a device set to a different time zone than the business can be a day off at the edges
+- [ ] Change-password screen — the API exists since Sprint 1; no screen yet
+- [ ] A role change or removal signs the member out, but an access token already issued keeps working for up to 15 minutes
+- [ ] Sprint 5 screens have not been run on a physical device — widget tests, rendered goldens and live API tests only
+
+## Sprint 6 — Production readiness ← next
 - [ ] S6-01 Outbox and sync · S6-02 Security review · S6-03 Performance
 - [ ] S6-04 Monitoring and consistency job · S6-05 Deployment and backups (blocked: D11)
 - [ ] S6-06 Store preparation · S6-07 Device end-to-end and accessibility pass

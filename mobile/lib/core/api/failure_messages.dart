@@ -46,6 +46,11 @@ const _business = <String, String>{
   'REFUND_METHOD_REQUIRED': 'Choose how the money is refunded.',
   'PRICE_BELOW_MINIMUM': 'A price is below the lowest allowed price.',
   'PRICE_ABOVE_MAXIMUM': 'A price is above the highest allowed price.',
+  'SETTING_LOCKED': 'Currency and time zone cannot be changed once prices or documents use them.',
+  'LAST_OWNER': 'The business needs at least one active owner. Make someone else an owner first.',
+  'MEMBER_EXISTS': 'This email address already has an account.',
+  'DUPLICATE_NAME': 'Another tax rate already has this name.',
+  'DEFAULT_RATE_REQUIRED': 'Choose another default tax rate first.',
   'SKU_TAKEN': 'Another product already uses this SKU.',
   'BARCODE_TAKEN': 'Another product already uses this barcode.',
   'PRODUCT_ARCHIVED': 'This product is archived.',
@@ -90,6 +95,12 @@ String? _withNumbers(String code, List<Map<String, dynamic>> details) {
           ? 'This product still has $quantity in stock. Adjust the stock to zero before archiving.'
           : 'A product with stock on hand cannot be archived.';
     case 'MARKUP_POLICY_INVALID':
+      final products = d['productCount'];
+      if (products is int) {
+        return products == 1
+            ? 'One product has a default markup above this maximum. Lower it first.'
+            : '$products products have a default markup above this maximum. Lower those first.';
+      }
       final max = d['maxMarkupBp'];
       return max is int
           ? 'Minimum markup must not exceed the default, and the default must not exceed ${max ~/ 100}%.'

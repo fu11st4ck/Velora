@@ -16,7 +16,10 @@ import 'package:velora/features/customers/data/customers_api.dart';
 import 'package:velora/features/documents/data/document.dart';
 import 'package:velora/features/documents/data/documents_api.dart';
 import 'package:velora/features/products/data/product.dart';
+import 'package:velora/features/home/data/dashboard.dart';
 import 'package:velora/features/products/data/products_api.dart';
+import 'package:velora/features/reports/data/reports.dart';
+import 'package:velora/features/settings/data/settings_api.dart';
 import 'package:velora/features/sell/data/sales_api.dart';
 
 /// Runs the app's real API client against a running backend seeded with the demo data.
@@ -33,6 +36,9 @@ void main() {
   late CustomersApi customers;
   late SalesApi sales;
   late DocumentsApi documents;
+  late ReportsApi reports;
+  late SettingsApi settings;
+  late Dio http;
   var sessionEnded = 0;
 
   setUp(() {
@@ -56,6 +62,9 @@ void main() {
     customers = CustomersApi(dio);
     sales = SalesApi(dio);
     documents = DocumentsApi(dio);
+    reports = ReportsApi(dio);
+    settings = SettingsApi(dio);
+    http = dio;
   });
 
   test('sign in as sales, load profile, sign out', () async {
@@ -539,4 +548,182 @@ void main() {
     },
     skip: skip,
   );
+
+  test('office: dashboard, reports, exports, settings, tax rates, team and devices', () async {
+    Future<void> signIn(String who) async => store.write(
+      await api.login(
+        email: '$who@velora.example',
+        password: password,
+        deviceName: 'Contract test',
+      ),
+    );
+    Future<Dashboard> dashboard() async => Dashboard.fromJson(
+      (await http.get<Map<String, dynamic>>('/dashboard/summary')).data!['data']
+          as Map<String, dynamic>,
+    );
+    final now = DateTime.now().toUtc();
+    String iso(DateTime d) => d.toIso8601String().substring(0, 10);
+    // Wide enough to include "today" in any time zone.
+    final period = ReportPeriod(
+      iso(now.subtract(const Duration(days: 30))),
+      iso(now.add(const Duration(days: 1))),
+    );
+    final stamp = now.millisecondsSinceEpoch;
+
+    // Sales: own figures, nothing cost-based, no manager reports.
+    await signIn('ahmed');
+    final salesHome = await dashboard();
+    expect(salesHome.showsProfit, isFalse);
+    expect(salesHome.inventoryValueMinor, isNull);
+    expect(salesHome.productCount, greaterThan(0));
+    final own = await reports.salesSummary(period);
+    expect(own.grossProfitMinor, isNull);
+    expect(own.cogsMinor, isNull);
+    expect(await reports.paymentStatus(period), hasLength(4));
+    await expectLater(
+      reports.bySalesperson(period),
+      throwsA(isA<ForbiddenFailure>()),
+    );
+    await expectLater(reports.valuation(), throwsA(isA<ForbiddenFailure>()));
+    await expectLater(
+      reports.salesCsv(period),
+      throwsA(isA<ForbiddenFailure>()),
+    );
+    await expectLater(settings.members(), throwsA(isA<ForbiddenFailure>()));
+    expect((await settings.organization()).maxMarkupBp, isNull);
+
+    // Manager: the whole business, read-only settings.
+    await signIn('manager');
+    final home = await dashboard();
+    expect(home.showsProfit, isTrue);
+    expect(home.inventoryValueMinor, greaterThan(0));
+    final all = await reports.salesSummary(period);
+    expect(all.grossProfitMinor, all.netSalesMinor - all.cogsMinor!);
+    expect(all.invoiceCount, greaterThanOrEqualTo(own.invoiceCount));
+    final statuses = await reports.paymentStatus(period);
+    expect(statuses.map((s) => s.status), [
+      'PAID',
+      'PARTIAL',
+      'UNPAID',
+      'OVERDUE',
+    ]);
+    expect(
+      statuses.take(3).fold<int>(0, (n, s) => n + s.count),
+      all.invoiceCount,
+    );
+    final team = await reports.bySalesperson(period);
+    expect(team.fold<int>(0, (n, t) => n + t.netSalesMinor), all.netSalesMinor);
+    final valuation = await reports.valuation(top: 3);
+    expect(valuation.valueMinor, home.inventoryValueMinor);
+    expect(valuation.top.length, lessThanOrEqualTo(3));
+    expect(
+      String.fromCharCodes((await reports.salesCsv(period)).skip(3).take(8)),
+      'Invoice,',
+    );
+    expect(
+      String.fromCharCodes((await reports.valuationCsv()).skip(3).take(4)),
+      'SKU,',
+    );
+    final org = await settings.organization();
+    expect(org.maxMarkupBp, isNotNull);
+    await expectLater(
+      settings.updateOrganization({'city': 'Dubai'}),
+      throwsA(isA<ForbiddenFailure>()),
+    );
+    expect(await settings.members(), isNotEmpty);
+
+    // Owner: settings, tax rates and team.
+    await signIn('owner');
+    final footer = 'Contract test $stamp';
+    final updated = await settings.updateOrganization({
+      'invoiceFooter': footer,
+    });
+    expect(updated.invoiceFooter, footer);
+    expect((await settings.organization()).invoiceFooter, footer);
+    await settings.updateOrganization({'invoiceFooter': org.invoiceFooter});
+    await expectLater(
+      settings.updateOrganization({'defaultMinMarkupBp': 99000}),
+      throwsA(
+        isA<BusinessFailure>().having(
+          (f) => f.code,
+          'code',
+          'MARKUP_POLICY_INVALID',
+        ),
+      ),
+    );
+
+    final rate = await settings.createTaxRate(
+      name: 'Contract $stamp',
+      rateBp: 725,
+      isDefault: false,
+    );
+    await expectLater(
+      settings.createTaxRate(
+        name: 'CONTRACT $stamp',
+        rateBp: 725,
+        isDefault: false,
+      ),
+      throwsA(
+        isA<BusinessFailure>().having((f) => f.code, 'code', 'DUPLICATE_NAME'),
+      ),
+    );
+    final retired = await settings.updateTaxRate(
+      rate.id,
+      name: 'Retired $stamp',
+      isActive: false,
+    );
+    expect(retired.isActive, isFalse);
+    final listed = await settings.taxRates();
+    expect(listed.where((r) => r.isDefault), hasLength(1));
+    expect(listed.map((r) => r.id), contains(rate.id));
+    expect((await sales.taxRates()).map((r) => r.id), isNot(contains(rate.id)));
+
+    final email = 'contract-$stamp@velora.example';
+    final invited = await settings.invite(
+      fullName: 'Contract Invitee',
+      email: email,
+      role: Role.sales,
+    );
+    expect(invited.isPending, isTrue);
+    await expectLater(
+      settings.invite(
+        fullName: 'Contract Invitee',
+        email: email,
+        role: Role.sales,
+      ),
+      throwsA(
+        isA<BusinessFailure>().having((f) => f.code, 'code', 'MEMBER_EXISTS'),
+      ),
+    );
+    final promoted = await settings.updateMember(
+      invited.memberId,
+      role: Role.manager,
+    );
+    expect(promoted.role, Role.manager);
+    final removed = await settings.updateMember(
+      invited.memberId,
+      isActive: false,
+    );
+    expect(removed.isActive, isFalse);
+    final me = await api.me();
+    await expectLater(
+      settings.updateMember(me.memberId, role: Role.sales),
+      throwsA(
+        isA<BusinessFailure>().having((f) => f.code, 'code', 'LAST_OWNER'),
+      ),
+    );
+
+    // Devices: this sign-in is listed as the current one.
+    final devices = await settings.sessions();
+    final current = devices.singleWhere((d) => d.isCurrent);
+    expect(current.deviceName, 'Contract test');
+    final other = devices.where((d) => !d.isCurrent).firstOrNull;
+    if (other != null) {
+      await settings.revokeSession(other.id);
+      expect(
+        (await settings.sessions()).map((d) => d.id),
+        isNot(contains(other.id)),
+      );
+    }
+  }, skip: skip);
 }

@@ -16,7 +16,17 @@ class AppHarness {
     required Handler server,
     StoredTokens? tokens,
     this.overrides = const [],
-  }) : adapter = FakeAdapter(server),
+    Map<String, dynamic>? dashboard,
+
+    /// True when [server] answers `/dashboard/summary` itself.
+    bool ownDashboard = false,
+  }) : adapter = FakeAdapter(
+         // Home loads the dashboard in every test; tests about other screens get a quiet one.
+         (request, body) =>
+             request.path == '/dashboard/summary' && !ownDashboard
+             ? ok(dashboard ?? dashboardJson())
+             : server(request, body),
+       ),
        store = InMemoryTokenStore(tokens);
 
   final FakeAdapter adapter;
@@ -26,6 +36,7 @@ class AppHarness {
   final List<Object> overrides;
 
   Widget build() => ProviderScope(
+    retry: noAutomaticRetry,
     overrides: [
       ...appOverrides(
         const AppConfig(flavor: Flavor.prod, apiBaseUrl: 'http://api.test'),
@@ -47,6 +58,7 @@ Future<void> pumpScreen(
   bool dark = false,
 }) => tester.pumpWidget(
   ProviderScope(
+    retry: noAutomaticRetry,
     overrides: overrides.cast(),
     child: MaterialApp(
       theme: dark ? AppTheme.dark() : AppTheme.light(),

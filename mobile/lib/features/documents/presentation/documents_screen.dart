@@ -63,6 +63,19 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Another screen may ask for a filter (Home's "invoices overdue").
+    final requested = ref.watch(documentFilterRequestProvider);
+    if (requested != null) {
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(documentFilterRequestProvider.notifier).clear();
+        _search.clear();
+        setState(() {
+          _filter = requested;
+          _query = '';
+        });
+      });
+    }
     final list = ref.watch(documentListProvider(_key));
     final filtered = _query.isNotEmpty || _filter != DocumentFilter.all;
 
@@ -218,39 +231,49 @@ class DocumentTile extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: Space.xs),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            Builder(
+              builder: (context) {
+                final details = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      d.customer.displayName,
+                      style: theme.textTheme.bodyLarge,
+                    ),
+                    Text(
+                      '${_day.format(d.issuedAt.toLocal())} · ${d.salespersonName}',
+                      style: muted,
+                    ),
+                    if (detail != null)
                       Text(
-                        d.customer.displayName,
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                      Text(
-                        '${_day.format(d.issuedAt.toLocal())} · ${d.salespersonName}',
-                        style: muted,
-                      ),
-                      if (detail != null)
-                        Text(
-                          detail,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: d.isOverdue
-                                ? theme.colorScheme.error
-                                : theme.colorScheme.onSurfaceVariant,
-                          ),
+                        detail,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: d.isOverdue
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: Space.md),
-                Text(
+                      ),
+                  ],
+                );
+                final amount = Text(
                   money.format(d.totalMinor),
                   style: VeloraTokens.of(context).moneyRow,
-                ),
-              ],
+                );
+                // At very large text sizes the amount goes under the details instead of beside them.
+                return MediaQuery.textScalerOf(context).scale(1) > 1.5
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [details, amount],
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: details),
+                          const SizedBox(width: Space.md),
+                          amount,
+                        ],
+                      );
+              },
             ),
           ],
         ),

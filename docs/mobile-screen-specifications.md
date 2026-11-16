@@ -31,6 +31,8 @@ Each screen lists route, access, layout, components, actions, navigation, states
 
 ## B. Home
 
+> **As built (Sprint 5):** B1, G1, H1, H3 and H4 are implemented, plus a signed-in devices screen (`/more/devices`). Differences: Home has no app bar or sync icon (greeting as the page heading); attention rows are split into out of stock, low in stock and overdue; the sales role sees a locked profit tile and no inventory value. Reports show the team comparison as bars and the status breakdown as one stacked bar with a legend; there is no offline copy of the figures. Business settings has no logo or offline-invoicing switch; managers see it read-only. More has no Sync queue or About rows yet.
+
 ### B1 Home — `/home` (all roles)
 - **App bar:** large title "Velora", subtitle "<Organization> · <greeting by local time>, <first name>"; trailing sync status icon.
 - **Body (scroll, pull to refresh):**

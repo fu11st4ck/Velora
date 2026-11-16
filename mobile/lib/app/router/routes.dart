@@ -22,6 +22,12 @@ abstract final class Routes {
   static String customer(String id) => '/more/customers/$id';
   static String editCustomer(String id) => '/more/customers/$id/edit';
 
+  static const reports = '/more/reports';
+  static const settings = '/more/settings';
+  static const taxRates = '/more/settings/tax-rates';
+  static const team = '/more/team';
+  static const devices = '/more/devices';
+
   static const cart = '/sell/cart';
   static const payment = '/sell/payment';
   static String invoice(String id) => '/documents/invoices/$id';

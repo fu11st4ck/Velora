@@ -1,9 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/data/auth_api.dart';
 import '../api/api_client.dart';
 import '../api/failure.dart';
 import 'session.dart';
+
+/// How this device is named in the user's list of signed-in devices.
+final deviceNameProvider = Provider<String>(
+  (ref) => switch (defaultTargetPlatform) {
+    TargetPlatform.android => 'Android device',
+    TargetPlatform.iOS => 'iPhone or iPad',
+    _ => 'Other device',
+  },
+);
 
 final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
@@ -34,7 +44,11 @@ class SessionController extends Notifier<SessionState> {
 
   /// Throws [Failure] so the sign-in form can show it next to the fields.
   Future<void> signIn({required String email, required String password}) async {
-    final tokens = await _api.login(email: email.trim(), password: password);
+    final tokens = await _api.login(
+      email: email.trim(),
+      password: password,
+      deviceName: ref.read(deviceNameProvider),
+    );
     await ref.read(tokenStoreProvider).write(tokens);
     await _loadProfile(rethrowFailure: true);
   }
@@ -51,6 +65,17 @@ class SessionController extends Notifier<SessionState> {
     }
     await store.clear();
     state = const SignedOut();
+  }
+
+  /// Reloads the profile after something it carries changed (business settings, default tax rate).
+  /// A failure leaves the current profile in place.
+  Future<void> refreshProfile() async {
+    if (state is! SignedIn) return;
+    try {
+      state = SignedIn(await _api.me());
+    } on Failure {
+      // The next start-up or sign-in loads it again.
+    }
   }
 
   /// Called by the HTTP layer when the server rejected the session and tokens were cleared.

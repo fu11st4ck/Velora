@@ -11,6 +11,7 @@ Future<void> main() async {
   final preferences = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(
+      retry: noAutomaticRetry,
       overrides: [
         ...appOverrides(AppConfig.fromEnvironment(Flavor.staging)),
         keyValueStoreProvider.overrideWithValue(

@@ -18,6 +18,8 @@ Baseline: OWASP ASVS Level 2 and the OWASP Mobile Top 10. Each item is a require
 
 Not in v1 (recorded as a known gap): multi-factor authentication. Recommended for Owner accounts before public launch.
 
+**Invitations and devices (Sprint 5).** An invited account is created with a hash of random bytes, so nobody can sign in until the invitee sets a password from the emailed single-use link (valid 7 days, stored hashed like reset tokens; never logged or audited). Changing a member's role or removing access revokes all their refresh tokens; an access token already issued remains valid until it expires (≤ 15 minutes). Users can list their own sessions and revoke one; session ids are refresh-token family ids and are only ever matched against the caller's own user id. CSV exports prefix cells that begin with `=`, `+`, `-` or `@` so spreadsheet apps do not run them as formulas.
+
 ## 2. Authorization
 
 - **Deny by default.** Every route declares its required permission; a global guard rejects routes without a declaration (enforced by a test that enumerates all routes).

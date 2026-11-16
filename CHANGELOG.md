@@ -4,6 +4,29 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Sprint 5 (2026-11-16)
+**Backend**
+- Dashboard summary in one request: today's sales against yesterday, stock, money owed and overdue, month-to-date profit and inventory value (managers), products needing attention, recent documents.
+- Reports: sales summary, sales by salesperson, invoice status breakdown, inventory valuation, each on the business's calendar days; CSV exports of invoices and stock for managers, with spreadsheet-formula injection neutralised.
+- Business profile and settings: owner-only edits, audited; markup policy checked against existing products; currency and time zone lock once documents exist.
+- Team: invitation by email with a 7-day set-password link, role changes and removal of access (both sign the member out), never fewer than one active owner — also under concurrent changes.
+- Tax rates: add, rename, change the default (always exactly one), stop using; the percentage is immutable.
+- Own signed-in devices: list and sign out another device.
+
+**Mobile**
+- Home is now a dashboard; its "needs attention" rows open the filtered inventory and documents lists.
+- Reports screen with period presets and a custom range, status breakdown, team comparison, stock value and CSV export.
+- Business settings, tax rates, team and signed-in devices under More; appearance choice remembered on the device.
+- The device type is sent at sign-in so the devices list can name it.
+
+### Changed
+- Returns are dated with the application clock, like every other business timestamp.
+- A failed load is no longer retried automatically in the background; screens show the failure with "Try again".
+- Status pills and document rows no longer overflow at 200% text size.
+
+### Not included
+- Outgoing email still needs SMTP configuration; logo upload; offline reports; change-password screen — see `TASKS.md`.
+
 ### Added — Sprint 4 (2026-11-16)
 **Backend**
 - Pricing preview: server-authoritative totals for a cart, with per-line problems (below the lowest price, above the highest, not enough stock, product unavailable). Managers may sell below the lowest price with a reason, which is audited.

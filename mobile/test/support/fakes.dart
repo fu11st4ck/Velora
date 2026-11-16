@@ -136,3 +136,33 @@ Map<String, dynamic> meJson({
 };
 
 Me me({String role = 'MANAGER'}) => Me.fromJson(meJson(role: role));
+
+/// `GET /dashboard/summary` for a business with stock and no sales yet. Cost-based figures are
+/// left out for the sales role, as the server does.
+Map<String, dynamic> dashboardJson({String role = 'MANAGER'}) => {
+  'asOf': '2026-11-16T05:30:00.000Z',
+  'currencyCode': 'AED',
+  'todaySales': {
+    'invoicedMinor': 0,
+    'invoiceCount': 0,
+    'yesterdayInvoicedMinor': 0,
+    'changeBp': null,
+  },
+  'stock': {'units': 53, 'productCount': 4, 'lowCount': 0, 'outCount': 0},
+  'outstanding': {
+    'balanceMinor': 0,
+    'invoiceCount': 0,
+    'overdueMinor': 0,
+    'overdueCount': 0,
+  },
+  if (role != 'SALES') ...{
+    'monthProfit': {
+      'netSalesMinor': 0,
+      'grossProfitMinor': 0,
+      'marginBp': null,
+    },
+    'inventoryValueMinor': 15085000,
+  },
+  'attentionProducts': <Object>[],
+  'recentDocuments': <Object>[],
+};

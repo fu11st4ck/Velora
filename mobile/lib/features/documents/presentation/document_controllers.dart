@@ -116,3 +116,18 @@ final documentSharerProvider = Provider<DocumentSharer>(
     }
   },
 );
+
+/// Lets another screen ask the Documents tab to show one filter (for example Home's
+/// "invoices overdue" row). The Documents screen applies it and clears the request.
+final documentFilterRequestProvider =
+    NotifierProvider<DocumentFilterRequest, DocumentFilter?>(
+      DocumentFilterRequest.new,
+    );
+
+class DocumentFilterRequest extends Notifier<DocumentFilter?> {
+  @override
+  DocumentFilter? build() => null;
+
+  void request(DocumentFilter filter) => state = filter;
+  void clear() => state = null;
+}

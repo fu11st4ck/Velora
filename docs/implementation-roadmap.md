@@ -75,7 +75,7 @@ Product audit, flows, design audit and system, screen specifications, business r
 | S4-08 | Documents screens F1–F6 (list, detail, record payment, cancel, return, share/WhatsApp/print) | S4-04..06 |
 **Exit:** scenarios 1–12 of the testing strategy pass; a sale can be made, paid, shared, cancelled and returned on device.
 
-### Sprint 5 — Dashboard, reports, settings
+### Sprint 5 — Dashboard, reports, settings (delivered 2026-11-16)
 | ID | Item | Depends on |
 |---|---|---|
 | S5-01 | Dashboard API + Home screen | S4 |

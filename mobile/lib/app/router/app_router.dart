@@ -22,6 +22,11 @@ import '../../features/products/presentation/product_detail_screen.dart';
 import '../../features/products/presentation/product_form_screen.dart';
 import '../../features/products/presentation/receive_stock_screen.dart';
 import '../../features/products/presentation/stock_history_screen.dart';
+import '../../features/reports/presentation/reports_screen.dart';
+import '../../features/settings/presentation/business_settings_screen.dart';
+import '../../features/settings/presentation/devices_screen.dart';
+import '../../features/settings/presentation/tax_rates_screen.dart';
+import '../../features/settings/presentation/team_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
 import '../../features/sell/presentation/cart_screen.dart';
 import '../../features/sell/presentation/payment_screen.dart';
@@ -211,6 +216,30 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (_, _) => const MoreScreen(),
                 routes: [
                   GoRoute(
+                    path: 'reports',
+                    builder: (_, _) => const ReportsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    redirect: _needs(ref, 'settings.read'),
+                    builder: (_, _) => const BusinessSettingsScreen(),
+                    routes: [
+                      GoRoute(
+                        path: 'tax-rates',
+                        builder: (_, _) => const TaxRatesScreen(),
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: 'team',
+                    redirect: _needs(ref, 'team.read'),
+                    builder: (_, _) => const TeamScreen(),
+                  ),
+                  GoRoute(
+                    path: 'devices',
+                    builder: (_, _) => const DevicesScreen(),
+                  ),
+                  GoRoute(
                     path: 'customers',
                     builder: (_, _) => const CustomersScreen(),
                     routes: [
@@ -247,3 +276,11 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.onDispose(router.dispose);
   return router;
 });
+
+/// Sends a user without [permission] back to More. The server enforces the permission too;
+/// this only keeps a screen that would show an error out of reach.
+GoRouterRedirect _needs(Ref ref, String permission) =>
+    (context, state) =>
+        (ref.read(currentUserProvider)?.can(permission) ?? false)
+        ? null
+        : Routes.more;

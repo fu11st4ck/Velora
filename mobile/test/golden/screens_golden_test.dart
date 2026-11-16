@@ -9,6 +9,7 @@ import 'package:velora/core/storage/key_value_store.dart';
 
 import '../support/fake_customer_server.dart';
 import '../support/fake_inventory_server.dart';
+import '../support/fake_office_server.dart';
 import '../support/fake_shop_server.dart';
 import '../support/fakes.dart';
 import '../support/harness.dart';
@@ -68,7 +69,11 @@ void main() {
           : Brightness.light;
       addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
       await tester.pumpWidget(
-        AppHarness(server: server('MANAGER'), tokens: stored).build(),
+        AppHarness(
+          server: server('MANAGER'),
+          tokens: stored,
+          dashboard: FakeOfficeServer.busyDashboard('MANAGER'),
+        ).build(),
       );
       await tester.pumpAndSettle();
       await expectLater(
@@ -95,7 +100,11 @@ void main() {
   testWidgets('home on a tablet', (tester) async {
     setScreenSize(tester, const Size(1194, 834));
     await tester.pumpWidget(
-      AppHarness(server: server('MANAGER'), tokens: stored).build(),
+      AppHarness(
+        server: server('MANAGER'),
+        tokens: stored,
+        dashboard: FakeOfficeServer.busyDashboard('MANAGER'),
+      ).build(),
     );
     await tester.pumpAndSettle();
     await expectLater(
@@ -353,6 +362,61 @@ void main() {
       await tester.pageBack();
       await tester.pumpAndSettle();
       await shot('documents_light');
+    });
+  });
+
+  group('office', () {
+    Future<void> open(WidgetTester tester, String role, String? row) async {
+      setScreenSize(tester, const Size(390, 844));
+      final server = FakeOfficeServer(role: role);
+      await tester.pumpWidget(
+        AppHarness(
+          server: officeHandler(server),
+          ownDashboard: true,
+          tokens: stored,
+        ).build(),
+      );
+      await tester.pumpAndSettle();
+      if (row == null) return;
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(Key(row)));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> shot(String name) => expectLater(
+      find.byType(VeloraAppRoot),
+      matchesGoldenFile('goldens/$name.png'),
+    );
+
+    testWidgets('home, sales', (tester) async {
+      await open(tester, 'SALES', null);
+      await shot('home_sales_light');
+    });
+
+    testWidgets('more, owner', (tester) async {
+      await open(tester, 'OWNER', null);
+      await tester.tap(find.text('More'));
+      await tester.pumpAndSettle();
+      await shot('more_owner_light');
+    });
+
+    testWidgets('reports, manager', (tester) async {
+      await open(tester, 'MANAGER', 'open-reports');
+      await shot('reports_manager_light');
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -700));
+      await tester.pumpAndSettle();
+      await shot('reports_manager_breakdown_light');
+    });
+
+    testWidgets('business settings, owner', (tester) async {
+      await open(tester, 'OWNER', 'open-settings');
+      await shot('settings_owner_light');
+    });
+
+    testWidgets('team, owner', (tester) async {
+      await open(tester, 'OWNER', 'open-team');
+      await shot('team_owner_light');
     });
   });
 }
