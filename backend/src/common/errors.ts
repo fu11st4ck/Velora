@@ -55,4 +55,28 @@ export const Errors = {
   productArchived: () => new DomainError('PRODUCT_ARCHIVED', 422, 'This product is archived.'),
   insufficientStock: (details: { productId: string; requested: number; available: number; lineNo?: number }[]) =>
     new DomainError('INSUFFICIENT_STOCK', 409, 'Not enough stock.', details),
+  discountExceedsSubtotal: (subtotalMinor: bigint) =>
+    new DomainError('DISCOUNT_EXCEEDS_SUBTOTAL', 422, 'The discount cannot be more than the subtotal.', [
+      { field: 'discountMinor', subtotalMinor: Number(subtotalMinor) },
+    ]),
+  taxRateInactive: () => new DomainError('TAX_RATE_INACTIVE', 422, 'This tax rate is not available.', [{ field: 'taxRateId' }]),
+  customerArchived: () => new DomainError('CUSTOMER_ARCHIVED', 422, 'This customer is archived.', [{ field: 'customerId' }]),
+  quotationAlreadyConverted: (invoiceId: string) =>
+    new DomainError('QUOTATION_ALREADY_CONVERTED', 409, 'This quotation was already converted to an invoice.', [{ invoiceId }]),
+  paymentExceedsBalance: (balanceMinor: bigint) =>
+    new DomainError('PAYMENT_EXCEEDS_BALANCE', 422, 'The amount is more than the balance due.', [
+      { field: 'amountMinor', balanceMinor: Number(balanceMinor) },
+    ]),
+  invoiceAlreadyPaid: () => new DomainError('INVOICE_ALREADY_PAID', 422, 'This invoice is already paid in full.'),
+  invoiceCancelled: () => new DomainError('INVOICE_CANCELLED', 409, 'This invoice was cancelled.'),
+  invoiceHasReturns: () =>
+    new DomainError('INVOICE_HAS_RETURNS', 409, 'An invoice with returns cannot be cancelled. Return the remaining items instead.'),
+  refundExceedsPaid: (paidMinor: bigint) =>
+    new DomainError('REFUND_EXCEEDS_PAID', 422, 'The refund is more than the amount received.', [
+      { field: 'amountMinor', paidMinor: Number(paidMinor) },
+    ]),
+  refundMethodRequired: (refundMinor: bigint) =>
+    new DomainError('REFUND_METHOD_REQUIRED', 422, 'Choose how the money is refunded.', [{ refundMinor: Number(refundMinor) }]),
+  returnQuantityExceedsSold: (details: { lineNo: number; requested: number; returnable: number }[]) =>
+    new DomainError('RETURN_QUANTITY_EXCEEDS_SOLD', 422, 'More items were selected than can be returned.', details),
 } as const;

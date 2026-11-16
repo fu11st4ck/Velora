@@ -19,11 +19,22 @@ import { GlobalErrorFilter } from './common/error.filter';
 import { HealthController } from './health/health.controller';
 import { IdempotencyService } from './idempotency/idempotency.service';
 import { MailService } from './mail/mail.service';
+import { DocumentsService } from './sales/documents.service';
+import { InvoicesService } from './sales/invoices.service';
+import { NumberingService } from './sales/numbering.service';
+import { PricingService } from './sales/pricing.service';
+import { QuotationsService } from './sales/quotations.service';
+import { DocumentsController, InvoicesController, PricingController, QuotationsController } from './sales/sales.controller';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [AuthController, HealthController, ProductsController, InventoryController, CustomersController],
+  controllers: [AuthController, HealthController, ProductsController, InventoryController, CustomersController,
+    PricingController,
+    DocumentsController,
+    QuotationsController,
+    InvoicesController,
+  ],
   providers: [
     { provide: APP_CONFIG, useFactory: () => loadConfig() },
     Clock,
@@ -36,6 +47,11 @@ import { PrismaModule } from './prisma/prisma.module';
     ProductsService,
     InventoryService,
     CustomersService,
+    PricingService,
+    NumberingService,
+    QuotationsService,
+    InvoicesService,
+    DocumentsService,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_INTERCEPTOR, useClass: EnvelopeInterceptor },
     { provide: APP_FILTER, useClass: GlobalErrorFilter },

@@ -135,6 +135,69 @@ export class InventoryService {
     return this.result(tx, ctx, movement.id, product.id);
   }
 
+  /**
+   * S2/S3: takes stock for one invoice line and writes its SALE movement. Throws INSUFFICIENT_STOCK
+   * when the branch does not hold enough; the caller's transaction then rolls everything back.
+   */
+  async takeForSale(
+    tx: Tx,
+    ctx: RequestContext,
+    line: { productId: string; branchId: string; quantity: number; unitCostMinor: bigint; invoiceId: string },
+  ): Promise<void> {
+    const balanceAfter = await this.applyDelta(tx, ctx, line.productId, line.branchId, -line.quantity);
+    await tx.stockMovement.create({
+      data: {
+        organizationId: ctx.organizationId,
+        productId: line.productId,
+        branchId: line.branchId,
+        type: 'SALE',
+        quantityDelta: -line.quantity,
+        balanceAfter,
+        unitCostMinor: line.unitCostMinor,
+        invoiceId: line.invoiceId,
+        createdById: ctx.memberId,
+      },
+    });
+  }
+
+  /**
+   * S7/S8: puts sold stock back (cancellation or customer return) at the cost it was sold at,
+   * re-averaging the product cost exactly as a receipt would.
+   */
+  async restoreFromSale(
+    tx: Tx,
+    ctx: RequestContext,
+    line: {
+      productId: string;
+      branchId: string;
+      quantity: number;
+      unitCostMinor: bigint;
+      type: 'SALE_CANCELLATION' | 'CUSTOMER_RETURN';
+      invoiceId?: string;
+      returnId?: string;
+    },
+  ): Promise<void> {
+    const product = await this.lockProduct(tx, line.productId);
+    const held = await tx.stockLevel.aggregate({ where: { productId: product.id }, _sum: { quantity: true } });
+    const newCost = weightedAverageCost(held._sum.quantity ?? 0, product.costMinor, line.quantity, line.unitCostMinor);
+    const balanceAfter = await this.applyDelta(tx, ctx, product.id, line.branchId, line.quantity);
+    await tx.stockMovement.create({
+      data: {
+        organizationId: ctx.organizationId,
+        productId: product.id,
+        branchId: line.branchId,
+        type: line.type,
+        quantityDelta: line.quantity,
+        balanceAfter,
+        unitCostMinor: line.unitCostMinor,
+        invoiceId: line.invoiceId ?? null,
+        returnId: line.returnId ?? null,
+        createdById: ctx.memberId,
+      },
+    });
+    await tx.product.update({ where: { id: product.id }, data: { costMinor: newCost } });
+  }
+
   async listMovements(ctx: RequestContext, query: ListMovementsQuery) {
     const limit = query.limit ?? DEFAULT_LIMIT;
     return this.prisma.tenantTx(ctx.organizationId, async (tx) => {
