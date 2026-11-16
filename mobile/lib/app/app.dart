@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:material_ui/material_ui.dart';
 
 import '../core/api/api_client.dart';
 import '../core/auth/session_controller.dart';
+import '../core/offline/sync_engine.dart';
 import 'config/app_config.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -25,17 +28,45 @@ class VeloraApp extends ConsumerStatefulWidget {
   ConsumerState<VeloraApp> createState() => _VeloraAppState();
 }
 
-class _VeloraAppState extends ConsumerState<VeloraApp> {
+class _VeloraAppState extends ConsumerState<VeloraApp>
+    with WidgetsBindingObserver {
+  Timer? _periodic;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     Future.microtask(
       () => ref.read(sessionControllerProvider.notifier).restore(),
     );
+    // While the app is open, unsent work is retried and the saved copies are refreshed.
+    _periodic = Timer.periodic(const Duration(minutes: 5), (_) => _sync());
+  }
+
+  @override
+  void dispose() {
+    _periodic?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _sync();
+  }
+
+  void _sync() {
+    if (ref.read(currentUserProvider) != null) {
+      unawaited(ref.read(syncProvider.notifier).syncNow());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Signing in (or starting already signed in) brings the saved copies up to date.
+    ref.listen(currentUserProvider.select((me) => me?.userId), (_, userId) {
+      if (userId != null) _sync();
+    });
     final flavor = ref.watch(appConfigProvider).flavor;
     return MaterialApp.router(
       title: 'Velora',

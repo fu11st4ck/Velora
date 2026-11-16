@@ -97,6 +97,11 @@ void main() {
     expect(find.text('Maya Manager'), findsOneWidget);
     expect(find.text('maya@velora.example'), findsOneWidget);
 
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('sign-out')),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
     await tester.tap(find.byKey(const Key('sign-out')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Cancel'));

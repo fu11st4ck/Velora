@@ -5,11 +5,13 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
 import 'package:velora/core/api/auth_interceptor.dart';
 import 'package:velora/core/api/failure.dart';
 import 'package:velora/core/auth/session.dart';
 import 'package:velora/core/auth/token_store.dart';
 import 'package:velora/core/api/idempotency.dart';
+import 'package:velora/core/offline/local_db.dart';
 import 'package:velora/features/auth/data/auth_api.dart';
 import 'package:velora/features/customers/data/customer.dart';
 import 'package:velora/features/customers/data/customers_api.dart';
@@ -726,4 +728,142 @@ void main() {
       );
     }
   }, skip: skip);
+
+  test('offline support: sync feed fills the device copy; a closed session stops at once', () async {
+    await store.write(
+      await api.login(email: 'ahmed@velora.example', password: password),
+    );
+    Future<Map<String, dynamic>> changes([String? since]) async =>
+        (await http.get<Map<String, dynamic>>(
+          '/sync/changes',
+          queryParameters: {'since': ?since, 'limit': 500},
+        )).data!;
+
+    final db = LocalDb(sqlite3.openInMemory());
+    addTearDown(db.close);
+    String? token;
+    var pages = 0;
+    while (true) {
+      final page = await changes(token);
+      final data = page['data'] as Map<String, dynamic>;
+      List<Map<String, dynamic>> rows(String e) =>
+          ((data[e] as Map<String, dynamic>)['upserted'] as List<dynamic>)
+              .cast<Map<String, dynamic>>();
+      List<String> gone(String e) =>
+          ((data[e] as Map<String, dynamic>)['archivedIds'] as List<dynamic>)
+              .cast<String>();
+      db.applyProducts(rows('products'), gone('products'));
+      db.applyCustomers(rows('customers'), gone('customers'));
+      final meta = page['meta'] as Map<String, dynamic>;
+      token = meta['next'] as String;
+      pages++;
+      if (meta['hasMore'] != true) break;
+    }
+    expect(pages, greaterThanOrEqualTo(1));
+
+    // The copy answers the same questions as the server, and parses as the same model.
+    final live = await products.list(q: 'VLR-BR-001');
+    final copy = db.products(q: 'VLR-BR-001').map(Product.fromJson).single;
+    expect(copy.id, live.items.single.id);
+    expect(copy.quantity, live.items.single.quantity);
+    expect(copy.listPriceMinor, live.items.single.listPriceMinor);
+    expect(
+      copy.costMinor,
+      isNull,
+      reason: 'a salesperson\'s copy holds no cost',
+    );
+    expect(
+      db.products(limit: 500).any((p) => p.containsKey('costMinor')),
+      isFalse,
+    );
+    expect(db.customers(limit: 5), isNotEmpty);
+    expect(
+      db.productCounts().all,
+      live.counts == null ? isPositive : greaterThanOrEqualTo(1),
+    );
+
+    // A bad position is refused, so the app knows to start again.
+    await expectLater(
+      changes('not-a-token'),
+      throwsA(
+        isA<DioException>().having(
+          (e) => e.response?.statusCode,
+          'status',
+          400,
+        ),
+      ),
+    );
+
+    // Signing out closes the session for its access token immediately.
+    final tokens = (await store.read())!;
+    await api.logout(tokens.refreshToken);
+    await expectLater(api.me(), throwsA(isA<UnauthorizedFailure>()));
+    expect(sessionEnded, 1);
+  }, skip: skip);
+
+  test(
+    'change password signs other devices out and can be changed back',
+    () async {
+      const temporary = 'contract-temporary-4417';
+      final first = await api.login(
+        email: 'ahmed@velora.example',
+        password: password,
+      );
+      final otherDevice = await api.login(
+        email: 'ahmed@velora.example',
+        password: password,
+      );
+      await store.write(first);
+      await expectLater(
+        api.changePassword(
+          currentPassword: 'wrong-password',
+          newPassword: temporary,
+        ),
+        throwsA(
+          isA<BusinessFailure>().having(
+            (f) => f.code,
+            'code',
+            'CURRENT_PASSWORD_INCORRECT',
+          ),
+        ),
+      );
+      await api.changePassword(
+        currentPassword: password,
+        newPassword: temporary,
+      );
+      try {
+        expect(
+          (await api.me()).email,
+          'ahmed@velora.example',
+          reason: 'this device stays signed in',
+        );
+        final probe = Dio(
+          BaseOptions(
+            baseUrl: baseUrl!,
+            headers: {'Authorization': 'Bearer ${otherDevice.accessToken}'},
+          ),
+        );
+        await expectLater(
+          probe.get<void>('/auth/me'),
+          throwsA(
+            isA<DioException>().having(
+              (e) => e.response?.statusCode,
+              'status',
+              401,
+            ),
+          ),
+        );
+      } finally {
+        await api.changePassword(
+          currentPassword: temporary,
+          newPassword: password,
+        );
+      }
+      await store.write(
+        await api.login(email: 'ahmed@velora.example', password: password),
+      );
+      expect((await api.me()).email, 'ahmed@velora.example');
+    },
+    skip: skip,
+  );
 }

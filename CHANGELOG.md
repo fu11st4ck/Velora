@@ -4,6 +4,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Sprint 6 (2026-11-16)
+**Backend**
+- `GET /sync/changes`: products and customers changed since a token, for the app's offline copy. A product counts as changed when its row, its stock or the pricing settings change. An overlap window guarantees no change is missed under concurrent writes.
+- Maintenance script: `check` verifies every derived figure (stock against the ledger, invoice paid and returned amounts, payment status, one default tax rate, an active owner) and `purge` deletes expired idempotency records and tokens.
+
+**Mobile**
+- Works without a connection: products and customers are saved on the device at sign-in and kept current; lists, search, details, the sell picker and the cart use the copy when the server cannot be reached, and a banner says how old it is.
+- Quotations, new customers and payments made offline are queued and sent in order when the connection returns, each exactly once. A refusal stays in the queue with its reason until retried or discarded. Invoices are never created offline.
+- The app starts without a connection from the profile it last loaded.
+- Sync screen, change-password screen.
+
+### Security
+- An access token stops working the moment its session is closed — sign-out, password change, role change, removal of access or remote sign-out — instead of up to 15 minutes later.
+- The device copy is erased on sign-out and never carried over to another person or role.
+
+### Performance
+- Documents list: 1.1 s → 10 ms with 100,000 invoices (reads its page from the index). Measurements in `docs/performance-notes.md`.
+
+### Not included
+- Deployment, email delivery, photos, barcode scanning, store builds and device testing remain blocked on hosting (D11) and on a device toolchain — see `TASKS.md`.
+
 ### Added — Sprint 5 (2026-11-16)
 **Backend**
 - Dashboard summary in one request: today's sales against yesterday, stock, money owed and overdue, month-to-date profit and inventory value (managers), products needing attention, recent documents.

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:velora/app/app.dart';
@@ -35,17 +36,23 @@ class AppHarness {
   /// Extra provider overrides for a test (for example a fake link opener).
   final List<Object> overrides;
 
+  /// What the app's clock says. Tests run on 16 Nov 2026, 09:30 unless they set another time.
+  DateTime now = DateTime(2026, 11, 16, 9, 30);
+
+  /// The overrides the app runs with — also usable with a bare [ProviderContainer].
+  List<Override> get providerOverrides => [
+    ...appOverrides(
+      const AppConfig(flavor: Flavor.prod, apiBaseUrl: 'http://api.test'),
+    ),
+    tokenStoreProvider.overrideWithValue(store),
+    httpClientAdapterProvider.overrideWithValue(adapter),
+    clockProvider.overrideWithValue(() => now),
+    ...overrides.cast(),
+  ];
+
   Widget build() => ProviderScope(
     retry: noAutomaticRetry,
-    overrides: [
-      ...appOverrides(
-        const AppConfig(flavor: Flavor.prod, apiBaseUrl: 'http://api.test'),
-      ),
-      tokenStoreProvider.overrideWithValue(store),
-      httpClientAdapterProvider.overrideWithValue(adapter),
-      clockProvider.overrideWithValue(() => DateTime(2026, 11, 16, 9, 30)),
-      ...overrides.cast(),
-    ],
+    overrides: providerOverrides,
     child: const VeloraApp(),
   );
 }

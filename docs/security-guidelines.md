@@ -20,6 +20,8 @@ Not in v1 (recorded as a known gap): multi-factor authentication. Recommended fo
 
 **Invitations and devices (Sprint 5).** An invited account is created with a hash of random bytes, so nobody can sign in until the invitee sets a password from the emailed single-use link (valid 7 days, stored hashed like reset tokens; never logged or audited). Changing a member's role or removing access revokes all their refresh tokens; an access token already issued remains valid until it expires (≤ 15 minutes). Users can list their own sessions and revoke one; session ids are refresh-token family ids and are only ever matched against the caller's own user id. CSV exports prefix cells that begin with `=`, `+`, `-` or `@` so spreadsheet apps do not run them as formulas.
 
+**Session closure and the device copy (Sprint 6).** Every authenticated request checks that the session behind its access token is still open (one indexed lookup), so sign-out, a password change, a role change, removal of access and remote sign-out take effect immediately. The app keeps a copy of products and customers in a SQLite file in its private storage: it holds exactly what the server sent for the signed-in role (no cost data for sales), is erased on sign-out and when a different person or role signs in, and never contains tokens. It is not separately encrypted, and excluding it from device backups requires native configuration that has not been done yet.
+
 ## 2. Authorization
 
 - **Deny by default.** Every route declares its required permission; a global guard rejects routes without a declaration (enforced by a test that enumerates all routes).

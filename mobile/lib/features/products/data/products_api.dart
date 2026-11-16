@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/failure.dart';
+import '../../../core/offline/local_db.dart';
+import 'offline_products_api.dart';
 import 'product.dart';
 
 final productsApiProvider = Provider<ProductsApi>(
-  (ref) => ProductsApi(ref.watch(dioProvider)),
+  (ref) =>
+      offlineProductsApi(ref.watch(dioProvider), ref.watch(localDbProvider)),
 );
 
 /// Remote data source for products and inventory (docs/api-specification.md §3.3–3.4). Throws [Failure].

@@ -1,13 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/api/failure.dart';
 import 'customer.dart';
+import 'offline_customers_api.dart';
 
-final customersApiProvider = Provider<CustomersApi>(
-  (ref) => CustomersApi(ref.watch(dioProvider)),
-);
+final customersApiProvider = Provider<CustomersApi>(OfflineCustomersApi.new);
 
 /// Remote data source for customers (docs/api-specification.md §3.5). Throws [Failure].
 class CustomersApi {

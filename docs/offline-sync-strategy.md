@@ -106,3 +106,22 @@ Shown in a persistent banner and in More → Sync queue. For each item the user 
 ## 8. Testing
 
 Covered in [`testing-strategy.md`](testing-strategy.md): outbox ordering and dependency tests, idempotent replay against the real API, forced-conflict integration tests (two clients, one stock unit), kill-and-restart during send, token expiry mid-queue, and local migration tests with a populated outbox.
+
+## 9. As built (Sprint 6)
+
+What exists, and where it differs from the plan above.
+
+**Built as described:** server-authoritative writes; the operation matrix for products, customers, quotations, payments and invoices; the queue with a stable idempotency key per item, strict order, dependants held behind a refused item, 7-day expiry, nothing resolved silently; copies erased on sign-out and on a change of person or role; offline banner with the age of the data; badge on More; Sync screen.
+
+**Different:**
+- **Storage** uses the `sqlite3` package directly (tables `cached_products`, `cached_customers`, `state`, `outbox`) rather than Drift — no code generation, and the same engine. There are no `cached_documents`, `drafts` or `pending_entities` tables: a customer created offline is a flagged row in `cached_customers`; a queued quotation exists only in the queue.
+- **Documents, dashboard and reports are not available offline.** A payment can therefore only be queued when the connection drops while an invoice is open.
+- **Connectivity** is inferred from the app's own requests (no network plugin): "offline" means the last request did not get through.
+- **Triggers:** sign-in or start, return to the foreground, every 5 minutes while open, "Sync now", and immediately after something is queued. There is no per-item backoff timer; a waiting item is retried at the next trigger.
+- **Needs attention** offers *Try again* (as a new request, with a new key) and *Discard*. "Edit and resubmit" is not built.
+- **Offline totals** are computed on the device with the same integer rules and labelled as such on the cart; the server prices the quotation again when it is sent.
+- **Other people's unsent items** stay on the device untouched and are sent when their owner signs in again; they do not block the next person.
+- **Provisional (offline) invoices are not built.** An invoice always needs the server.
+- **Start-up offline** works from the last loaded profile; a device that has never been online with this account shows the connection error instead of an empty shop.
+
+**Not verified on a device:** the database file in app storage, behaviour when the operating system suspends the app mid-send, and backup exclusion.

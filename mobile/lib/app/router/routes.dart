@@ -27,6 +27,8 @@ abstract final class Routes {
   static const taxRates = '/more/settings/tax-rates';
   static const team = '/more/team';
   static const devices = '/more/devices';
+  static const syncQueue = '/more/sync';
+  static const changePassword = '/more/password';
 
   static const cart = '/sell/cart';
   static const payment = '/sell/payment';

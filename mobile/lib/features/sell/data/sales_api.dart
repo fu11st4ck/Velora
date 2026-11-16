@@ -2,14 +2,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/api/failure.dart';
 import '../../../core/auth/session.dart';
 import '../../documents/data/document.dart';
+import 'offline_sales_api.dart';
 
-final salesApiProvider = Provider<SalesApi>(
-  (ref) => SalesApi(ref.watch(dioProvider)),
-);
+final salesApiProvider = Provider<SalesApi>(OfflineSalesApi.new);
 
 /// The tax rates a sale can use, default first.
 final taxRatesProvider = FutureProvider.autoDispose<List<TaxRate>>(
@@ -71,6 +69,7 @@ class PricePreview {
     required this.totalMinor,
     required this.valid,
     required this.issues,
+    this.estimated = false,
   });
 
   factory PricePreview.fromJson(Map<String, dynamic> json) => PricePreview(
@@ -93,6 +92,10 @@ class PricePreview {
   final int totalMinor;
   final bool valid;
   final List<List<LineIssue>> issues;
+
+  /// Worked out on this device from its copy of the products, because the server could not be
+  /// reached. The server checks everything again when the document is sent.
+  final bool estimated;
 }
 
 /// Remote data source for pricing and issuing documents (docs/api-specification.md §3.6, 3.8, 3.9).
@@ -123,6 +126,21 @@ class SalesApi {
     return PricePreview.fromJson(res.data!['data'] as Map<String, dynamic>);
   });
 
+  /// The request body of a new quotation — also what is queued when it is made offline.
+  static Map<String, dynamic> quotationBody({
+    required String customerId,
+    required List<SaleLine> lines,
+    required int discountMinor,
+    String? taxRateId,
+    String? notes,
+  }) => {
+    'customerId': customerId,
+    'lines': lines.map((l) => l.toJson()).toList(),
+    'discountMinor': discountMinor,
+    'taxRateId': ?taxRateId,
+    'notes': notes,
+  };
+
   Future<Quotation> createQuotation({
     required String customerId,
     required List<SaleLine> lines,
@@ -133,13 +151,13 @@ class SalesApi {
   }) => _guard(() async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/quotations',
-      data: {
-        'customerId': customerId,
-        'lines': lines.map((l) => l.toJson()).toList(),
-        'discountMinor': discountMinor,
-        'taxRateId': ?taxRateId,
-        'notes': notes,
-      },
+      data: quotationBody(
+        customerId: customerId,
+        lines: lines,
+        discountMinor: discountMinor,
+        taxRateId: taxRateId,
+        notes: notes,
+      ),
       options: Options(headers: {'Idempotency-Key': idempotencyKey}),
     );
     return Quotation.fromJson(res.data!['data'] as Map<String, dynamic>);

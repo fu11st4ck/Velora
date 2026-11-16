@@ -22,6 +22,8 @@ import '../../documents/presentation/document_controllers.dart';
 import '../../products/presentation/inventory_controllers.dart'
     show inventoryListProvider;
 import '../data/sales_api.dart';
+import '../../../core/offline/sync_engine.dart';
+import '../../products/data/offline_products_api.dart' show isUnreachable;
 import 'cart_controller.dart';
 import 'sale_navigation.dart';
 import 'sell_screen.dart' show sellableProductsProvider;
@@ -110,6 +112,14 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
 
     setState(() => _busy = true);
     try {
+      // A customer created offline must reach the server before an invoice can name them.
+      final sync = ref.read(syncProvider.notifier);
+      if (sync.pendingCustomerOperation(cart.customer!.id) != null) {
+        await sync.syncNow();
+        if (sync.pendingCustomerOperation(cart.customer!.id) != null) {
+          throw const NetworkFailure();
+        }
+      }
       final invoice = await ref
           .read(salesApiProvider)
           .createInvoice(
@@ -268,7 +278,11 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
               ),
               const SizedBox(height: Space.xl),
               if (_failure != null) ...[
-                Notice(message: describeFailure(_failure!)),
+                Notice(
+                  message: isUnreachable(_failure!)
+                      ? 'No connection. An invoice takes stock, so it needs the server. Try again, or go back and save a quotation — that works offline.'
+                      : describeFailure(_failure!),
+                ),
                 const SizedBox(height: Space.lg),
               ],
               LabeledField(

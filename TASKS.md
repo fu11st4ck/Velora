@@ -29,7 +29,7 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 ### Carried over from Sprint 1
 - [ ] Android and iOS builds and on-device runs — **blocked here** (no Android SDK, no macOS); CI jobs `mobile-android` and `mobile-ios` are defined and will run on the first push
 - [ ] Native build flavours (Android `productFlavors`, iOS schemes) and the `velora://` deep-link registration — need the native toolchains to verify; Dart entry points and `--dart-define` config are in place
-- [ ] Drift local database — moves with the product cache to Sprint 6 (see below)
+- [x] Local database — done in Sprint 6 with the `sqlite3` package directly instead of Drift (see ADR-0007 addendum)
 - [ ] Freezed / json_serializable — still deferred; models remain hand-written and small
 - [ ] Localisation via ARB files — strings are English literals in widgets for now; extract before Sprint 4
 - [x] Pagination helper and role-aware product view — built with S2-01
@@ -45,12 +45,12 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 ### Moved out of Sprint 2
 - [ ] S2-02 Product photos — needs object storage, which this workspace cannot run (no Docker/MinIO), and the camera/gallery picker needs a device. Products show the monogram tile; `imageUrl` is always null. Scheduled with deployment storage in Sprint 6
 - [ ] S2-05 Camera barcode scanning — needs a device to build and verify; scheduled with the first device-capable environment
-- [ ] S2-06 Product cache and delta sync (`GET /sync/changes`, Drift) — moved to Sprint 6 with the rest of offline support, so the cache and the sync engine are designed together
+- [x] S2-06 Product cache and delta sync — done in Sprint 6
 
 ## Sprint 3 — Customers
 - [x] S3-01 Customers API: list with search (name, company, email, phone digits), exact lookup by mobile, create with optional client id, detail with invoiced / outstanding / overdue totals, edit, manager-only archive
 - [x] S3-02 Customer screens E1–E3 (directory, detail, new/edit) and the reusable customer picker (D4) for the sale flow
-- [ ] S3-03 Customer cache and offline create — moved to Sprint 6 with the rest of offline support
+- [x] S3-03 Customer cache and offline create — done in Sprint 6
 - [ ] Customer's document list on the detail screen — listed under Sprint 4 "Not in Sprint 4"
 
 ## Sprint 4 — Sales and documents
@@ -88,14 +88,31 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Branch assignment for team members — the UI is single-branch (D9)
 - [ ] Reports while offline (last loaded figures with a timestamp) — Sprint 6 with the local cache
 - [ ] Report ranges use the device's calendar date; a device set to a different time zone than the business can be a day off at the edges
-- [ ] Change-password screen — the API exists since Sprint 1; no screen yet
-- [ ] A role change or removal signs the member out, but an access token already issued keeps working for up to 15 minutes
+- [x] Change-password screen — done in Sprint 6
+- [x] A role change or removal now takes effect immediately (Sprint 6)
 - [ ] Sprint 5 screens have not been run on a physical device — widget tests, rendered goldens and live API tests only
 
-## Sprint 6 — Production readiness ← next
-- [ ] S6-01 Outbox and sync · S6-02 Security review · S6-03 Performance
-- [ ] S6-04 Monitoring and consistency job · S6-05 Deployment and backups (blocked: D11)
-- [ ] S6-06 Store preparation · S6-07 Device end-to-end and accessibility pass
+## Sprint 6 — Production readiness (partly delivered; the rest is blocked, see below)
+- [x] S6-01 Offline: device copy of products and customers kept current by `GET /sync/changes`; lists, search, product and customer detail, the sell picker and the cart work without a connection; quotations, new customers and payments are queued and sent later; Sync screen with retry and discard; offline start-up from the remembered profile
+- [x] S6-02 Security review fixes: a closed session (sign-out, password change, role change, removal, remote sign-out) stops working at once instead of at token expiry; change-password screen
+- [x] S6-03 Performance measured with 20k products / 100k invoices (`docs/performance-notes.md`); documents list fixed (1.1 s → 10 ms)
+- [x] S6-04 (part) Consistency job `npm run maintenance -- check` and expiry purge `-- purge`
+- [x] Deployment runbook written (`docs/deployment-runbook.md`) — **not executed**, no hosting exists yet
+
+### Blocked — needs a decision or equipment this workspace does not have
+- [ ] **S6-05 Deployment, backups and restore drill — blocked on D11 (hosting choice).** Also unblocks SMTP for invitation and reset emails, object storage for photos and the logo, and error monitoring
+- [ ] **S6-06 Store preparation and S6-07 device testing — need an Android SDK / macOS and devices.** The app has never been built for or run on a phone. In particular the on-device database file (`sqlite3` build hooks, `path_provider`) is unverified on Android and iOS; tests run it in memory on Linux
+- [ ] S2-02 Product photos and company logo — need object storage (D11) and a device for the picker
+- [ ] S2-05 Camera barcode scanning — needs a device; barcodes can be typed and searched today
+- [ ] S6-04 Error monitoring, dashboards and alerts — need a monitoring service (with D11)
+
+### Not built, by choice — say if you want them
+- [ ] Offline invoices ("provisional" sales, D8) — off by default in the accepted decisions; an invoice always needs the server
+- [ ] Documents are not saved for offline reading; the dashboard and reports need a connection
+- [ ] "Edit and resubmit" for a refused queued item — it can be retried or discarded; the content is not reopened in the cart
+- [ ] D6 named drafts — one cart in progress is kept per user
+- [ ] The device database is not encrypted beyond the platform's app sandbox, and excluding it from device backups needs native configuration (with the first device build)
+- [ ] ARB localisation, native build flavours, deep-link registration (carried over from Sprint 1)
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

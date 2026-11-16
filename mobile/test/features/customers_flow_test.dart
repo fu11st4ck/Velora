@@ -244,7 +244,7 @@ void main() {
     });
 
     testWidgets(
-      'a retry after a lost connection reuses the key and creates one customer',
+      'a customer saved without a connection is sent once, with the same key',
       (tester) async {
         var failOnce = true;
         setScreenSize(tester, const Size(390, 844));
@@ -268,11 +268,12 @@ void main() {
         await tapKey(tester, 'new-customer');
         await type(tester, 'field-name', 'Layla Haddad');
         await tapKey(tester, 'save-customer');
+        // Offline, the customer is kept on the device and queued; the queue then sends it
+        // with the same key, so the server creates it once even if the first attempt arrived.
         expect(
-          find.text('No connection. Check your internet and try again.'),
+          find.textContaining('Layla Haddad saved on this device'),
           findsOneWidget,
         );
-        await tapKey(tester, 'save-customer');
         final keys = app.adapter.requests
             .where((r) => r.method == 'POST')
             .map((r) => r.headers['Idempotency-Key'])

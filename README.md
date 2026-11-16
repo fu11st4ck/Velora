@@ -2,7 +2,7 @@
 
 Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend for jewellery sales and inventory: stock, customer pricing, quotations, invoices, payments and reports.
 
-> **Status (2026-11-16): Sprints 0–5 delivered** — a tested backend (authentication, tenant isolation, products and inventory, customers, quotations, invoices, payments, returns, PDFs, dashboard, reports, settings, team) and a Flutter app covering sign-in, inventory, customers, the sale flow, documents, the dashboard, reports and settings. Production readiness (offline, photos, barcode scanning, deployment) is next (Sprint 6). Not yet run on a physical device; outgoing email needs SMTP. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
+> **Status (2026-11-16): Sprints 0–5 delivered, Sprint 6 partly** — the backend and the Flutter app cover sign-in, inventory, customers, the sale flow, documents, dashboard, reports, settings and offline use (saved products and customers, queued quotations, customers and payments). **Not done:** deployment, email delivery, product photos, barcode scanning and store builds — they wait on a hosting choice and on a device toolchain. The app has never been run on a physical device. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 

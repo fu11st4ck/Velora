@@ -11,3 +11,9 @@
 - Code generation is part of the build (`build_runner`).
 - Deliberately no generic use-case/interactor classes for simple reads — avoids ceremony.
 - Alternatives: Bloc (more boilerplate for the same result here); Isar/Hive (weaker fit for relational cache + ordered queue).
+
+## Addendum (2026-11-16, Sprint 6)
+
+Two parts of this decision were not followed, deliberately:
+- **Local database:** the `sqlite3` package is used directly instead of Drift. The offline store is four small tables with hand-written SQL; Drift would have added code generation for no query that needs it. If the local schema grows (document cache, migrations), revisit.
+- **Models and providers** are hand-written rather than generated with Freezed / json_serializable / Riverpod generators. They are small, and avoiding `build_runner` keeps the build simple.

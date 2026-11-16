@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,8 @@ import '../../customers/presentation/customer_picker.dart';
 import '../../documents/presentation/document_controllers.dart';
 import '../data/cart.dart';
 import '../data/sales_api.dart';
+import '../../../core/offline/sync_engine.dart';
+import '../../products/data/offline_products_api.dart' show isUnreachable;
 import 'cart_controller.dart';
 import 'sale_navigation.dart';
 import 'price_sheet.dart';
@@ -174,6 +178,45 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       _saving = true;
       _failure = null;
     });
+    final body = SalesApi.quotationBody(
+      customerId: cart.customer!.id,
+      lines: cart.lines.map((l) => l.toSaleLine()).toList(),
+      discountMinor: cart.discountMinor,
+      taxRateId: cart.taxRateId,
+      notes: cart.notes,
+    );
+    final sync = ref.read(syncProvider.notifier);
+    // A customer created offline exists only on this device until it is sent: the quotation
+    // has to follow it through the queue, even if the connection is back.
+    final customerOperation = sync.pendingCustomerOperation(cart.customer!.id);
+    void saveForLater() {
+      sync.enqueue(
+        type: 'quotation.create',
+        path: '/quotations',
+        body: body,
+        summary:
+            'Quotation for ${cart.customer!.displayName} · ${ref.read(moneyFormatterProvider).format(preview!.totalMinor)}',
+        idempotencyKey: _quotationKey,
+        dependsOn: customerOperation,
+      );
+      ref.read(cartProvider.notifier).clear();
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Quotation saved on this device. It gets its number when it is sent.',
+            ),
+          ),
+        );
+      context.go(Routes.sell);
+    }
+
+    if (customerOperation != null) {
+      saveForLater();
+      setState(() => _saving = false);
+      return;
+    }
     try {
       final quotation = await ref
           .read(salesApiProvider)
@@ -191,6 +234,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       finishSaleAt(context, Routes.quotation(quotation.id));
     } on Failure catch (failure) {
       if (!mounted) return;
+      if (isUnreachable(failure)) {
+        // No stock or money moves with a quotation, so it can wait for the connection.
+        saveForLater();
+        return;
+      }
       setState(() {
         if (failure is BusinessFailure || failure is ValidationFailure) {
           _quotationKey = newIdempotencyKey();
@@ -301,6 +349,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           children: [
             if (_failure != null) ...[
               Notice(message: describeFailure(_failure!)),
+              const SizedBox(height: Space.lg),
+            ],
+            if (preview?.estimated ?? false) ...[
+              const Notice(
+                key: Key('offline-estimate'),
+                message: 'No connection. Totals and stock come from this device and are checked again when sent. You can save a quotation; an invoice needs a connection.',
+                tone: StatusTone.warning,
+                icon: Icons.cloud_off_outlined,
+              ),
               const SizedBox(height: Space.lg),
             ],
             if (cart.quotationNumber != null) ...[

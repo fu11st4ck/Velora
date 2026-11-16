@@ -35,10 +35,24 @@ class AuthApi {
     );
   });
 
-  Future<Me> me() => _guard(() async {
+  Future<Me> me() async => Me.fromJson(await profile());
+
+  /// The profile as the server sent it, so it can be remembered for starting without a connection.
+  Future<Map<String, dynamic>> profile() => _guard(() async {
     final res = await _dio.get<Map<String, dynamic>>('/auth/me');
-    return Me.fromJson(res.data!['data'] as Map<String, dynamic>);
+    return res.data!['data'] as Map<String, dynamic>;
   });
+
+  /// Other devices are signed out by the server; this one stays signed in.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) => _guard(
+    () => _dio.post<void>(
+      '/auth/change-password',
+      data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    ),
+  );
 
   Future<void> logout(String refreshToken) => _guard(
     () => _dio.post<void>('/auth/logout', data: {'refreshToken': refreshToken}),

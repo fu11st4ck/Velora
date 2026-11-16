@@ -22,6 +22,8 @@ import '../../products/presentation/inventory_controllers.dart'
     show inventoryListProvider;
 import '../../sell/presentation/sell_screen.dart' show sellableProductsProvider;
 import '../data/document.dart';
+import '../../../core/offline/sync_engine.dart';
+import '../../products/data/offline_products_api.dart' show isUnreachable;
 import '../data/documents_api.dart';
 import 'document_controllers.dart';
 import 'document_widgets.dart';
@@ -441,6 +443,41 @@ class _RecordPaymentSheetState extends ConsumerState<_RecordPaymentSheet> {
       if (mounted) Navigator.of(context).pop(updated);
     } on Failure catch (failure) {
       if (!mounted) return;
+      if (isUnreachable(failure)) {
+        // Recording money received can wait for the connection: the server applies it once and
+        // refuses it if it would exceed what is owed by then.
+        final amount = _money.parse(_amount.text)!;
+        final reference =
+            _method == PaymentMethod.bankTransfer &&
+                _reference.text.trim().isNotEmpty
+            ? _reference.text.trim()
+            : null;
+        ref
+            .read(syncProvider.notifier)
+            .enqueue(
+              type: 'payment.record',
+              path: '/invoices/${widget.invoice.id}/payments',
+              body: {
+                'amountMinor': amount,
+                'method': _method.wire,
+                'reference': reference,
+              },
+              summary:
+                  'Payment of ${_money.format(amount)} on ${widget.invoice.number}',
+              idempotencyKey: _idempotencyKey,
+            );
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No connection. The payment is saved on this device and sent when you are back online.',
+              ),
+            ),
+          );
+        Navigator.of(context).pop();
+        return;
+      }
       setState(() {
         if (failure is BusinessFailure || failure is ValidationFailure) {
           _idempotencyKey = newIdempotencyKey();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/config/app_config.dart';
 import '../auth/token_store.dart';
+import '../offline/connection_status.dart';
 import 'auth_interceptor.dart';
 
 final appConfigProvider = Provider<AppConfig>(
@@ -44,6 +45,16 @@ final dioProvider = Provider<Dio>((ref) {
       refreshDio: client(),
       retryDio: client(),
       onSessionEnded: () => ref.read(sessionEndedCallbackProvider)(),
+    ),
+  );
+  dio.interceptors.add(
+    ConnectionInterceptor(
+      // Reported after the current build, so a provider being built may make requests.
+      ({required reached}) => Future.microtask(() {
+        if (ref.mounted) {
+          ref.read(offlineProvider.notifier).report(reached: reached);
+        }
+      }),
     ),
   );
   ref.onDispose(dio.close);

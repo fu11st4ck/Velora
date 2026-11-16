@@ -1,6 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
+
+import '../../../app/theme/tokens.dart';
+import '../../../core/offline/connection_status.dart';
+import '../../../core/offline/sync_engine.dart';
 
 import '../../sell/presentation/cart_controller.dart';
 
@@ -40,9 +45,19 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // The Sell tab shows how many units are in the cart, wherever the user is.
     final cartUnits = ref.watch(cartProvider.select((c) => c.units));
+    // More shows how many changes made offline are still waiting to be sent.
+    final unsent = ref.watch(syncProvider.select((s) => s.unsent));
     Widget badge(int index, Widget icon) => index == 2 && cartUnits > 0
         ? Badge(label: Text('$cartUnits'), child: icon)
+        : index == 4 && unsent > 0
+        ? Badge(label: Text('$unsent'), child: icon)
         : icon;
+    final content = Column(
+      children: [
+        const OfflineBanner(),
+        Expanded(child: shell),
+      ],
+    );
     final wide = MediaQuery.sizeOf(context).width >= railBreakpoint;
     if (wide) {
       return Scaffold(
@@ -63,14 +78,14 @@ class AppShell extends ConsumerWidget {
                 ],
               ),
               const VerticalDivider(width: 1),
-              Expanded(child: shell),
+              Expanded(child: content),
             ],
           ),
         ),
       );
     }
     return Scaffold(
-      body: shell,
+      body: content,
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           border: Border(
@@ -93,6 +108,52 @@ class AppShell extends ConsumerWidget {
                   selectedIcon: badge(i, Icon(d.selectedIcon)),
                   label: d.label,
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown across the top while the server cannot be reached, with the age of the saved data.
+class OfflineBanner extends ConsumerWidget {
+  const OfflineBanner({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!ref.watch(offlineProvider)) return const SizedBox.shrink();
+    final synced = ref.watch(syncProvider.select((s) => s.lastSyncedAt));
+    final colors = VeloraTokens.of(context).status(StatusTone.warning);
+    return Material(
+      color: colors.background,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Space.lg,
+            vertical: Space.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 18,
+                color: colors.foreground,
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: Text(
+                  synced == null
+                      ? 'No connection.'
+                      : 'No connection. Showing data saved ${DateFormat('d MMM, HH:mm').format(synced.toLocal())}.',
+                  key: const Key('offline-banner'),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: colors.foreground,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
           ),
         ),

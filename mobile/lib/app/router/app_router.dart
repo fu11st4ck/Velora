@@ -24,7 +24,9 @@ import '../../features/products/presentation/receive_stock_screen.dart';
 import '../../features/products/presentation/stock_history_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/business_settings_screen.dart';
+import '../../features/settings/presentation/change_password_screen.dart';
 import '../../features/settings/presentation/devices_screen.dart';
+import '../../features/settings/presentation/sync_queue_screen.dart';
 import '../../features/settings/presentation/tax_rates_screen.dart';
 import '../../features/settings/presentation/team_screen.dart';
 import '../../features/shell/presentation/app_shell.dart';
@@ -238,6 +240,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(
                     path: 'devices',
                     builder: (_, _) => const DevicesScreen(),
+                  ),
+                  GoRoute(
+                    path: 'sync',
+                    builder: (_, _) => const SyncQueueScreen(),
+                  ),
+                  GoRoute(
+                    path: 'password',
+                    builder: (_, _) => const ChangePasswordScreen(),
                   ),
                   GoRoute(
                     path: 'customers',

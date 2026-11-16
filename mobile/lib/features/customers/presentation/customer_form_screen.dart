@@ -11,6 +11,7 @@ import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/sections.dart';
 import '../../../core/widgets/state_views.dart';
 import '../data/customer.dart';
+import '../../../core/offline/sync_engine.dart';
 import '../data/customers_api.dart';
 import 'customer_controllers.dart';
 
@@ -187,6 +188,11 @@ class _CustomerFormState extends ConsumerState<_CustomerForm> {
           content: Text(
             _isEdit
                 ? '${saved.displayName} updated'
+                : ref
+                          .read(syncProvider.notifier)
+                          .pendingCustomerOperation(saved.id) !=
+                      null
+                ? '${saved.displayName} saved on this device. They are sent when you are back online.'
                 : '${saved.displayName} added',
           ),
         ),

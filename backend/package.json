@@ -17,7 +17,7 @@
     "db:setup": "bash scripts/db-setup.sh",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "maintenance": "tsx scripts/maintenance.ts",
+    "maintenance": "tsx src/maintenance/cli.ts",
     "prisma:generate": "prisma generate"
   },
   "prisma": {

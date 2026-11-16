@@ -131,6 +131,10 @@ void main() {
               .data
           as Map<String, dynamic>;
 
+  /// Carts kept on the device (the store also remembers the profile).
+  Iterable<String> savedCarts() =>
+      device.values.keys.where((k) => k.startsWith('velora.cart'));
+
   setUp(() {
     server = FakeShopServer();
     device = InMemoryKeyValueStore();
@@ -363,7 +367,7 @@ void main() {
       await tapKey(tester, 'clear-cart');
       await tapKey(tester, 'confirm-clear');
       expect(find.byKey(const Key('review-cart')), findsNothing);
-      expect(device.values, isEmpty);
+      expect(savedCarts(), isEmpty);
     });
   });
 
@@ -438,7 +442,7 @@ void main() {
           },
         });
         expect(server.product('VLR-BR-001')['quantity'], 23);
-        expect(device.values, isEmpty, reason: 'the saved cart is gone');
+        expect(savedCarts(), isEmpty, reason: 'the saved cart is gone');
         await tester.tap(
           find.descendant(
             of: find.byType(NavigationBar),
@@ -566,7 +570,7 @@ void main() {
         await tapKey(tester, 'create-invoice');
         await tapKey(tester, 'confirm-invoice');
         expect(
-          find.text('No connection. Check your internet and try again.'),
+          find.textContaining('No connection. An invoice takes stock'),
           findsOneWidget,
         );
         await tapKey(tester, 'create-invoice');
@@ -659,7 +663,7 @@ void main() {
         );
         expect(find.textContaining('holds prices, not stock'), findsOneWidget);
         expect(server.product('VLR-RC-021')['quantity'], 17);
-        expect(device.values, isEmpty, reason: 'the cart was cleared');
+        expect(savedCarts(), isEmpty, reason: 'the cart was cleared');
 
         await tapKey(tester, 'convert-quotation');
         expect(find.textContaining('Converting QT-2026-00001'), findsOneWidget);

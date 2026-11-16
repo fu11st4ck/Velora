@@ -89,13 +89,15 @@ Changes from the brief's starting list, with reasons:
 
 ### Implementation status (after Sprint 5)
 
-Every endpoint in the table is implemented and tested except `/sync/changes` and the product image upload URL (Sprint 6). Differences from the details below, all deliberate and tracked in `TASKS.md`:
+Every endpoint in the table is implemented and tested except the product image upload URL (needs object storage). Differences from the details below, all deliberate and tracked in `TASKS.md`:
 - `GET /documents` sorts by `-issuedAt` only.
 - `POST /invoices` does not accept `offline` yet (Sprint 6); the field is rejected as unknown.
 - Creating a quotation, invoice or payment with a client-generated `id` that already exists returns `409 DOCUMENT_EXISTS`.
 - `PATCH /organization` does not accept `allowOfflineSales` or a logo yet. `GET /organization` adds `regionalSettingsLocked` (managers and owners). A currency with a different number of decimals is refused (`409 SETTING_LOCKED`) once any product has a price.
 - `POST /organization/members` takes `fullName`, `email`, `role` (no `branchId`); the invitation link is valid 7 days. `PATCH` accepts `role` = `OWNER|MANAGER|SALES` and `isActive`. Members carry `isPending` until their first sign-in.
 - `GET /tax-rates` returns active rates; `?includeInactive=true` adds inactive ones for managers and owners. Removing the default flag directly is refused (`409 DEFAULT_RATE_REQUIRED`): make another rate the default instead.
+- `GET /sync/changes`: a product is reported as changed when its row, its stock level or the organization's pricing settings changed, so the feed scans the organization's products rather than using the `updated_at` index alone. The token also records the caller's role: a token made for another role is refused (`400`, field `since`) and the app starts from a full copy. The feed stays 10 seconds behind "now" and re-sends the most recent changes, so nothing is missed.
+- Every authenticated request is refused with `401 SESSION_REVOKED` once its session has been closed, even if the access token has not expired.
 - **Added:** `GET /auth/sessions` (the caller's signed-in devices: `id, deviceName, ipAddress, signedInAt, lastActiveAt, isCurrent`) and `DELETE /auth/sessions/{id}` → 204 (sign that device out; 404 for a session that is not the caller's).
 - Reports: `sales-summary` also returns `from` and `to`; its CSV has one row per issued invoice and is manager-only (`403` for sales). Dashboard `attentionProducts` items include `sku`.
 

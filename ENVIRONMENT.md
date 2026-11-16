@@ -12,7 +12,7 @@ Status: specification for Sprint 1 — the variables are not yet read by any cod
 | `PORT` | no | `3000` | HTTP port |
 | `APP_BASE_URL` | yes | `http://localhost:3000` | Used in emailed links |
 | `DATABASE_URL` | yes | `postgresql://velora_app:…@localhost:5432/velora` | Application role (no DDL, no RLS bypass) |
-| `DATABASE_MIGRATION_URL` | yes (deploy) | `postgresql://velora_owner:…@…/velora` | Owner role, used only by the migration job |
+| `DATABASE_MIGRATION_URL` | yes (deploy) | `postgresql://velora_owner:…@…/velora` | Owner role, used only by the migration job and the maintenance jobs (`npm run maintenance`) |
 | `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` | yes | PEM | Access-token signing key pair |
 | `JWT_KEY_ID` | yes | `2026-11` | `kid` for key rotation |
 | `ACCESS_TOKEN_TTL_SECONDS` | no | `900` | |

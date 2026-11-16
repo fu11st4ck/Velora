@@ -1,11 +1,12 @@
 /**
- * Scheduled maintenance, run with the schema owner's connection:
+ * Scheduled maintenance, run with the schema owner's connection (in the production image:
+ * `node dist/maintenance/cli.js <check|purge>`):
  *   npm run maintenance -- check     verifies derived figures; exits 1 and lists what is wrong
  *   npm run maintenance -- purge     deletes expired idempotency records and tokens
  * Intended for a daily scheduler; `check` failing is an alert, never something to auto-repair.
  */
 import { Client } from 'pg';
-import { checkConsistency, purgeExpired } from '../src/maintenance/consistency';
+import { checkConsistency, purgeExpired } from './consistency';
 
 async function main(): Promise<number> {
   const command = process.argv[2];

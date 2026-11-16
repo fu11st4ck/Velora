@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/auth/data/auth_api.dart';
 import '../api/api_client.dart';
 import '../api/failure.dart';
+import '../storage/key_value_store.dart';
 import 'session.dart';
 
 /// How this device is named in the user's list of signed-in devices.
@@ -14,6 +18,8 @@ final deviceNameProvider = Provider<String>(
     _ => 'Other device',
   },
 );
+
+const _profileKey = 'velora.profile';
 
 final sessionControllerProvider =
     NotifierProvider<SessionController, SessionState>(SessionController.new);
@@ -64,6 +70,7 @@ class SessionController extends Notifier<SessionState> {
       }
     }
     await store.clear();
+    await ref.read(keyValueStoreProvider).remove(_profileKey);
     state = const SignedOut();
   }
 
@@ -72,21 +79,47 @@ class SessionController extends Notifier<SessionState> {
   Future<void> refreshProfile() async {
     if (state is! SignedIn) return;
     try {
-      state = SignedIn(await _api.me());
+      state = SignedIn(await _fetchProfile());
     } on Failure {
       // The next start-up or sign-in loads it again.
     }
   }
 
+  Future<Me> _fetchProfile() async {
+    final json = await _api.profile();
+    final me = Me.fromJson(json);
+    await ref.read(keyValueStoreProvider).write(_profileKey, jsonEncode(json));
+    return me;
+  }
+
+  Me? _rememberedProfile() {
+    final saved = ref.read(keyValueStoreProvider).read(_profileKey);
+    if (saved == null) return null;
+    try {
+      return Me.fromJson(jsonDecode(saved) as Map<String, dynamic>);
+    } on Object {
+      return null;
+    }
+  }
+
   /// Called by the HTTP layer when the server rejected the session and tokens were cleared.
   void onSessionEnded() {
+    unawaited(ref.read(keyValueStoreProvider).remove(_profileKey));
     if (state is! SignedOut) state = const SignedOut(expired: true);
   }
 
   Future<void> _loadProfile({bool rethrowFailure = false}) async {
     try {
-      state = SignedIn(await _api.me());
+      state = SignedIn(await _fetchProfile());
     } on Failure catch (failure) {
+      // Without a connection the app opens with the profile it last loaded, so saved products
+      // and customers can still be used. The server re-checks everything once it is reachable.
+      final remembered = rethrowFailure ? null : _rememberedProfile();
+      if (remembered != null &&
+          (failure is NetworkFailure || failure is TimeoutFailure)) {
+        state = SignedIn(remembered);
+        return;
+      }
       if (failure is UnauthorizedFailure || failure is ForbiddenFailure) {
         await ref.read(tokenStoreProvider).clear();
         state = SignedOut(expired: !rethrowFailure);

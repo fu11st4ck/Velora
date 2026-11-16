@@ -106,6 +106,8 @@ class FakeCustomerServer {
       final error = _validate(body!);
       if (error != null) return error;
       final c = seed();
+      // A customer created offline keeps the id its device chose.
+      if (body['id'] != null) c['id'] = body['id'];
       _apply(c, body);
       return _created(_replays[key] = jsonEncode({'data': c}));
     }

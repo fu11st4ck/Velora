@@ -48,6 +48,16 @@ VELORA_LIVE_API=http://localhost:3000/api/v1 VELORA_LIVE_PASSWORD='<seed passwor
 
 Staging and production builds require `--dart-define=API_BASE_URL=https://…` and refuse to start without it.
 
+## Maintenance jobs
+
+```bash
+cd backend
+DATABASE_MIGRATION_URL=postgresql://velora_owner:…@localhost:5432/velora_dev npm run maintenance -- check   # exit 1 lists what is inconsistent
+DATABASE_MIGRATION_URL=… npm run maintenance -- purge                                                      # deletes expired idempotency records and tokens
+```
+
+Both use the owner connection (row-level security would hide other organizations). `check` only reads.
+
 ## Other checks
 
 ```bash
