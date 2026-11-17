@@ -216,7 +216,7 @@ export class OrganizationService {
       return { member: created, organizationName: org.name };
     });
 
-    await this.mail.send({
+    const invitationEmailSent = await this.mail.send({
       to: dto.email,
       subject: `You have been invited to ${organizationName} on Velora`,
       text:
@@ -225,7 +225,9 @@ export class OrganizationService {
         `${this.config.MOBILE_DEEP_LINK_BASE}reset-password?token=${invitation.token}\n\n` +
         `If the link has expired, use "Forgot password" on the sign-in screen with this email address.`,
     });
-    return memberView(member);
+    // The account exists either way. When the email could not be sent, the owner is told, and the
+    // invited person can get a link with "Forgot password" once email works.
+    return { ...memberView(member), invitationEmailSent };
   }
 
   updateMember(ctx: RequestContext, memberId: string, dto: UpdateMemberDto) {

@@ -175,7 +175,9 @@ class TeamScreen extends ConsumerWidget {
                   ..showSnackBar(
                     SnackBar(
                       content: Text(
-                        'Invitation emailed to ${invited.email}. The link works for 7 days.',
+                        invited.invitationEmailSent
+                            ? 'Invitation emailed to ${invited.email}. The link works for 7 days.'
+                            : '${invited.fullName} was added, but the email could not be sent. Ask them to use "Forgot password" on the sign-in screen.',
                       ),
                     ),
                   );

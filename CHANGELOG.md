@@ -4,6 +4,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Deployment (2026-11-17)
+- `deploy/`: production Docker Compose stack (PostgreSQL, API, Caddy with automatic HTTPS), database role setup, secrets generator, nightly backup with optional off-server copy, restore drill, and a step-by-step guide.
+- `create-organization` maintenance command: creates a business, its default tax rate and its owner account (there is no public sign-up).
+- CI builds the production stack and checks that the API becomes ready.
+
+### Fixed
+- Inviting a team member no longer fails when the mail server is unreachable: the account is created, the response says the email was not sent, and the app tells the owner to have the person use "Forgot password".
+- Requesting a password reset no longer returns an error when the mail server is down.
+
+### Changed
+- The Prisma command-line tool ships in the production image, so the migration job runs from the same image as the API.
+
 ### Added — Sprint 6 (2026-11-16)
 **Backend**
 - `GET /sync/changes`: products and customers changed since a token, for the app's offline copy. A product counts as changed when its row, its stock or the pricing settings change. An overlap window guarantees no change is missed under concurrent writes.

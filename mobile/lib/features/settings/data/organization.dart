@@ -105,6 +105,7 @@ class TeamMember {
     required this.isActive,
     required this.isPending,
     this.lastLoginAt,
+    this.invitationEmailSent = true,
   });
 
   factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(
@@ -114,6 +115,7 @@ class TeamMember {
     role: Role.parse(json['role'] as String),
     isActive: json['isActive'] as bool,
     isPending: json['isPending'] as bool,
+    invitationEmailSent: json['invitationEmailSent'] as bool? ?? true,
     lastLoginAt: json['lastLoginAt'] == null
         ? null
         : DateTime.parse(json['lastLoginAt'] as String),
@@ -128,6 +130,9 @@ class TeamMember {
   /// Invited, but has not signed in yet.
   final bool isPending;
   final DateTime? lastLoginAt;
+
+  /// Only meaningful on the answer to an invitation: false when the server could not send the email.
+  final bool invitationEmailSent;
 }
 
 /// One of the signed-in user's devices.

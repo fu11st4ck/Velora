@@ -42,6 +42,16 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t velora-api ./backend
       - run: docker compose config -q
+      # The production stack: valid file, and the image it builds starts far enough to check its configuration.
+      - run: |
+          cd deploy
+          cp .env.example .env
+          ./generate-secrets.sh >> .env
+          sed -i 's#^MAIL_SMTP_URL=$#MAIL_SMTP_URL=smtp://localhost:25#; s#^DOMAIN=.*#DOMAIN=localhost#' .env
+          docker compose config -q
+          docker compose up -d --build postgres migrate api
+          docker compose exec -T api node -e "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+          docker compose exec -T api node dist/maintenance/cli.js check
 
   mobile:
     runs-on: ubuntu-latest

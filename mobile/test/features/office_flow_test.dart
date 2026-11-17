@@ -801,6 +801,24 @@ void main() {
       );
     });
 
+    testWidgets('says so when the invitation email could not be sent', (
+      tester,
+    ) async {
+      await launch(tester, arrange: (s) => s.mailDown = true);
+      await openMore(tester, 'open-team');
+      await tapKey(tester, 'invite-member');
+      await type(tester, 'invite-name', 'Sara Nasser');
+      await type(tester, 'invite-email', 'sara@velora.example');
+      await tapKey(tester, 'invite-send');
+      expect(
+        find.textContaining(
+          'Sara Nasser was added, but the email could not be sent.',
+        ),
+        findsOneWidget,
+      );
+      expect(server.members.last['email'], 'sara@velora.example');
+    });
+
     testWidgets('changes a role and removes access after confirming', (
       tester,
     ) async {

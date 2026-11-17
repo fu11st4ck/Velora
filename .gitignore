@@ -24,3 +24,7 @@ ios/Pods/
 .vscode/
 .DS_Store
 *.tsbuildinfo
+
+# Production deployment
+deploy/.env
+deploy/backups/

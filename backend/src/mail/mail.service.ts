@@ -18,12 +18,23 @@ export class MailService {
     this.transport = config.MAIL_SMTP_URL ? createTransport(config.MAIL_SMTP_URL) : null;
   }
 
-  async send(mail: OutgoingMail): Promise<void> {
+  /**
+   * Returns whether the mail was handed to the mail server. Never throws: what triggered the mail
+   * (an invitation, a reset request) has already been saved, and failing the request would only
+   * hide that from the caller.
+   */
+  async send(mail: OutgoingMail): Promise<boolean> {
     if (!this.transport) {
       // The body may contain a reset link, so it is never logged.
       this.logger.warn(`SMTP not configured — mail "${mail.subject}" not sent`);
-      return;
+      return false;
     }
-    await this.transport.sendMail({ from: this.config.MAIL_FROM, to: mail.to, subject: mail.subject, text: mail.text });
+    try {
+      await this.transport.sendMail({ from: this.config.MAIL_FROM, to: mail.to, subject: mail.subject, text: mail.text });
+      return true;
+    } catch (error) {
+      this.logger.error(`Mail "${mail.subject}" could not be sent: ${error instanceof Error ? error.message : 'unknown error'}`);
+      return false;
+    }
   }
 }

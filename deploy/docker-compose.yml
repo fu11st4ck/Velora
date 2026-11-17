@@ -1,0 +1,92 @@
+# Velora in production on one server: PostgreSQL, the API and Caddy (HTTPS).
+# Run from this directory, with the settings in ./.env (see README.md):
+#   docker compose up -d --build
+#
+# Only Caddy is reachable from outside (ports 80 and 443). The database has no published port.
+name: velora
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set in .env}
+      VELORA_OWNER_PASSWORD: ${VELORA_OWNER_PASSWORD:?set in .env}
+      VELORA_APP_PASSWORD: ${VELORA_APP_PASSWORD:?set in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Runs once, when the data volume is empty: creates the two roles and the database.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d velora"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Applies database migrations with the owner role, then exits. The API starts only if it succeeded.
+  migrate:
+    build: ../backend
+    image: velora-api
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://velora_owner:${VELORA_OWNER_PASSWORD}@postgres:5432/velora
+    command: ["npx", "prisma", "migrate", "deploy"]
+
+  api:
+    build: ../backend
+    image: velora-api
+    restart: unless-stopped
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_BASE_URL: https://${DOMAIN:?set in .env}
+      # The application role: no schema changes, row-level security applies.
+      DATABASE_URL: postgresql://velora_app:${VELORA_APP_PASSWORD}@postgres:5432/velora
+      # Used only by the maintenance commands (docker compose exec api node dist/maintenance/cli.js …).
+      DATABASE_MIGRATION_URL: postgresql://velora_owner:${VELORA_OWNER_PASSWORD}@postgres:5432/velora
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY:?set in .env}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY:?set in .env}
+      JWT_KEY_ID: ${JWT_KEY_ID:-prod-1}
+      MAIL_SMTP_URL: ${MAIL_SMTP_URL:?set in .env}
+      MAIL_FROM: ${MAIL_FROM:?set in .env}
+      MOBILE_DEEP_LINK_BASE: ${MOBILE_DEEP_LINK_BASE:-velora://}
+      # Caddy is the only client, so the forwarded address is the real one (used for rate limits and audit).
+      TRUST_PROXY: "true"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: json-file
+      options: { max-size: "20m", max-file: "5" }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificates live here; losing this volume only means they are issued again.
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

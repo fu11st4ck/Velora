@@ -1,6 +1,6 @@
 # Velora — Deployment Runbook (draft)
 
-> **Status: written, never executed.** No hosting has been chosen (decision D11), so nothing here has been run against real infrastructure. Treat every step as a plan to verify on staging first.
+> **Decision D11 (2026-11-17): one server with Docker Compose.** The concrete, step-by-step guide is [`deploy/README.md`](../deploy/README.md); this document keeps the reasoning (what has to exist, backups, monitoring). The database and API steps were rehearsed locally; the Docker stack itself has not been run yet.
 
 ## 1. What has to exist
 

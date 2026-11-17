@@ -42,6 +42,7 @@ afterAll(async () => {
 beforeEach(async () => {
   t.clock.reset();
   t.mail.sent.length = 0;
+  t.mail.failing = false;
   await resetDb(db);
   org = await createOrg(db);
   ownerUser = await createUser(db, org, 'OWNER');
@@ -150,7 +151,7 @@ describe('team', () => {
   it('invites a salesperson who chooses a password from the emailed link and signs in', async () => {
     fails(await invite({ fullName: 'Lina Haddad', email: 'lina@example.com', role: 'SALES' }, manager), 403, 'FORBIDDEN');
     const member = data(await invite({ fullName: ' Lina Haddad ', email: ' Lina@Example.com ', role: 'SALES' }), 201);
-    expect(member).toMatchObject({ fullName: 'Lina Haddad', email: 'lina@example.com', role: 'SALES', isActive: true, isPending: true });
+    expect(member).toMatchObject({ fullName: 'Lina Haddad', email: 'lina@example.com', role: 'SALES', isActive: true, isPending: true, invitationEmailSent: true });
 
     expect(t.mail.sent).toHaveLength(1);
     const mail = t.mail.sent[0]!;
@@ -169,6 +170,20 @@ describe('team', () => {
     const [entry] = await audit('team.member_invited');
     expect(entry.after).toEqual({ email: 'lina@example.com', role: 'SALES' });
     expect(JSON.stringify(entry)).not.toContain(tokenFrom(mail.text));
+  });
+
+  it('still creates the account when the email cannot be sent, and says so', async () => {
+    t.mail.failing = true;
+    const member = data(await invite({ fullName: 'Lina Haddad', email: 'lina@example.com', role: 'SALES' }), 201);
+    expect(member).toMatchObject({ email: 'lina@example.com', isPending: true, invitationEmailSent: false });
+    // "Forgot password" gives them a link once email works again — and never reveals a failure.
+    const forgot = () => t.app.inject({ method: 'POST', url: `${api}/auth/forgot-password`, payload: { email: 'lina@example.com' } });
+    expect((await forgot()).statusCode).toBe(202);
+    t.mail.failing = false;
+    expect((await forgot()).statusCode).toBe(202);
+    const set = await t.app.inject({ method: 'POST', url: `${api}/auth/reset-password`, payload: { token: tokenFrom(t.mail.sent[0]!.text), newPassword: 'ruby-anklet-4417' } });
+    expect(set.statusCode, set.body).toBe(204);
+    expect((await signIn('lina@example.com', 'ruby-anklet-4417')).statusCode).toBe(200);
   });
 
   it('keeps the invitation link valid for seven days, then refuses it', async () => {

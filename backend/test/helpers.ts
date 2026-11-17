@@ -24,8 +24,12 @@ export class TestClock extends Clock {
 
 export class CapturingMail {
   readonly sent: OutgoingMail[] = [];
-  async send(mail: OutgoingMail): Promise<void> {
+  /** When true, behaves like an unreachable mail server. */
+  failing = false;
+  async send(mail: OutgoingMail): Promise<boolean> {
+    if (this.failing) return false;
     this.sent.push(mail);
+    return true;
   }
 }
 

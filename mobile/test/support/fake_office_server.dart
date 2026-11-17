@@ -20,6 +20,9 @@ class FakeOfficeServer {
   /// When set, the next dashboard request fails as if the connection dropped.
   bool dashboardOffline = false;
   bool emptyPeriod = false;
+
+  /// When set, invitations are created but their email is reported as not sent.
+  bool mailDown = false;
   int csvRequests = 0;
 
   bool get _manager => role != 'SALES';
@@ -388,7 +391,9 @@ class FakeOfficeServer {
         pending: true,
       );
       members.add(member);
-      return json(201, {'data': member});
+      return json(201, {
+        'data': {...member, 'invitationEmailSent': !mailDown},
+      });
     }
     if (path.startsWith('/organization/members/')) {
       if (!_owner) return apiError(403, 'FORBIDDEN');

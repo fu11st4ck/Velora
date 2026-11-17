@@ -100,7 +100,9 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [x] Deployment runbook written (`docs/deployment-runbook.md`) — **not executed**, no hosting exists yet
 
 ### Blocked — needs a decision or equipment this workspace does not have
-- [ ] **S6-05 Deployment, backups and restore drill — blocked on D11 (hosting choice).** Also unblocks SMTP for invitation and reset emails, object storage for photos and the logo, and error monitoring
+- [x] D11 decided (2026-11-17): one server with Docker Compose. `deploy/` holds the Compose stack (PostgreSQL, API, Caddy for HTTPS), secrets generator, backup and restore scripts and a step-by-step guide; `create-organization` sets up the first business and owner
+- [ ] **S6-05 First real deployment — yours to run** (`deploy/README.md`). Rehearsed locally without Docker: roles, migrations, first organization, API in production mode, backup, restore, consistency check. **Not run: the image build, the Compose stack and Caddy** (no Docker daemon here). Still needed from you: a server, a domain, an SMTP account, an off-server backup target
+- [ ] Error monitoring service and alerts — not chosen yet; the API logs structured JSON with request ids
 - [ ] **S6-06 Store preparation and S6-07 device testing — need an Android SDK / macOS and devices.** The app has never been built for or run on a phone. In particular the on-device database file (`sqlite3` build hooks, `path_provider`) is unverified on Android and iOS; tests run it in memory on Linux
 - [ ] S2-02 Product photos and company logo — need object storage (D11) and a device for the picker
 - [ ] S2-05 Camera barcode scanning — needs a device; barcodes can be typed and searched today

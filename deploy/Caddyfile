@@ -1,0 +1,14 @@
+# HTTPS is automatic: Caddy obtains and renews a certificate for DOMAIN.
+# The domain's DNS A record must point at this server, and ports 80 and 443 must be open.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy api:3000
+	# Request bodies are small JSON documents; anything larger is refused before it reaches the API.
+	request_body {
+		max_size 1MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}
