@@ -13,6 +13,7 @@ The product is derived from the reference web demo at <https://velora-sales-inve
 | Know what the reference does and where it falls short | [`docs/product-discovery.md`](docs/product-discovery.md), [`docs/feature-matrix.md`](docs/feature-matrix.md) |
 | See the flows | [`docs/user-flow-map.md`](docs/user-flow-map.md) |
 | Review the decisions awaiting approval, the backlog and the risks | [`docs/implementation-roadmap.md`](docs/implementation-roadmap.md) |
+| See the feature list per platform (API, Android, iOS, Web) and effort estimates | [`docs/feature-list-and-estimation.md`](docs/feature-list-and-estimation.md) |
 | Check a calculation or rule | [`docs/business-rules.md`](docs/business-rules.md) |
 | Understand the design direction | [`docs/design-audit.md`](docs/design-audit.md), [`docs/design-system.md`](docs/design-system.md), [`docs/mobile-screen-specifications.md`](docs/mobile-screen-specifications.md) |
 | Understand the system | [`docs/system-architecture.md`](docs/system-architecture.md), [`docs/architecture-decision-records/`](docs/architecture-decision-records/) |
