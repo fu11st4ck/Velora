@@ -1,6 +1,7 @@
 # Velora — Feature List and Effort Estimate
 
 **Sales & inventory system for jewellery retail** · API · Android · iOS · Web
+
 Prepared 17 November 2026
 
 ## 1. Estimate summary
@@ -18,6 +19,7 @@ All figures are in **person-days**: one experienced engineer's working day, incl
 | **Complete system: API + Android + iOS + Web** | 254.5 | 10 | 269.5 | **≈ 341** |
 
 **Notes**
+
 - The Android and iOS apps are built with **Flutter**, so most of the code is shared. Ordering both costs 105.5 days of development, not 91.5 + 95. Building two separate native apps (Kotlin and Swift) would cost about 90 days each.
 - The web estimate assumes it shares code with the mobile app. A web app on its own, without the mobile apps, is about 75 development days.
 - The API is needed by every app and is included once.
