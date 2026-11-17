@@ -1,192 +1,452 @@
 # Velora — Feature List and Effort Estimate
 
-Prepared 2026-11-17 · Covers the **API**, the **Android** and **iOS** apps and a **Web** app.
+**Sales & inventory system for jewellery retail** · API · Android · iOS · Web
+Prepared 17 November 2026
 
-## 1. Summary
+## 1. Estimate summary
 
-| Client / component | Built with | Status today | v1 effort, total (PD) | v1 effort remaining (PD) | Optional extras (PD) |
-|---|---|---|---:|---:|---:|
-| API | NestJS · PostgreSQL | Features built and tested; not yet deployed | 94 | 12 | 7 |
-| Mobile shared code (Android + iOS) | Flutter | Features built and tested; never run on a device | 82 | 12 | 14 |
-| Android-specific work | Flutter / Gradle | Not started | 9.5 | 9.5 | 1 |
-| iOS-specific work | Flutter / Xcode | Not started | 13 | 13 | 1 |
-| Web app (back office) | Flutter Web (recommended) | Not started | 31 | 31 | — |
-| **Engineering total** | | | **229.5** | **77.5** | **23** |
+All figures are in **person-days**: one experienced engineer's working day, including unit tests and code review.
 
-**Remaining work to launch v1 on all four clients**
+| Deliverable | Development | UX / UI design | Subtotal | With project management (10%) and contingency (15%) |
+|---|---:|---:|---:|---:|
+| Discovery & business rules (all platforms) | — | — | 5 | 6 |
+| **API (backend)** | 93 | — | 93 | **118** |
+| **Android app** | 91.5 | 6 | 97.5 | **123** |
+| **iOS app** | 95 | 6 | 101 | **128** |
+| **Android + iOS together** (one shared codebase) | 105.5 | 6 | 111.5 | **141** |
+| **Web app** | 56 | 4 | 60 | **76** |
+| **Complete system: API + Android + iOS + Web** | 254.5 | 10 | 269.5 | **≈ 341** |
 
-| Item | PD |
-|---|---:|
-| Remaining engineering (table above) | 77.5 |
-| Cross-platform regression and user acceptance testing | 8 |
-| Project management and coordination (≈10%) | 8.5 |
-| Contingency (20%) | 19 |
-| **Total remaining** | **≈ 113 PD (≈ 5.4 person-months)** |
+**Notes**
+- The Android and iOS apps are built with **Flutter**, so most of the code is shared. Ordering both costs 105.5 days of development, not 91.5 + 95. Building two separate native apps (Kotlin and Swift) would cost about 90 days each.
+- The web estimate assumes it shares code with the mobile app. A web app on its own, without the mobile apps, is about 75 development days.
+- The API is needed by every app and is included once.
 
-With a team of **one backend engineer, one Flutter engineer and a part-time QA engineer**, this is about **7–8 calendar weeks**. App Store and Play review times are not included, and neither is time spent waiting for the decisions in §8.
+**Suggested team and timeline for the complete system:** 2 backend engineers, 3 Flutter engineers, 1 QA engineer, plus a part-time designer and project manager. That is **about 4 months**: 2–3 weeks of discovery and design, about 12 weeks of development and testing, then store submission.
 
-**How the numbers work**
-- **PD (person-day)** = one experienced engineer's focused working day. It includes unit and integration tests and code review.
-- **Total** = the effort a feature needs from scratch. For finished features it is an estimate of their size, not hours actually logged; the repository has no timesheets.
-- **Remaining** = work still needed for v1, based on `TASKS.md` and the code as of commit `e2e0eb7`.
-- Android and iOS share one Flutter codebase. The shared work is counted once (§4), and only native and store work is counted per platform (§5, §6).
-- Items marked **Optional** (P2 or awaiting a decision) are kept out of the v1 totals.
-- Priorities follow `docs/feature-matrix.md`: P0 = required for v1, P1 = v1 if time allows, P2 = after v1.
+## 2. Feature-wise estimate per platform
 
-## 2. Features by client
+Development days per module. "Mobile shared" is the common Flutter code used by both phone apps. "Android-specific" and "iOS-specific" are the native and store work for each platform.
+
+| # | Module | API | Mobile shared (Android + iOS) | Android-specific | iOS-specific | Web |
+|---|---|---:|---:|---:|---:|---:|
+| 1 | Project setup & foundation | 14 | 9 | — | — | 6 |
+| 2 | Authentication & access | 10.5 | 6 | 1 | 1.5 | 5 |
+| 3 | Dashboard | 2 | 2.5 | — | — | 2.5 |
+| 4 | Products & inventory | 12 | 12.5 | 1 | 1 | 8 |
+| 5 | Customers | 4 | 5 | — | — | 3.5 |
+| 6 | Sales | 11 | 11 | — | — | 6.5 |
+| 7 | Documents & payments | 13 | 8.5 | 0.5 | 0.5 | 6.5 |
+| 8 | Reports | 4 | 3.5 | — | — | 3.5 |
+| 9 | Settings & team | 7 | 5 | — | — | 3.5 |
+| 10 | Offline use (phones) | 3.5 | 9.5 | 0.5 | 0.5 | — |
+| 11 | Localisation | — | 2 | — | — | 1 |
+| 12 | Quality assurance | 6 | 6.5 | 4.5 | 4.5 | 8.5 |
+| 13 | Deployment & release | 6 | — | 3 | 6 | 1.5 |
+| | **Total development** | **93** | **81** | **10.5** | **14** | **56** |
+
+- Android app = Mobile shared + Android-specific = 81 + 10.5 = **91.5 days**
+- iOS app = Mobile shared + iOS-specific = 81 + 14 = **95 days**
+
+## 3. Feature capability by platform
 
 | Capability | API | Android | iOS | Web |
 |---|:-:|:-:|:-:|:-:|
-| Sign in, password reset, session and device management | ✅ | ✅ | ✅ | 🆕 |
-| Roles (Owner / Manager / Sales), cost hidden from Sales | ✅ | ✅ | ✅ | 🆕 |
-| Dashboard | ✅ | ✅ | ✅ | 🆕 |
-| Products, stock receipts, adjustments, stock history | ✅ | ✅ | ✅ | 🆕 |
-| Product photos and company logo | 🔲 | 🔲 | 🔲 | 🆕 |
-| Barcode search (typed) | ✅ | ✅ | ✅ | 🆕 |
-| Barcode scanning | — | 🔲 camera | 🔲 camera | 🆕 USB scanner |
-| Customers and customer picker | ✅ | ✅ | ✅ | 🆕 |
-| Sell flow: price control, cart, discount, tax, payment | ✅ | ✅ | ✅ | 🆕 |
-| Quotations, invoices, payments, refunds | ✅ | ✅ | ✅ | 🆕 |
-| Cancellations, returns, credit notes | ✅ | ✅ | ✅ | 🆕 |
-| PDFs and sharing (share sheet / WhatsApp) | ✅ | ✅ | ✅ | 🆕 download / print |
-| Reports and CSV export | ✅ | ✅ | ✅ | 🆕 |
-| Business settings, tax rates, team | ✅ | ✅ | ✅ | 🆕 |
-| Works offline (saved data, queued changes) | ✅ | ✅ | ✅ | — online only |
-| Push notifications | Optional | Optional | Optional | — |
-| Store release | — | 🔲 | 🔲 | — |
+| Sign in, password reset, device management | ✔ | ✔ | ✔ | ✔ |
+| Owner / Manager / Sales roles; cost hidden from Sales | ✔ | ✔ | ✔ | ✔ |
+| Dashboard | ✔ | ✔ | ✔ | ✔ |
+| Products, stock receiving, adjustments, history | ✔ | ✔ | ✔ | ✔ |
+| Product photos | ✔ | ✔ camera / gallery | ✔ camera / gallery | ✔ file upload |
+| Barcode | ✔ search | ✔ camera scan | ✔ camera scan | ✔ USB scanner |
+| Customers | ✔ | ✔ | ✔ | ✔ |
+| Sales: pricing, cart, discount, tax, payment | ✔ | ✔ | ✔ | ✔ |
+| Quotations, invoices, payments, refunds | ✔ | ✔ | ✔ | ✔ |
+| Cancellations, returns, credit notes | ✔ | ✔ | ✔ | ✔ |
+| PDF documents | ✔ generates | ✔ share / WhatsApp | ✔ share / WhatsApp | ✔ view / print / download |
+| Reports and CSV export | ✔ | ✔ | ✔ | ✔ |
+| Settings, tax rates, team | ✔ | ✔ | ✔ | ✔ |
+| Works offline | ✔ sync | ✔ | ✔ | Online only |
+| App store distribution | — | Google Play | App Store | Web hosting |
 
-✅ built and tested · 🔲 planned for v1, not built · 🆕 new web client · — not applicable
+## 4. API (backend) — 93 days
 
-Mobile has "built and tested" status from unit, widget, golden-screenshot and live-API tests. **The app has never been built for or run on a phone**; that work is in §5 and §6.
+NestJS (Node.js) REST API with a PostgreSQL database and an OpenAPI contract. It serves the Android, iOS and web apps.
 
-## 3. API
+#### Project setup & foundation — 14 days
 
-43 REST paths under `/api/v1`; contract in `backend/openapi/openapi.yaml`.
+| Feature | What is included | Days |
+|---|---|---:|
+| Project scaffolding & pipelines | Code repositories, coding standards, automated build and test pipelines, dev / staging / production environments | 2 |
+| Architecture & data model | Database design, API contract (OpenAPI), multi-business data separation | 4 |
+| Security foundation | Row-level data isolation per business, rate limiting, security headers, audit log of sensitive actions | 5 |
+| Core services | Error handling, request logging, duplicate-request protection, exact money arithmetic (no rounding drift) | 3 |
 
-| # | Feature | Scope | Priority | Total (PD) | Remaining (PD) | Status |
-|---|---|---|---|---:|---:|---|
-| 1 | Platform foundation | Config validation, request ids, error/response envelopes, security headers, rate limits, health probes, migrations, row-level security, append-only ledgers, money module, idempotency, audit log | P0 | 12 | 0 | Done |
-| 2 | Authentication & sessions | Sign-in with lockout, rotating refresh tokens with reuse detection, sign-out, forgot/reset/change password, `/auth/me`, device sessions, remote sign-out, immediate revocation | P0 | 8 | 0 | Done |
-| 3 | Roles & field policy | Owner / Manager / Sales permission map, deny-by-default routes, cost and profit stripped for Sales | P0 | 3 | 0 | Done |
-| 4 | Business settings & tax rates | Profile, currency/time-zone lock, markup policy, thresholds; tax rates with exactly one default | P0 | 4 | 0 | Done |
-| 5 | Team management | Invite by email with set-password link, change role, remove/restore access, last-owner protection | P1 | 4 | 0 | Done |
-| 6 | Products | Search, stock filters, five sorts, keyset paging, counts, create with opening stock, edit with optimistic locking, archive | P0 | 6 | 0 | Done |
-| 7 | Inventory | Receipts with weighted-average cost, adjustments with reason, movement ledger | P0 | 5 | 0 | Done |
-| 8 | Product photos & company logo | Presigned upload to object storage, verification, re-encode, thumbnails, logo on PDFs | P1 | 4 | 4 | Not started |
-| 9 | Customers | Search, mobile lookup (E.164), create (idempotent), detail with invoiced/outstanding/overdue, edit, archive | P0 | 4 | 0 | Done |
-| 10 | Pricing engine | Price bounds, integer totals, discount, tax on discounted total, `/pricing/preview`, below-floor override with reason | P0 | 4 | 0 | Done |
-| 11 | Quotations | Numbering, create, expiry, cancel, convert to invoice | P0 | 3 | 0 | Done |
-| 12 | Invoices, payments & refunds | Single-transaction issue (stock, number, first payment, audit), later payments, refunds, no oversell under concurrency | P0 | 7 | 0 | Done |
-| 13 | Cancellation, returns & credit notes | Full reversal with restock; returns with credit notes and optional restock | P1 | 5 | 0 | Done |
-| 14 | Documents list & PDFs | Combined list with filters/search; invoice and quotation PDFs | P0 | 5 | 0 | Done |
-| 15 | Credit-note PDF | PDF for `CN-…` documents (planned in S4-06, no endpoint yet) | P1 | 1 | 1 | Not started |
-| 16 | Dashboard | Today vs yesterday, stock, owed/overdue, MTD profit, inventory value, needs-attention, recent documents | P0 | 2 | 0 | Done |
-| 17 | Reports & CSV | Sales summary, by salesperson, status breakdown, inventory valuation, CSV exports with formula-injection guard | P0 | 4 | 0 | Done |
-| 18 | Offline sync & maintenance | `/sync/changes` delta feed, consistency check, expiry purge | P1 | 4 | 0 | Done |
-| 19 | Email delivery | SMTP provider set-up, sender domain (SPF/DKIM), invitation and reset templates checked end to end | P0 | 1 | 1 | Partly done (code done, no SMTP) |
-| 20 | Deployment | Compose stack, Caddy HTTPS, backups and restore (done); first server run, staging environment | P0 | 4 | 2 | Partly done |
-| 21 | Monitoring & alerts | Error-monitoring service, uptime checks, alert rules, log retention | P0 | 2 | 2 | Not started |
-| 22 | Web-client support | Cookie-based session for browsers (httpOnly + CSRF), CORS allow-list, CSP for the web origin | P0 (if Web) | 2 | 2 | Not started |
-| 23 | Provisional offline invoices (D8) | `offline` invoices from the outbox, conflict resolution queue | P2 | 4 | 4 | Optional |
-| 24 | Push notifications | Low-stock and overdue alerts via FCM/APNs, device-token registry | P2 | 3 | 3 | Optional |
-| | **Subtotal (v1, without optional)** | | | **94** | **12** | |
-| | Optional items | | | 7 | 7 | |
+#### Authentication & access — 10.5 days
 
-The 2 PD for *Web-client support* is needed only if the web app is built.
+| Feature | What is included | Days |
+|---|---|---:|
+| Sign in | Email and password, account lockout after repeated failures | 2 |
+| Sessions & secure storage | Short-lived access tokens with refresh; Android Keystore, iOS Keychain, secure browser cookies on web | 2 |
+| Forgot / reset password | Email with a reset link that opens the app | 1.5 |
+| Change password | Signs out other devices | 0.5 |
+| Roles & permissions | Owner, Manager, Sales; purchase cost and profit hidden from Sales everywhere | 3 |
+| Signed-in devices | List of own devices, sign out a lost device remotely | 1.5 |
 
-## 4. Mobile shared code (Android + iOS, Flutter)
+#### Dashboard — 2 days
 
-| # | Feature | Scope | Priority | Total (PD) | Remaining (PD) | Status |
-|---|---|---|---|---:|---:|---|
-| 1 | App foundation | Dev/staging/prod entry points, Riverpod, go_router with five tabs (rail on tablets), Dio client with single-flight refresh, secure token storage | P0 | 8 | 0 | Done |
-| 2 | Design system | Light/dark themes, tokens, bundled fonts, shared components, contrast and golden tests | P0 | 6 | 0 | Done |
-| 3 | Sign-in & session | Start-up/session restore, sign in, forgot/reset password, sign out | P0 | 3 | 0 | Done |
-| 4 | Home dashboard | Role-aware KPIs, needs-attention links into filtered lists, recent documents | P0 | 3 | 0 | Done |
-| 5 | Inventory screens (C1–C6) | List, detail, new/edit product, receive stock, adjust stock, stock history, live previews | P0 | 8 | 0 | Done |
-| 6 | Product photos & logo | Camera/gallery picker, upload, image caching, logo in settings | P1 | 3 | 3 | Not started |
-| 7 | Camera barcode scanning | Scan to search and to fill the product form | P1 | 3 | 3 | Not started |
-| 8 | Customers (E1–E3) & picker | Directory, detail with call/WhatsApp/email, new/edit, duplicate check, picker for sales | P0 | 5 | 0 | Done |
-| 9 | Customer's documents on detail | List of the customer's quotations and invoices | P1 | 1 | 1 | Not started |
-| 10 | Sell flow (D1–D5) | Product picker, price sheet, cart kept across restarts, customer, payment outcome | P0 | 9 | 0 | Done |
-| 11 | Documents (F1–F6) | List, invoice/quotation detail, record payment, cancel, return, share PDF, WhatsApp | P0 | 8 | 0 | Done |
-| 12 | List refinements | Date/salesperson filter sheet for documents, infinite scroll in the sell picker | P1 | 2 | 2 | Not started |
-| 13 | Reports | Period presets and custom range, status breakdown, team comparison, stock value, CSV export | P0 | 4 | 0 | Done |
-| 14 | Settings, team & devices | Business settings, tax rates, team, signed-in devices, change password, appearance | P1 | 6 | 0 | Done |
-| 15 | Offline & sync | On-device copy of products/customers, outbox for quotations/customers/payments, sync screen, offline start-up | P1 | 10 | 0 | Done |
-| 16 | Localisation (English, ARB) | Extract strings to ARB files, date/number formats | P1 | 3 | 3 | Not started |
-| 17 | Arabic / RTL | Translation, RTL layout pass, Arabic PDF fonts (needs U2 decision) | P2 | 8 | 8 | Optional |
-| 18 | Named drafts (D6) | Several saved carts per user | P2 | 3 | 3 | Optional |
-| 19 | Offline reading of documents & reports | Cache last-loaded documents and figures with a timestamp | P2 | 3 | 3 | Optional |
-| | **Subtotal (v1, without optional)** | | | **82** | **12** | |
-| | Optional items | | | 14 | 14 | |
+| Feature | What is included | Days |
+|---|---|---:|
+| Key figures | Today's sales vs yesterday, units in stock, money owed and overdue, month-to-date profit and inventory value (managers) | 1.5 |
+| Needs attention & recent activity | Low / out-of-stock and overdue shortcuts into filtered lists, latest documents, quick actions | 0.5 |
 
-## 5. Android-specific work
+#### Products & inventory — 12 days
 
-| # | Feature | Scope | Priority | Total (PD) | Remaining (PD) | Status |
-|---|---|---|---|---:|---:|---|
-| 1 | Build flavours | Gradle `productFlavors` for dev/staging/prod, app ids, icons per flavour | P0 | 1 | 1 | Not started |
-| 2 | Deep links | `velora://` and App Links for password-reset/invite links | P0 | 0.5 | 0.5 | Not started |
-| 3 | Device database verification | `sqlite3` build hooks and `path_provider` on device, exclude from backups | P0 | 1 | 1 | Not started |
-| 4 | Permissions | Camera and photo access for scanning and product photos | P1 | 0.5 | 0.5 | Not started |
-| 5 | Release signing & Play Console | Upload key, Play App Signing, internal testing track, CI release build | P0 | 1.5 | 1.5 | Not started |
-| 6 | Store compliance & listing | Data-safety form, privacy policy link, screenshots, listing text | P0 | 1 | 1 | Not started |
-| 7 | Device testing & fixes | Phones and a tablet across Android versions, low-end device performance, accessibility pass | P0 | 4 | 4 | Not started |
-| 8 | Push notifications (FCM) | Only if push is built | P2 | 1 | 1 | Optional |
-| | **Subtotal (v1, without optional)** | | | **9.5** | **9.5** | |
-| | Optional items | | | 1 | 1 | |
+| Feature | What is included | Days |
+|---|---|---:|
+| Product list | Search by name, SKU or barcode; In stock / Low / Out of stock filters with counts; sorting; paging | 2 |
+| Product detail | Prices, stock, cost and margin (managers), recent movements | 0.5 |
+| Add / edit / archive product | Validation, unique SKU, lowest / standard / highest selling price, reorder level | 2 |
+| Product photos | Camera or gallery, upload to cloud storage, thumbnails, image caching | 3 |
+| Barcode | Barcode field and search; camera scanning on phones; USB scanner on web | 0.5 |
+| Receive stock | Purchase quantity and cost, supplier name, automatic average cost | 2 |
+| Stock adjustments | Corrections with a mandatory reason | 1 |
+| Stock history | Every movement with who, when and why | 1 |
 
-## 6. iOS-specific work
+#### Customers — 4 days
 
-Needs macOS: a Mac or a macOS CI runner, plus an Apple Developer account.
+| Feature | What is included | Days |
+|---|---|---:|
+| Customer directory | Search by name, company, email or phone; paging | 1.5 |
+| Add / edit customer | Phone number validation, duplicate check by mobile number, tax registration number, archive | 1.5 |
+| Customer detail | Total invoiced, outstanding and overdue; the customer's documents | 1 |
 
-| # | Feature | Scope | Priority | Total (PD) | Remaining (PD) | Status |
-|---|---|---|---|---:|---:|---|
-| 1 | Build schemes | Xcode schemes/configurations for dev/staging/prod, bundle ids, icons | P0 | 1.5 | 1.5 | Not started |
-| 2 | Universal links | Associated domains + `velora://` for reset/invite links | P0 | 1 | 1 | Not started |
-| 3 | Device database verification | `sqlite3` on device, file protection, exclude from iCloud backup | P0 | 1 | 1 | Not started |
-| 4 | Permissions | Camera and photo-library usage strings | P1 | 0.5 | 0.5 | Not started |
-| 5 | Signing & TestFlight | Certificates, provisioning, CI on a macOS runner, TestFlight distribution | P0 | 2 | 2 | Not started |
-| 6 | Store compliance & listing | Privacy manifest, App Store privacy labels, screenshots, review notes with demo account | P0 | 1 | 1 | Not started |
-| 7 | Device testing & fixes | iPhones and an iPad across iOS versions, accessibility (VoiceOver, Dynamic Type) | P0 | 4 | 4 | Not started |
-| 8 | App Review buffer | Responding to review feedback and resubmission | P0 | 2 | 2 | Not started |
-| 9 | Push notifications (APNs) | Only if push is built | P2 | 1 | 1 | Optional |
-| | **Subtotal (v1, without optional)** | | | **13** | **13** | |
-| | Optional items | | | 1 | 1 | |
+#### Sales — 11 days
 
-## 7. Web app
+| Feature | What is included | Days |
+|---|---|---:|
+| Pricing engine | Allowed price range per product, discount, tax, live totals checked by the server; manager override below minimum with reason | 4 |
+| Quotations | Numbered quotations with validity, cancel, convert to invoice | 3 |
+| Invoice issue | Stock deducted, number assigned, first payment and audit recorded in one step; no overselling when two staff sell the last item | 4 |
 
-**Recommended: Flutter Web, as a back office for owners and managers at a desk.** About 70% of the mobile code carries over: models, API client, business logic, money maths and theme. The new work is the desktop layouts and the browser-specific pieces. The web app is online-only; offline use stays a mobile feature.
+#### Documents & payments — 13 days
 
-| # | Feature | Scope | Priority | Total (PD) | Remaining (PD) | Status |
-|---|---|---|---|---:|---:|---|
-| 1 | Web target & hosting | Flutter web build, served by the existing Caddy, caching headers, CI job | P0 | 2 | 2 | Not started |
-| 2 | Desktop UX design | Wide layouts: sidebar navigation, master-detail, data tables (designs for 8–10 screens) | P0 | 5 | 5 | Not started |
-| 3 | Browser session handling | Cookie session instead of Keychain/Keystore tokens, idle timeout, sign-out on all tabs | P0 | 3 | 3 | Not started |
-| 4 | Responsive back-office screens | Inventory, documents, customers, reports and settings as sortable tables with paging and side panels | P0 | 10 | 10 | Not started |
-| 5 | Sell flow on desktop | Keyboard-friendly product search and cart; USB barcode scanner (keyboard input) | P1 | 3 | 3 | Not started |
-| 6 | PDF & CSV in the browser | View/print invoices in a tab, download PDF and CSV | P0 | 2 | 2 | Not started |
-| 7 | Online-only mode | Disable the on-device database and outbox on web; clear offline messaging | P0 | 2 | 2 | Not started |
-| 8 | Browser testing | Chrome, Safari, Edge, Firefox; accessibility; first-load performance | P0 | 4 | 4 | Not started |
-| | **Subtotal (v1, without optional)** | | | **31** | **31** | |
+| Feature | What is included | Days |
+|---|---|---:|
+| Documents list | Quotations and invoices together; status, date and salesperson filters; search | 2 |
+| Invoice & quotation detail | Lines, totals, payments, balance, status (paid / partial / overdue / cancelled) | 0.5 |
+| Later payments & refunds | Record instalments; manager refunds; overpayment blocked | 2 |
+| Cancel invoice | Manager only; stock restored, received money recorded as refunded | 1.5 |
+| Returns & credit notes | Return some items, optional restock, credit note issued | 3 |
+| PDF documents | Branded invoice, quotation and credit-note PDFs with logo | 4 |
 
-**Alternative: a separate React / Next.js app.** This means rebuilding every screen, the API client, money formatting and role handling: **about 65 PD**, plus a second UI codebase to maintain for good. Choose it only if the web app needs SEO, a public storefront, or a team that has web skills but not Flutter.
+#### Reports — 4 days
 
-## 8. Decisions and dependencies affecting the estimate
+| Feature | What is included | Days |
+|---|---|---:|
+| Sales summary | Revenue, cost, gross profit, tax, outstanding; Today / 7 days / month / custom range | 1.5 |
+| Team & status reports | Sales by salesperson; paid / partial / unpaid / overdue breakdown | 1 |
+| Inventory valuation | Stock value at cost and at selling price | 0.5 |
+| CSV export | Invoices and stock for spreadsheets (managers) | 1 |
 
-| # | Open item | Affects | Effect if decided differently |
-|---|---|---|---|
-| D11 / U3 | Server, domain, SMTP account, off-server backup target, error-monitoring vendor | API deployment, email, monitoring | Blocks launch; no change in effort |
-| — | Apple and Google developer accounts | Android, iOS | Blocks store release |
-| D7 | Accountant to confirm the tax rule (one exclusive rate on the discounted total) | API, all clients | Per-line or tax-inclusive pricing: +5–8 PD |
-| U2 | Arabic / right-to-left support | Mobile, Web, PDFs | +8 PD mobile, +4 PD web |
-| U1 | Single business or a product sold to many (self sign-up, billing) | API, Web | Sign-up, plans and billing: +15–25 PD |
-| D5 | Jewellery attributes (metal, purity, stones, gold-rate pricing) | API, all clients | +10–20 PD depending on whether pricing changes |
-| D6 | Supplier directory and purchase orders | API, all clients | +12–18 PD |
-| D9 | Multi-branch UI and stock transfers | API, all clients | +10–15 PD |
+#### Settings & team — 7 days
 
-## 9. Suggested delivery order
+| Feature | What is included | Days |
+|---|---|---:|
+| Business profile & settings | Name, address, tax number, currency, time zone, pricing limits, stock thresholds | 1.5 |
+| Company logo | Upload; shown on documents | 1 |
+| Tax rates | Add, rename, set default, retire | 1 |
+| Team management | Invite by email, change role, remove or restore access; at least one owner always kept | 2 |
+| Email delivery | Invitation and password-reset emails, sender domain set-up | 1.5 |
 
-1. **Weeks 1–2 — Go live on Android.** First server deployment, SMTP and monitoring (API). Android flavours, signing, device testing, Play internal testing. Localisation extraction.
-2. **Weeks 2–4 — iOS and remaining mobile features.** iOS schemes, signing, TestFlight, device testing. Product photos and logo (API + app). Camera barcode scanning. Credit-note PDF. List refinements.
-3. **Weeks 3–7 — Web back office.** Cookie sessions and CORS (API). Desktop design, back-office screens, browser testing.
-4. **Weeks 7–8 — Release.** Cross-platform regression, user acceptance, store submissions, web launch.
+#### Offline use (phones) — 3.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Data saved on the device | Products and customers kept on the phone and updated in the background | 2.5 |
+| Offline queue | Quotations, new customers and payments made offline are sent automatically when back online, exactly once; sync screen | 1 |
+
+#### Quality assurance — 6 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Automated test suites | API integration and concurrency tests; app widget, flow and screenshot tests | 3 |
+| Performance testing | Large data volumes (20k products, 100k invoices); start-up and list speed | 2 |
+| User acceptance support | Fixes from client testing | 1 |
+
+#### Deployment & release — 6 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Server deployment | Containers, HTTPS, database, automated backups and restore test | 4 |
+| Monitoring & alerts | Error tracking, uptime checks, alerts | 2 |
+
+## 5. Android and iOS apps — 105.5 days for both
+
+One Flutter codebase produces both apps. Columns show the shared work and the work specific to each platform.
+
+#### Project setup & foundation — 9 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Project scaffolding & pipelines | Code repositories, coding standards, automated build and test pipelines, dev / staging / production environments | 2 | — | — | 2 |
+| Core services | Error handling, request logging, duplicate-request protection, exact money arithmetic (no rounding drift) | 2 | — | — | 2 |
+| Design system | Colours, typography, light and dark themes, reusable components, accessibility contrast | 5 | — | — | 5 |
+
+#### Authentication & access — 8.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Sign in | Email and password, account lockout after repeated failures | 1 | — | — | 1 |
+| Sessions & secure storage | Short-lived access tokens with refresh; Android Keystore, iOS Keychain, secure browser cookies on web | 1.5 | 0.5 | 0.5 | 2.5 |
+| Forgot / reset password | Email with a reset link that opens the app | 1 | 0.5 | 1 | 2.5 |
+| Change password | Signs out other devices | 0.5 | — | — | 0.5 |
+| Roles & permissions | Owner, Manager, Sales; purchase cost and profit hidden from Sales everywhere | 1 | — | — | 1 |
+| Signed-in devices | List of own devices, sign out a lost device remotely | 1 | — | — | 1 |
+
+#### Dashboard — 2.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Key figures | Today's sales vs yesterday, units in stock, money owed and overdue, month-to-date profit and inventory value (managers) | 1.5 | — | — | 1.5 |
+| Needs attention & recent activity | Low / out-of-stock and overdue shortcuts into filtered lists, latest documents, quick actions | 1 | — | — | 1 |
+
+#### Products & inventory — 14.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Product list | Search by name, SKU or barcode; In stock / Low / Out of stock filters with counts; sorting; paging | 2 | — | — | 2 |
+| Product detail | Prices, stock, cost and margin (managers), recent movements | 1 | — | — | 1 |
+| Add / edit / archive product | Validation, unique SKU, lowest / standard / highest selling price, reorder level | 2 | — | — | 2 |
+| Product photos | Camera or gallery, upload to cloud storage, thumbnails, image caching | 2 | 0.5 | 0.5 | 3 |
+| Barcode | Barcode field and search; camera scanning on phones; USB scanner on web | 2 | 0.5 | 0.5 | 3 |
+| Receive stock | Purchase quantity and cost, supplier name, automatic average cost | 1.5 | — | — | 1.5 |
+| Stock adjustments | Corrections with a mandatory reason | 1 | — | — | 1 |
+| Stock history | Every movement with who, when and why | 1 | — | — | 1 |
+
+#### Customers — 5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Customer directory | Search by name, company, email or phone; paging | 1.5 | — | — | 1.5 |
+| Add / edit customer | Phone number validation, duplicate check by mobile number, tax registration number, archive | 1.5 | — | — | 1.5 |
+| Customer detail | Total invoiced, outstanding and overdue; the customer's documents | 1.5 | — | — | 1.5 |
+| Contact actions | Call, WhatsApp and email from the customer page | 0.5 | — | — | 0.5 |
+
+#### Sales — 11 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Pricing engine | Allowed price range per product, discount, tax, live totals checked by the server; manager override below minimum with reason | 1 | — | — | 1 |
+| Product picker & price selection | Pick in-stock items, choose price within limits, quantity limited to stock | 2.5 | — | — | 2.5 |
+| Cart | Edit quantities and prices, order discount, tax rate, notes; kept if the app is closed | 2.5 | — | — | 2.5 |
+| Customer selection | Pick an existing customer or add one without leaving the sale | 0.5 | — | — | 0.5 |
+| Payment | Full, partial or credit sale with due date; cash or bank transfer with reference; outcome shown before saving | 2 | — | — | 2 |
+| Quotations | Numbered quotations with validity, cancel, convert to invoice | 1.5 | — | — | 1.5 |
+| Invoice issue | Stock deducted, number assigned, first payment and audit recorded in one step; no overselling when two staff sell the last item | 1 | — | — | 1 |
+
+#### Documents & payments — 9.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Documents list | Quotations and invoices together; status, date and salesperson filters; search | 2 | — | — | 2 |
+| Invoice & quotation detail | Lines, totals, payments, balance, status (paid / partial / overdue / cancelled) | 2 | — | — | 2 |
+| Later payments & refunds | Record instalments; manager refunds; overpayment blocked | 1.5 | — | — | 1.5 |
+| Cancel invoice | Manager only; stock restored, received money recorded as refunded | 0.5 | — | — | 0.5 |
+| Returns & credit notes | Return some items, optional restock, credit note issued | 1.5 | — | — | 1.5 |
+| Share & print | Share PDF via share sheet and WhatsApp on phones; view, print and download on web | 1 | 0.5 | 0.5 | 2 |
+
+#### Reports — 3.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Sales summary | Revenue, cost, gross profit, tax, outstanding; Today / 7 days / month / custom range | 1.5 | — | — | 1.5 |
+| Team & status reports | Sales by salesperson; paid / partial / unpaid / overdue breakdown | 1 | — | — | 1 |
+| Inventory valuation | Stock value at cost and at selling price | 0.5 | — | — | 0.5 |
+| CSV export | Invoices and stock for spreadsheets (managers) | 0.5 | — | — | 0.5 |
+
+#### Settings & team — 5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Business profile & settings | Name, address, tax number, currency, time zone, pricing limits, stock thresholds | 1.5 | — | — | 1.5 |
+| Company logo | Upload; shown on documents | 0.5 | — | — | 0.5 |
+| Tax rates | Add, rename, set default, retire | 1 | — | — | 1 |
+| Team management | Invite by email, change role, remove or restore access; at least one owner always kept | 1.5 | — | — | 1.5 |
+| Appearance | Light, dark or same as device | 0.5 | — | — | 0.5 |
+
+#### Offline use (phones) — 10.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Data saved on the device | Products and customers kept on the phone and updated in the background | 4 | 0.5 | 0.5 | 5 |
+| Offline queue | Quotations, new customers and payments made offline are sent automatically when back online, exactly once; sync screen | 4 | — | — | 4 |
+| Offline start-up | App opens without a connection; banner shows how fresh the data is | 1.5 | — | — | 1.5 |
+
+#### Localisation — 2 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Translation-ready text | All text in translation files; local date, number and currency formats | 2 | — | — | 2 |
+
+#### Quality assurance — 15.5 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Automated test suites | API integration and concurrency tests; app widget, flow and screenshot tests | 3 | — | — | 3 |
+| Performance testing | Large data volumes (20k products, 100k invoices); start-up and list speed | 1 | — | — | 1 |
+| Device / browser testing & fixes | Range of phones and tablets and OS versions; Chrome, Safari, Edge, Firefox | — | 4 | 4 | 8 |
+| Accessibility | Screen readers, large text, contrast | 1.5 | — | — | 1.5 |
+| User acceptance support | Fixes from client testing | 1 | 0.5 | 0.5 | 2 |
+
+#### Deployment & release — 9 days
+
+| Feature | What is included | Shared | Android | iOS | Total |
+|---|---|---:|---:|---:|---:|
+| Build variants & signing | Dev / staging / production builds; release signing | — | 1.5 | 2.5 | 4 |
+| Store submission | Store listing, screenshots, privacy declarations, internal / TestFlight testing | — | 1 | 1.5 | 2.5 |
+| Store review buffer | Responding to Google Play / App Store review feedback | — | 0.5 | 2 | 2.5 |
+
+## 6. Web app — 56 days
+
+A browser back office for owners, managers and counter staff at a desk. It uses large-screen layouts: sidebar navigation, sortable tables and side panels. It is built with Flutter Web, so it shares business logic with the mobile apps.
+
+#### Project setup & foundation — 6 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Project scaffolding & pipelines | Code repositories, coding standards, automated build and test pipelines, dev / staging / production environments | 1 |
+| Design system | Colours, typography, light and dark themes, reusable components, accessibility contrast | 2 |
+| Desktop layout & navigation | Sidebar navigation, master-detail panels, data tables for large screens | 3 |
+
+#### Authentication & access — 5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Sign in | Email and password, account lockout after repeated failures | 1 |
+| Sessions & secure storage | Short-lived access tokens with refresh; Android Keystore, iOS Keychain, secure browser cookies on web | 1.5 |
+| Forgot / reset password | Email with a reset link that opens the app | 0.5 |
+| Change password | Signs out other devices | 0.5 |
+| Roles & permissions | Owner, Manager, Sales; purchase cost and profit hidden from Sales everywhere | 1 |
+| Signed-in devices | List of own devices, sign out a lost device remotely | 0.5 |
+
+#### Dashboard — 2.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Key figures | Today's sales vs yesterday, units in stock, money owed and overdue, month-to-date profit and inventory value (managers) | 1.5 |
+| Needs attention & recent activity | Low / out-of-stock and overdue shortcuts into filtered lists, latest documents, quick actions | 1 |
+
+#### Products & inventory — 8 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Product list | Search by name, SKU or barcode; In stock / Low / Out of stock filters with counts; sorting; paging | 2 |
+| Product detail | Prices, stock, cost and margin (managers), recent movements | 1 |
+| Add / edit / archive product | Validation, unique SKU, lowest / standard / highest selling price, reorder level | 1.5 |
+| Product photos | Camera or gallery, upload to cloud storage, thumbnails, image caching | 1 |
+| Barcode | Barcode field and search; camera scanning on phones; USB scanner on web | 0.5 |
+| Receive stock | Purchase quantity and cost, supplier name, automatic average cost | 1 |
+| Stock adjustments | Corrections with a mandatory reason | 0.5 |
+| Stock history | Every movement with who, when and why | 0.5 |
+
+#### Customers — 3.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Customer directory | Search by name, company, email or phone; paging | 1 |
+| Add / edit customer | Phone number validation, duplicate check by mobile number, tax registration number, archive | 1 |
+| Customer detail | Total invoiced, outstanding and overdue; the customer's documents | 1 |
+| Contact actions | Call, WhatsApp and email from the customer page | 0.5 |
+
+#### Sales — 6.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Pricing engine | Allowed price range per product, discount, tax, live totals checked by the server; manager override below minimum with reason | 0.5 |
+| Product picker & price selection | Pick in-stock items, choose price within limits, quantity limited to stock | 1.5 |
+| Cart | Edit quantities and prices, order discount, tax rate, notes; kept if the app is closed | 1.5 |
+| Customer selection | Pick an existing customer or add one without leaving the sale | 0.5 |
+| Payment | Full, partial or credit sale with due date; cash or bank transfer with reference; outcome shown before saving | 1 |
+| Quotations | Numbered quotations with validity, cancel, convert to invoice | 1 |
+| Invoice issue | Stock deducted, number assigned, first payment and audit recorded in one step; no overselling when two staff sell the last item | 0.5 |
+
+#### Documents & payments — 6.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Documents list | Quotations and invoices together; status, date and salesperson filters; search | 1.5 |
+| Invoice & quotation detail | Lines, totals, payments, balance, status (paid / partial / overdue / cancelled) | 1.5 |
+| Later payments & refunds | Record instalments; manager refunds; overpayment blocked | 1 |
+| Cancel invoice | Manager only; stock restored, received money recorded as refunded | 0.5 |
+| Returns & credit notes | Return some items, optional restock, credit note issued | 1 |
+| Share & print | Share PDF via share sheet and WhatsApp on phones; view, print and download on web | 1 |
+
+#### Reports — 3.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Sales summary | Revenue, cost, gross profit, tax, outstanding; Today / 7 days / month / custom range | 1.5 |
+| Team & status reports | Sales by salesperson; paid / partial / unpaid / overdue breakdown | 1 |
+| Inventory valuation | Stock value at cost and at selling price | 0.5 |
+| CSV export | Invoices and stock for spreadsheets (managers) | 0.5 |
+
+#### Settings & team — 3.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Business profile & settings | Name, address, tax number, currency, time zone, pricing limits, stock thresholds | 1 |
+| Company logo | Upload; shown on documents | 0.5 |
+| Tax rates | Add, rename, set default, retire | 0.5 |
+| Team management | Invite by email, change role, remove or restore access; at least one owner always kept | 1 |
+| Appearance | Light, dark or same as device | 0.5 |
+
+#### Localisation — 1 day
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Translation-ready text | All text in translation files; local date, number and currency formats | 1 |
+
+#### Quality assurance — 8.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Automated test suites | API integration and concurrency tests; app widget, flow and screenshot tests | 1.5 |
+| Performance testing | Large data volumes (20k products, 100k invoices); start-up and list speed | 1 |
+| Device / browser testing & fixes | Range of phones and tablets and OS versions; Chrome, Safari, Edge, Firefox | 4 |
+| Accessibility | Screen readers, large text, contrast | 1 |
+| User acceptance support | Fixes from client testing | 1 |
+
+#### Deployment & release — 1.5 days
+
+| Feature | What is included | Days |
+|---|---|---:|
+| Web hosting | Hosting, caching, release pipeline | 1.5 |
+
+## 7. Optional add-ons (not included above)
+
+| Add-on | API | Mobile (Android + iOS) | Web | Total |
+|---|---:|---:|---:|---:|
+| Push notifications (low stock, overdue invoices) | 3 | 2 | — | 5 |
+| Arabic language and right-to-left layout, Arabic PDFs | 1 | 8 | 4 | 13 |
+| Invoices created offline (provisional, confirmed later) | 4 | 3 | — | 7 |
+| Several saved carts / draft sales per user | 1 | 3 | 2 | 6 |
+| Offline reading of documents and reports | — | 3 | — | 3 |
+| Supplier directory and purchase orders | 7 | 6 | 4 | 17 |
+| Multiple branches and stock transfers | 6 | 5 | 3 | 14 |
+| Jewellery attributes (metal, purity, stones, gold-rate pricing) | 7 | 5 | 3 | 15 |
+| Self sign-up, subscription plans and billing (SaaS) | 12 | 4 | 6 | 22 |
+
+## 8. Assumptions
+
+- English only at launch; all text is ready for translation.
+- One tax rate per document, applied to the discounted total, tax-exclusive. A different tax scheme (per-line or tax-inclusive) adds 5–8 days.
+- Average-cost stock valuation. Quantities are whole pieces.
+- One branch per business in the user interface. The data model allows branches later.
+- Payment methods: cash and bank transfer. No card terminal or payment-gateway integration.
+- The client provides branding (logo, colours), invoice legal wording, and the store and hosting accounts.
+
+## 9. Not included
+
+- Hosting, store and third-party service fees: server, domain, email service, error monitoring, Apple Developer Program, Google Play Console.
+- Product data entry, store listing text, and data migration from another system.
+- Maintenance and support after launch. Usually quoted separately, typically 15–20% of build effort per year.
