@@ -1,39 +1,3 @@
-@if (done(); as d) {
-  <app-page-header [heading]="d.kind === 'invoice' ? 'Sale complete' : 'Quotation saved'" />
-  <section class="card done" aria-live="polite" data-testid="sale-done">
-    @if (d.kind === 'invoice') {
-      <div class="done-head">
-        <span class="t-title-lg number" data-testid="done-number">{{ d.invoice.number }}</span>
-        <app-status-pill [label]="invoiceStatus(d.invoice).label" [tone]="invoiceStatus(d.invoice).tone" data-testid="done-status" />
-      </div>
-      <p>{{ snapshotName(d.invoice.customer) }}</p>
-      <dl class="totals">
-        <div><dt>Total</dt><dd class="t-money" data-testid="done-total">{{ money(d.invoice.totalMinor) }}</dd></div>
-        <div><dt>Received</dt><dd class="t-money" data-testid="done-paid">{{ money(d.invoice.paidMinor) }}</dd></div>
-        <div><dt>Balance</dt><dd class="t-money" data-testid="done-balance">{{ money(d.invoice.balanceMinor) }}</dd></div>
-        @if (d.invoice.dueDate) {
-          <div><dt>Due</dt><dd data-testid="done-due">{{ date(d.invoice.dueDate) }}</dd></div>
-        }
-      </dl>
-      <p class="t-body-sm t-muted">The invoice and its PDF open from the documents list once it is available (next release).</p>
-    } @else {
-      <div class="done-head">
-        <span class="t-title-lg number" data-testid="done-number">{{ d.quotation.number }}</span>
-        <app-status-pill label="Quotation" tone="neutral" />
-      </div>
-      <p>{{ snapshotName(d.quotation.customer) }}</p>
-      <dl class="totals">
-        <div><dt>Total</dt><dd class="t-money" data-testid="done-total">{{ money(d.quotation.totalMinor) }}</dd></div>
-        <div><dt>Valid until</dt><dd>{{ date(d.quotation.validUntil) }}</dd></div>
-      </dl>
-      <p class="t-body-sm t-muted">No stock was taken. Convert it to an invoice when the customer confirms.</p>
-    }
-    <div class="done-actions">
-      <a matButton="outlined" [routerLink]="['/customers', d.kind === 'invoice' ? d.invoice.customer.id : d.quotation.customer.id]">View customer</a>
-      <button matButton="filled" type="button" (click)="newSale()" data-testid="new-sale"><mat-icon>add</mat-icon>New sale</button>
-    </div>
-  </section>
-} @else {
   <app-page-header heading="New sale" [subtitle]="sale.quotation() ? 'Converting ' + sale.quotation()!.number : null">
     <button matButton type="button" (click)="clearSale()" [disabled]="sale.isEmpty() || mode() === 'payment'" data-testid="clear-sale"><mat-icon>delete_sweep</mat-icon>Clear sale</button>
   </app-page-header>
@@ -186,4 +150,3 @@
       <button matButton="filled" type="button" (click)="step.set('cart')">Review</button>
     </div>
   }
-}

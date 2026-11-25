@@ -20,6 +20,7 @@ export const NAVIGATION: NavGroup[] = [
     items: [
       { label: 'Dashboard', icon: 'space_dashboard', path: '/dashboard' },
       { label: 'New sale', icon: 'point_of_sale', path: '/sell', permission: 'sale.create' },
+      { label: 'Documents', icon: 'receipt_long', path: '/documents', permission: 'document.read_own' },
       { label: 'Customers', icon: 'group', path: '/customers', permission: 'customer.read' },
     ],
   },

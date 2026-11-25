@@ -180,11 +180,26 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [x] Accessibility fix found by axe: product results no longer nest a button inside a list option
 
 ### Known gaps after W3
-- [ ] After a sale or quotation the workspace shows a summary; the document page, PDF and later payments arrive in W4 (**deviation from W-D4**, which goes to the invoice page)
-- [ ] Converting a quotation has no button yet (it will be on the quotation page, W4); the `?quotation=` address works
+- [x] ~~After a sale the workspace shows a summary~~ — since W4 a sale opens its invoice page and a quotation its quotation page, as W-D4 specifies
+- [x] ~~Converting a quotation has no button~~ — "Convert to sale" on the quotation page (W4)
 - [ ] Customer edits are last-write-wins (the API has no version for customers); acceptable at 10 users, noted
 
-- [ ] W4 Documents · W5 Reports, settings, account · W6 Production readiness
+## Web app — Sprint W4: documents (2026-11-25)
+- [x] W-F1 Documents: type and status filters, search (number, customer, company, mobile), date range, salesperson (managers/owners), balance with due date (red when overdue); newest first; phone cards; filters in the URL
+- [x] W-F2 Invoice: status, total, received, credited, balance and due date; bill to; items (cost and markup for managers/owners) and totals; profit card (managers/owners); payments and refunds timeline; credit notes; activity (issued by, from quotation, cancellation)
+- [x] W-F3 Quotation: status, valid until, items, link to its invoice; Convert to sale; Cancel
+- [x] W-F4 Record payment (defaults to the balance, never more), W-F5 Refund correction (managers/owners, reason recorded), W-F6 Cancel invoice (consequences spelled out, refund method when money was received) — each with one idempotency key and no dismissing while sending
+- [x] W-F7 Return items: returnable quantities, "back to stock" per line, reason; credit and refund calculated by the server; the refund method is asked only when the server says a refund is due
+- [x] W-F8 PDF: view in a dialog, print, download as `<number>.pdf`; WhatsApp link with the document summary
+- [x] Sale workspace now opens the new invoice / quotation page; document numbers on the dashboard, customer page and stock history are links
+- [x] Tests: 67 unit/component tests; 47 end-to-end tests — new: 10/11 continued (rest of the balance later, more than the balance refused), 12 (PDF downloads as `INV-….pdf` and is a real PDF; view and print use the server's PDF), 13 (cancel a paid invoice: stock restored, refund recorded; salesperson refused by the API), 14 (return 1 of 2, not restocked: balance cleared first, only the excess refunded), refund correction, documents filters + quotation cancel + axe on list and invoice, salesperson sees only own documents (others' invoice "not found", no return/refund/cancel), 16 for invoices
+
+### Known gaps after W4
+- [ ] That print() opens the browser's print dialog cannot be observed in a headless run; the test checks the PDF is loaded into the print frame. Needs a manual check in each browser
+- [ ] WhatsApp sends a text with the document summary; the PDF itself is attached by the user (there is no API to send files)
+- [ ] Documents are listed newest first only (sorting needs optional backend item B5)
+
+- [ ] W5 Reports, settings, account · W6 Production readiness
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

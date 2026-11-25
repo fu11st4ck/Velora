@@ -57,10 +57,10 @@ test.describe('selling (manager)', () => {
     await page.getByTestId('confirm-sale').click();
     await page.getByTestId('confirm').click();
 
-    await expect(page.getByTestId('sale-done')).toBeVisible();
-    await expect(page.getByTestId('done-number')).toHaveText(/^INV-\d{4}-\d{5}$/);
-    await expect(page.getByTestId('done-status')).toHaveText('Paid');
-    await expect(page.getByTestId('done-balance')).toHaveText('AED 0.00');
+    await expect(page).toHaveURL(/\/documents\/invoices\//);
+    await expect(page.locator('#page-title')).toHaveText(/^INV-\d{4}-\d{5}$/);
+    await expect(page.getByTestId('invoice-status')).toHaveText('Paid');
+    await expect(page.getByTestId('invoice-balance')).toHaveText('AED 0.00');
     expect(await invoicesFor(customer.id)).toEqual([expect.objectContaining({ total_minor: '273000', paid_minor: '273000' })]);
 
     const stock = await api<{ data: { quantity: number } }>(token, 'GET', `/products/${product.id}`);
@@ -86,9 +86,9 @@ test.describe('selling (manager)', () => {
     await expect(page.getByTestId('payment-outcome')).toHaveText(/^Partially paid — AED 365\.00 due \d{1,2} \w{3} \d{4}\.$/);
     await page.getByTestId('confirm-sale').click();
     await page.getByTestId('confirm').click();
-    await expect(page.getByTestId('done-status')).toHaveText('Partially paid');
-    await expect(page.getByTestId('done-balance')).toHaveText('AED 365.00');
-    await expect(page.getByTestId('done-due')).toBeVisible();
+    await expect(page.getByTestId('invoice-status')).toHaveText('Partially paid');
+    await expect(page.getByTestId('invoice-balance')).toHaveText('AED 365.00');
+    await expect(page.getByTestId('invoice-due')).toBeVisible();
     const [row] = await sql<{ method: string; reference: string; amount_minor: string; credit_days: number }>(
       `SELECT p.method, p.reference, p.amount_minor, i.credit_days FROM payments p JOIN invoices i ON i.id = p.invoice_id WHERE i.customer_id = $1`,
       [customer.id],
@@ -112,7 +112,7 @@ test.describe('selling (manager)', () => {
     await expect(page.getByTestId('payment-outcome')).toHaveText(/^Unpaid — AED 1,365\.00 due/);
     await page.getByTestId('confirm-sale').click();
     await page.getByTestId('confirm').click();
-    await expect(page.getByTestId('done-status')).toHaveText('Unpaid');
+    await expect(page.getByTestId('invoice-status')).toHaveText('Unpaid');
     expect(await invoicesFor(customer.id)).toEqual([expect.objectContaining({ paid_minor: '0' })]);
 
     // The server refuses a payment above the total whatever a client sends.
@@ -180,7 +180,7 @@ test.describe('selling (manager)', () => {
     await expect(page.getByTestId('payment-error')).toContainText('will not be recorded twice');
     expect(await invoicesFor(customer.id)).toHaveLength(1);
     await page.getByTestId('confirm-sale').click(); // "Retry" — no second confirmation
-    await expect(page.getByTestId('sale-done')).toBeVisible();
+    await expect(page).toHaveURL(/\/documents\/invoices\//);
     expect(keys).toHaveLength(2);
     expect(keys[1]).toBe(keys[0]);
     expect(await invoicesFor(customer.id)).toHaveLength(1);
@@ -196,20 +196,19 @@ test.describe('selling (manager)', () => {
     await addProduct(page, product.name, 3, '1,250.00');
     await chooseCustomer(page, customer.name!);
     await page.getByTestId('save-quotation').click();
-    await expect(page.getByTestId('done-number')).toHaveText(/^QT-\d{4}-\d{5}$/);
-    const number = await page.getByTestId('done-number').textContent();
+    await expect(page.locator('#page-title')).toHaveText(/^QT-\d{4}-\d{5}$/);
+    const number = await page.locator('#page-title').textContent();
     expect((await api<{ data: { quantity: number } }>(token, 'GET', `/products/${product.id}`)).body.data.quantity).toBe(3);
 
     const [q] = await sql<{ id: string }>(`SELECT id FROM quotations WHERE number = $1`, [number]);
-    await page.getByTestId('new-sale').click();
-    await navigateInApp(page, `/sell?quotation=${q!.id}`);
+    await page.getByTestId('quotation-convert').click();
     await expect(page.getByText(`Converting ${number}`)).toBeVisible();
     await expect(page.getByTestId('sale-customer')).toHaveText(customer.name!);
     await expect(page.getByTestId('line-total')).toHaveText('AED 3,750.00');
     await page.getByTestId('take-payment').click();
     await page.getByTestId('confirm-sale').click();
     await page.getByTestId('confirm').click();
-    await expect(page.getByTestId('done-status')).toHaveText('Paid');
+    await expect(page.getByTestId('invoice-status')).toHaveText('Paid');
     const [converted] = await sql<{ status: string; invoice_id: string | null }>(`SELECT status, (SELECT id FROM invoices WHERE quotation_id = $1) AS invoice_id FROM quotations WHERE id = $1`, [q!.id]);
     expect(converted!.invoice_id).not.toBeNull();
   });

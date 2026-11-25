@@ -178,6 +178,13 @@ export class StockHistoryPage {
   protected cost(m: StockMovement): string {
     return m.unitCostMinor === undefined || m.unitCostMinor === null ? '—' : formatMoney(m.unitCostMinor, this.session.money());
   }
+  /** Everything but the invoice number (which is a link). */
+  protected otherReference(m: StockMovement): string {
+    const parts = [m.return?.number, m.supplierName, m.referenceNote, m.reason].filter((x): x is string => !!x);
+    if (parts.length === 0) return m.invoice ? '' : '—';
+    return `${m.invoice ? ' · ' : ''}${parts.join(' · ')}`;
+  }
+
   /** What the movement refers to: the document number, or the receipt's supplier and note, or the adjustment reason. */
   protected reference(m: StockMovement): string {
     const parts = [m.invoice?.number, m.return?.number, m.supplierName, m.referenceNote, m.reason].filter((x): x is string => !!x);

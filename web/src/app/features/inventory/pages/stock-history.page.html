@@ -104,7 +104,10 @@
               @if (seesCost()) {
                 <td class="num t-money">{{ cost(m) }}</td>
               }
-              <td>{{ reference(m) }}</td>
+              <td>
+                @if (m.invoice; as inv) { <a [routerLink]="['/documents/invoices', inv.id]">{{ inv.number }}</a> }
+                {{ otherReference(m) }}
+              </td>
               <td>{{ m.createdBy.fullName }}</td>
             </tr>
           }

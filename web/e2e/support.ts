@@ -101,3 +101,17 @@ export function aed(minor: number): string {
   const abs = Math.abs(minor);
   return `${sign}AED ${Math.trunc(abs / 100).toLocaleString('en')}.${String(abs % 100).padStart(2, '0')}`;
 }
+
+/** Issues an invoice through the API (as another device would): one line at 1,300.00 (+5% VAT). */
+export async function createInvoice(
+  token: string,
+  productId: string,
+  customerId: string,
+  fields: Record<string, unknown> = {},
+): Promise<{ id: string; number: string; totalMinor: number; balanceMinor: number }> {
+  const res = await api<{ data: { id: string; number: string; totalMinor: number; balanceMinor: number } }>(token, 'POST', '/invoices', {
+    customerId, lines: [{ productId, quantity: 1, unitPriceMinor: 130000 }], ...fields,
+  });
+  expect(res.status).toBe(201);
+  return res.body.data;
+}

@@ -4,6 +4,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W4 (2026-11-25)
+- **Documents on the web:** list with filters; invoice and quotation pages; record payments, refunds, cancellations and returns (credit notes); view, print and download PDFs; share a summary on WhatsApp. A finished sale now opens its invoice.
+
 ### Added — Web app Sprint W3 (2026-11-25)
 - **Selling on the web:** sale workspace with product search, price editor, customer picker, live totals from the server, discount and tax, full / part / credit payment by cash or bank transfer, and quotations (save and convert). A sale in progress survives reloads; a sale is never recorded twice, even when the connection drops after it was sent.
 - **Customers on the web:** list, detail with figures and documents, add and edit (with a warning when the mobile number is already saved), archive.

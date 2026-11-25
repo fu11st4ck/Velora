@@ -6,12 +6,11 @@ import { MatFormField, MatHint, MatLabel, MatPrefix, MatSuffix } from '@angular/
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { toApiFailure } from '../../../core/api/api-failure';
 import { describeFailure } from '../../../core/api/messages';
 import type { Invoice, PricingPreview, Product, Quotation, TaxRate } from '../../../core/api/types';
 import { SessionStore } from '../../../core/auth/session.store';
-import { formatCalendarDate } from '../../../core/dates/dates';
 import { formatBasisPoints, formatMoney, parseMoney } from '../../../core/money/money';
 import { Submission } from '../../../core/state/submission';
 import { COMPACT, mediaQuery } from '../../../shared/table/media';
@@ -19,7 +18,6 @@ import { Confirm } from '../../../shared/ui/confirm-dialog';
 import { Notify } from '../../../shared/ui/notify';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Skeleton } from '../../../shared/ui/skeleton';
-import { StatusPill, type Tone } from '../../../shared/ui/status-pill';
 import { CustomerPicker, CustomersApi, customerLabel } from '../../customers';
 import { PaymentPanel } from '../components/payment-panel';
 import { PriceEditor } from '../components/price-editor';
@@ -27,7 +25,6 @@ import { SalesApi } from '../data/sales.api';
 import { SaleStore, type CartLine } from '../state/sale.store';
 
 type Issue = PricingPreview['lines'][number]['issues'][number];
-type Done = { kind: 'invoice'; invoice: Invoice } | { kind: 'quotation'; quotation: Quotation };
 
 /**
  * W-D1 Sale workspace. Prices and totals shown in the cart are the server's preview; the sale is
@@ -36,7 +33,7 @@ type Done = { kind: 'invoice'; invoice: Invoice } | { kind: 'quotation'; quotati
 @Component({
   selector: 'app-sell-page',
   imports: [
-    FormsModule, RouterLink, PageHeader, Skeleton, StatusPill, PaymentPanel,
+    FormsModule, PageHeader, Skeleton, PaymentPanel,
     MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatHint, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption,
   ],
   providers: [SaleStore],
@@ -61,7 +58,6 @@ export class SellPage {
   protected readonly compact = mediaQuery(COMPACT);
   protected readonly step = signal<'products' | 'cart'>('products');
   protected readonly mode = signal<'cart' | 'payment'>('cart');
-  protected readonly done = signal<Done | null>(null);
   protected readonly notice = signal<string | null>(null);
 
   // Product search
@@ -147,7 +143,7 @@ export class SellPage {
   protected onKey(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     const typing = !!target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
-    if (event.key === '/' && !typing && this.mode() === 'cart' && !this.done()) {
+    if (event.key === '/' && !typing && this.mode() === 'cart') {
       event.preventDefault();
       this.step.set('products');
       this.searchInput()?.nativeElement.focus();
@@ -281,9 +277,9 @@ export class SellPage {
   }
 
   protected completed(invoice: Invoice): void {
-    this.done.set({ kind: 'invoice', invoice });
     this.notify.success(`Invoice ${invoice.number} issued.`);
     this.reset();
+    void this.router.navigate(['/documents/invoices', invoice.id]);
   }
 
   protected async saveQuotation(): Promise<void> {
@@ -294,19 +290,13 @@ export class SellPage {
       this.api.createQuotation({ ...body, customerId: customer.id, notes: this.sale.notes().trim() || null }, key),
     );
     if (quotation) {
-      this.done.set({ kind: 'quotation', quotation });
       this.notify.success(`Quotation ${quotation.number} saved.`);
       this.reset();
+      void this.router.navigate(['/documents/quotations', quotation.id]);
       return;
     }
     const f = this.quoteSubmission.failure();
     if (f) this.notice.set(this.quoteSubmission.unconfirmed() ? 'We could not confirm the quotation — the connection dropped. Save again: it will not be created twice.' : describeFailure(f));
-  }
-
-  protected newSale(): void {
-    this.done.set(null);
-    this.notice.set(null);
-    queueMicrotask(() => this.searchInput()?.nativeElement.focus());
   }
 
   // ---- display helpers ----
@@ -332,16 +322,4 @@ export class SellPage {
     }
   }
 
-  protected invoiceStatus(i: Invoice): { label: string; tone: Tone } {
-    if (i.paymentStatus === 'PAID') return { label: 'Paid', tone: 'success' };
-    return i.paymentStatus === 'PARTIAL' ? { label: 'Partially paid', tone: 'warning' } : { label: 'Unpaid', tone: 'warning' };
-  }
-
-  protected date(d: string | null | undefined): string {
-    return d ? formatCalendarDate(d) : '—';
-  }
-
-  protected snapshotName(c: { name?: string | null; company?: string | null }): string {
-    return customerLabel(c);
-  }
 }

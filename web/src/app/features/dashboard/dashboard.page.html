@@ -50,7 +50,7 @@
           @for (doc of d.recentDocuments; track doc.id) {
             <li data-testid="recent-document">
               <div class="doc-main">
-                <span class="number">{{ doc.number }}</span>
+                <a class="number" [routerLink]="doc.type === 'INVOICE' ? ['/documents/invoices', doc.id] : ['/documents/quotations', doc.id]">{{ doc.number }}</a>
                 <app-status-pill [label]="status(doc).label" [tone]="status(doc).tone" />
                 <span class="customer">{{ customer(doc) }}</span>
                 <span class="t-body-sm t-muted">{{ docLine(doc) }}</span>

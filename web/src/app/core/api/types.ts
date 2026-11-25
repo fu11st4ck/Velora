@@ -30,3 +30,6 @@ export type TaxRate = Schemas['TaxRate'];
 export type PricingPreview = Schemas['PricingPreview'];
 export type Invoice = Schemas['Invoice'];
 export type Quotation = Schemas['Quotation'];
+export type Payment = Schemas['Payment'];
+export type SalesReturn = Schemas['SalesReturn'];
+export type Member = Schemas['Member'];

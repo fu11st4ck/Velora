@@ -80,6 +80,10 @@ function wait(seconds: number): string {
 function withNumbers(code: string, details: Record<string, unknown>[]): string | null {
   const d = details[0] ?? {};
   switch (code) {
+    case 'PAYMENT_EXCEEDS_BALANCE':
+      return 'The amount is more than the balance due.';
+    case 'REFUND_EXCEEDS_PAID':
+      return 'The refund is more than the amount received.';
     case 'INSUFFICIENT_STOCK':
       return typeof d['available'] === 'number' ? `Only ${d['available']} in stock.` : 'Not enough stock.';
     case 'PRODUCT_HAS_STOCK':

@@ -1,0 +1,101 @@
+<app-page-header heading="Documents" [subtitle]="seesAll() ? null : 'Your quotations and invoices'">
+  <a matButton="filled" routerLink="/sell"><mat-icon>point_of_sale</mat-icon>New sale</a>
+</app-page-header>
+
+<section class="filters" aria-label="Filters">
+  <div class="types" role="group" aria-label="Type">
+    @for (t of [{ v: null, l: 'All' }, { v: 'invoice', l: 'Invoices' }, { v: 'quotation', l: 'Quotations' }]; track t.l) {
+      <button type="button" class="chip" [class.selected]="(query().type ?? null) === t.v" [attr.aria-pressed]="(query().type ?? null) === t.v" (click)="setType($any(t.v))" [attr.data-testid]="'type-' + (t.v ?? 'all')">{{ t.l }}</button>
+    }
+  </div>
+  <div class="chips" role="group" aria-label="Status">
+    @for (c of chips(); track c.value) {
+      <button type="button" class="chip" [class.selected]="c.selected" [attr.aria-pressed]="c.selected" (click)="toggleStatus(c.value)" [attr.data-testid]="'status-' + c.value">{{ c.label }}</button>
+    }
+  </div>
+  <div class="row">
+    <mat-form-field class="search">
+      <mat-label>Number, customer, company or mobile</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput type="search" maxlength="100" [ngModel]="searchText" (ngModelChange)="onSearch($event)" data-testid="document-search" />
+      @if (searchText) {
+        <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="onSearch('', true)"><mat-icon>close</mat-icon></button>
+      }
+    </mat-form-field>
+    <mat-form-field class="date">
+      <mat-label>From</mat-label>
+      <input matInput type="date" [value]="query().from ?? ''" (change)="setDate('from', $any($event.target).value)" data-testid="document-from" />
+    </mat-form-field>
+    <mat-form-field class="date">
+      <mat-label>To</mat-label>
+      <input matInput type="date" [value]="query().to ?? ''" (change)="setDate('to', $any($event.target).value)" data-testid="document-to" />
+    </mat-form-field>
+    @if (seesAll() && members().length > 0) {
+      <mat-form-field class="person">
+        <mat-label>Salesperson</mat-label>
+        <mat-select [value]="query().salespersonId ?? null" (selectionChange)="navigate({ salesperson: $event.value })">
+          <mat-option [value]="null">Everyone</mat-option>
+          @for (m of members(); track m.memberId) {
+            <mat-option [value]="m.memberId">{{ m.fullName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    }
+    @if (filtered()) {
+      <button matButton type="button" (click)="clearFilters()">Clear filters</button>
+    }
+  </div>
+</section>
+
+@if (rangeInvalid()) {
+  <app-state-view heading="Check the dates" message="The From date is after the To date." />
+} @else if (failure(); as message) {
+  <app-state-view kind="error" heading="Could not load documents" [message]="message" actionLabel="Try again" (action)="list.reload()" />
+} @else if (list.status() === 'loading' && list.items().length === 0) {
+  <div aria-busy="true" aria-label="Loading documents">
+    @for (i of [1, 2, 3, 4, 5]; track i) { <app-skeleton height="56px" /> }
+  </div>
+} @else if (list.items().length === 0) {
+  <app-state-view [heading]="filtered() ? 'No documents match' : 'No documents yet'" [message]="filtered() ? 'Try other filters.' : 'Quotations and invoices appear here once a sale is made.'" [actionLabel]="filtered() ? 'Clear filters' : null" (action)="clearFilters()" />
+} @else {
+  <div [attr.aria-busy]="list.status() === 'loading'" class="results">
+    @if (compact()) {
+      <ul class="cards">
+        @for (d of list.items(); track d.id) {
+          <li><a class="card" [routerLink]="link(d)" data-testid="document-row">
+            <span class="line"><span class="number">{{ d.number }}</span><app-status-pill [label]="status(d).label" [tone]="status(d).tone" /></span>
+            <span>{{ d.customer.company || d.customer.name }}</span>
+            <span class="line t-body-sm t-muted"><span>{{ issued(d) }} · {{ d.salesperson.fullName }}</span><span class="t-money">{{ money(d.totalMinor) }}</span></span>
+            @if (due(d)) { <span class="t-body-sm" [class.overdue]="d.isOverdue">Balance {{ money(d.balanceMinor) }} · due {{ due(d) }}</span> }
+          </a></li>
+        }
+      </ul>
+    } @else {
+      <div class="table-wrap">
+        <table class="table" data-testid="documents-table">
+          <caption class="visually-hidden">Documents</caption>
+          <thead><tr><th scope="col">Number</th><th scope="col">Date</th><th scope="col">Customer</th><th scope="col">Salesperson</th><th scope="col" class="num">Total</th><th scope="col" class="num">Balance</th><th scope="col">Status</th></tr></thead>
+          <tbody>
+            @for (d of list.items(); track d.id) {
+              <tr data-testid="document-row">
+                <td><a [routerLink]="link(d)" class="number">{{ d.number }}</a><span class="t-body-sm t-muted block">{{ d.type === 'INVOICE' ? 'Invoice' : 'Quotation' }}</span></td>
+                <td class="nowrap">{{ issued(d) }}</td>
+                <td>{{ d.customer.company || d.customer.name }}@if (d.customer.company && d.customer.name) {<span class="t-body-sm t-muted block">{{ d.customer.name }}</span>}</td>
+                <td>{{ d.salesperson.fullName }}</td>
+                <td class="num t-money">{{ money(d.totalMinor) }}</td>
+                <td class="num">
+                  @if (owes(d)) {
+                    <span class="t-money" [class.overdue]="d.isOverdue">{{ money(d.balanceMinor) }}</span>
+                    @if (due(d)) { <span class="t-body-sm block" [class.overdue]="d.isOverdue" [class.t-muted]="!d.isOverdue">due {{ due(d) }}</span> }
+                  } @else { — }
+                </td>
+                <td><app-status-pill [label]="status(d).label" [tone]="status(d).tone" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    <app-load-more [shown]="list.items().length" [hasMore]="list.hasMore()" [loading]="list.status() === 'loadingMore'" [failure]="list.moreFailure()" (more)="list.more()" />
+  </div>
+}
