@@ -66,7 +66,22 @@ export async function apiLogin(email: string, password = E2E.password): Promise<
   return ((await res.json()) as { data: { accessToken: string } }).data.accessToken;
 }
 
-export async function api<T>(token: string, method: string, path: string): Promise<{ status: number; body: T }> {
-  const res = await fetch(`http://localhost:${E2E.apiPort}/api/v1${path}`, { method, headers: { authorization: `Bearer ${token}` } });
+export async function api<T>(token: string, method: string, path: string, body?: unknown): Promise<{ status: number; body: T }> {
+  const headers: Record<string, string> = { authorization: `Bearer ${token}` };
+  if (body !== undefined) {
+    headers['content-type'] = 'application/json';
+    headers['idempotency-key'] = randomUUID();
+  }
+  const res = await fetch(`http://localhost:${E2E.apiPort}/api/v1${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
   return { status: res.status, body: (res.status === 204 ? null : await res.json()) as T };
+}
+
+/** Creates a product through the API (as another device would) and returns it. */
+export async function createProduct(token: string, fields: Record<string, unknown> = {}): Promise<{ id: string; name: string; sku: string; version: number }> {
+  const name = `E2E Ring ${randomUUID().slice(0, 8)}`;
+  const res = await api<{ data: { id: string; name: string; sku: string; version: number } }>(token, 'POST', '/products', {
+    name, costMinor: 100000, defaultMarkupBp: 3000, minMarkupBp: 1500, openingQuantity: 10, ...fields,
+  });
+  expect(res.status).toBe(201);
+  return res.body.data;
 }

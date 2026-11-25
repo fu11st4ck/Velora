@@ -144,12 +144,30 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [x] CI job `web` (lint, types current, unit tests, build, e2e) and the web image in the stack job
 
 ### Known gaps after W1
-- [ ] Dashboard tiles and rows are not links yet — their target lists arrive in W2 (inventory) and W4 (documents)
+- [x] ~~Dashboard tiles and rows are not links yet~~ — stock tile and low/out rows link to the products list since W2; invoice rows wait for W4 (documents)
 - [ ] The phone app cannot open the new https reset link itself until Android App Links / iOS Universal Links are configured (needs the native projects); until then the link opens the web page, which works on a phone browser too
 - [ ] Only Chromium was run here; Firefox and WebKit are CI/nightly items. Not tried on a real phone
 - [ ] Docker stack with Caddy still not run (no Docker daemon here); the CSP and the production build were verified with `web/e2e/serve-dist.mjs`, which applies the Caddyfile's own headers
 
-- [ ] W2 Inventory (products, detail, forms, receive, adjust, stock history) · W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
+## Web app — Sprint W2: inventory (2026-11-25)
+- [x] W-C1 Products: server search (name, SKU, barcode), stock chips with the server's counts, sort (name, stock, newest), "Show archived" (manager/owner), optional columns remembered per browser, "Load more", cards on phones; filters live in the URL
+- [x] W-C2 Product detail: prices, cost and markups (manager/owner only), details, stock with the server's status, last 10 movements with "View all"
+- [x] W-C3 New / edit product: integer money and basis-point parsing, price preview (display only; the saved product shows the server's prices), organization maximum markup, SKU/barcode taken shown on the field, optimistic locking with "Someone else changed this product → Reload"; cost and opening stock read-only after creation. **Deviation:** a page, not a drawer (noted in the screen spec)
+- [x] W-C4 Receive stock and W-C5 Adjust stock dialogs: one idempotency key per change, kept for a retry after a lost answer; cannot remove more than on hand (checked, then enforced by the API)
+- [x] W-C6 Stock history: product, type and date filters; dates are business days in the organization's time zone, converted to exact instants
+- [x] Archive with confirmation; refused while stock is on hand (API message)
+- [x] Navigation (Products, Stock history; the most specific entry is highlighted), dashboard stock tile and low/out rows link to the filtered list
+- [x] Shared: `PagedList` (keyset "Load more", late answers ignored), `LoadMore`, column choice, `Submission` (idempotency keys), money/percent/whole-number validators, org-time-zone day bounds
+- [x] **Backend fix found by the e2e tests:** stock entered when a product is created is now recorded as `OPENING` (business rule S4), not `PURCHASE_RECEIPT`
+- [x] Tests: 55 unit/component tests; 27 end-to-end tests against the production build and the real API — new: scenarios 4–7 (create, edit with concurrent-edit conflict, receive/adjust with history, low stock on dashboard and filter), archive, axe on the inventory pages, 15 (salesperson sees no cost or actions; API refuses), 16 (a second organization created with `create-organization`: its products never appear, direct links show "not found", API returns 404). Backend: 266 tests
+
+### Known gaps after W2
+- [ ] Invoice and credit-note numbers in stock history are plain text until the documents pages exist (W4)
+- [ ] Product photos: not in v1 (decision Q5)
+- [ ] Axe ran on the inventory pages in the light theme only; dark-theme checks cover W1 pages. Firefox/WebKit and real phones still not run here
+- [ ] Movements created before this fix by product creation remain labelled "Received" (only affects databases that already have data)
+
+- [ ] W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

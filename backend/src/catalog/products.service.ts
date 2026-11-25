@@ -156,7 +156,7 @@ export class ProductsService {
           organizationId: ctx.organizationId,
           productId: product.id,
           branchId,
-          type: 'PURCHASE_RECEIPT',
+          type: 'OPENING',
           quantityDelta: dto.openingQuantity,
           balanceAfter: dto.openingQuantity,
           unitCostMinor: product.costMinor,

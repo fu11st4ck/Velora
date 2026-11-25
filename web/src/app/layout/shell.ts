@@ -8,11 +8,11 @@ import { MatIcon } from '@angular/material/icon';
 import { MatMenu, MatMenuItem, MatMenuTrigger } from '@angular/material/menu';
 import { MatSidenav, MatSidenavContainer, MatSidenavContent } from '@angular/material/sidenav';
 import { MatTooltip } from '@angular/material/tooltip';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { SessionStore } from '../core/auth/session.store';
 import { PreferencesStore, type ThemePreference } from '../core/state/preferences.store';
-import { visibleNavigation } from './navigation';
+import { activeNavPath, visibleNavigation } from './navigation';
 
 type Layout = 'wide' | 'rail' | 'compact';
 
@@ -24,7 +24,7 @@ function currentLayout(): Layout {
 /** The signed-in frame: sidebar (≥ 1280 px), icon rail (840–1279 px) or drawer (< 840 px). */
 @Component({
   selector: 'app-shell',
-  imports: [TitleCasePipe, RouterOutlet, RouterLink, RouterLinkActive, MatSidenavContainer, MatSidenav, MatSidenavContent, MatIcon, MatIconButton, MatMenu, MatMenuItem, MatMenuTrigger, MatDivider, MatTooltip],
+  imports: [TitleCasePipe, RouterOutlet, RouterLink, MatSidenavContainer, MatSidenav, MatSidenavContent, MatIcon, MatIconButton, MatMenu, MatMenuItem, MatMenuTrigger, MatDivider, MatTooltip],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
@@ -44,6 +44,9 @@ export class Shell {
   );
   protected readonly layout = computed<Layout>(() => (this.breakpoints() === 'wide' && this.preferences.sidebarCollapsed() ? 'rail' : this.breakpoints()));
   protected readonly navigation = computed(() => visibleNavigation((p) => this.session.can(p)));
+  private readonly url = toSignal(this.router.events.pipe(filter((e) => e instanceof NavigationEnd), map(() => this.router.url)), { initialValue: this.router.url });
+  /** The most specific entry containing the current page: /inventory/42 → Products, /inventory/history → Stock history. */
+  protected readonly activePath = computed(() => activeNavPath(this.url(), this.navigation()));
   protected readonly initials = computed(() =>
     (this.session.me()?.user.fullName ?? '?')
       .split(/\s+/)

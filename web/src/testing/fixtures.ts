@@ -1,4 +1,4 @@
-import type { DashboardSummary, Me } from '../app/core/api/types';
+import type { DashboardSummary, Me, Product, StockMovement } from '../app/core/api/types';
 
 /** Test data shaped exactly like the API's responses (types come from the OpenAPI contract). Test-only. */
 export function meFixture(role: 'OWNER' | 'MANAGER' | 'SALES' = 'MANAGER'): Me {
@@ -6,7 +6,14 @@ export function meFixture(role: 'OWNER' | 'MANAGER' | 'SALES' = 'MANAGER'): Me {
   return {
     user: { id: 'u1', fullName: 'Maya Manager', email: 'maya@velora.example' },
     membership: { memberId: 'm1', role, branchId: null, organization: { id: 'o1', name: 'Velora Fine Jewellery LLC' } },
-    permissions: ['product.read', 'sale.create', 'report.read_own', ...(manager ? ['product.read_cost', 'report.read_all', 'settings.read', 'team.read'] : [])],
+    // Same matrix as backend/src/authz/permissions.ts.
+    permissions: [
+      ...['product.read', 'inventory.read', 'customer.read', 'customer.write', 'sale.create', 'document.read_own', 'payment.record', 'report.read_own'],
+      ...(manager
+        ? ['product.read_cost', 'product.manage', 'inventory.manage', 'customer.archive', 'sale.below_minimum', 'document.read_all', 'payment.refund', 'invoice.cancel', 'invoice.return', 'report.read_all', 'settings.read', 'team.read']
+        : []),
+      ...(role === 'OWNER' ? ['settings.manage', 'team.manage'] : []),
+    ],
     settings: {
       currencyCode: 'AED',
       currencyExponent: 2,
@@ -39,4 +46,25 @@ export function dashboardFixture(role: 'MANAGER' | 'SALES' = 'MANAGER'): Dashboa
       },
     ],
   } as DashboardSummary;
+}
+
+/** A product as the API returns it to the given role (cost fields only with product.read_cost). */
+export function productFixture(overrides: Partial<Product> = {}, role: 'MANAGER' | 'SALES' = 'MANAGER'): Product {
+  const base: Product = {
+    id: '01a1e0ca-13af-7da1-9715-c7f57be85084', sku: 'VLR-BR-001', barcode: null, name: 'Alhambra Gold Bracelet', description: null,
+    weight: { value: '12.8', unit: 'G' }, imageUrl: null, quantity: 23, stockStatus: 'IN_STOCK', reorderLevel: null, effectiveReorderLevel: 8,
+    listPriceMinor: 364000, floorPriceMinor: 322000, ceilingPriceMinor: 448000, isActive: true, archivedAt: null, version: 3,
+    createdAt: '2026-11-15T19:58:00.000Z', updatedAt: '2026-11-16T07:32:00.000Z',
+    ...(role === 'MANAGER' ? { costMinor: 280000, defaultMarkupBp: 3000, minMarkupBp: 1500 } : {}),
+  };
+  return { ...base, ...overrides };
+}
+
+export function movementFixture(overrides: Partial<StockMovement> = {}): StockMovement {
+  return {
+    id: 'mv1', productId: '01a1e0ca-13af-7da1-9715-c7f57be85084', productName: 'Alhambra Gold Bracelet', productSku: 'VLR-BR-001',
+    type: 'ADJUSTMENT_OUT', quantityDelta: -2, balanceAfter: 21, unitCostMinor: 280000, invoice: null, return: null,
+    supplierName: null, referenceNote: null, reason: 'Damaged clasp', createdBy: { memberId: 'm1', fullName: 'Maya Manager' }, createdAt: '2026-11-24T21:05:00.000Z',
+    ...overrides,
+  };
 }

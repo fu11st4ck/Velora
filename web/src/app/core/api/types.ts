@@ -12,3 +12,14 @@ export type Role = Schemas['Role'];
 export interface Envelope<T> {
   data: T;
 }
+export type Product = Schemas['Product'];
+export type ProductCreate = Schemas['ProductCreate'];
+export type ProductUpdate = Schemas['ProductUpdate'];
+export type StockMovement = Schemas['StockMovement'];
+export type PageMeta = Schemas['PageMeta'];
+
+/** A page of a list endpoint: `{ data: [...], meta: { nextCursor, hasMore } }`. */
+export interface Page<T, M extends PageMeta = PageMeta> {
+  data: T[];
+  meta: M;
+}

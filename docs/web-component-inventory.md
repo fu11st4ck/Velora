@@ -77,7 +77,7 @@ Base: **M** = Angular Material 3 component, themed; **C** = Angular CDK primitiv
 ### Data display
 | Component | Base | Notes |
 |---|---|---|
-| `DataTable` | M (`mat-table`) + C | Typed column definitions (`key`, `header`, `cell` template, `align`, `sortable` → server sort key, `hideBelow`, `priority`); server sort only where the API supports it; sticky header; row click → detail; column visibility menu (remembered); **card mode** below 840 px using the same column defs; "Load more" with cursor; skeleton rows; empty/error slots. Replaces any ad-hoc table or list |
+| `DataTable` | M (`mat-table`) + C | Typed column definitions (`key`, `header`, `cell` template, `align`, `sortable` → server sort key, `hideBelow`, `priority`); server sort only where the API supports it; sticky header; row click → detail; column visibility menu (remembered); **card mode** below 840 px using the same column defs; "Load more" with cursor; skeleton rows; empty/error slots. Replaces any ad-hoc table or list **As built (W2):** not one generic component yet — pages use `mat-table` with the shared pieces `PagedList` (cursor paging), `LoadMore`, `ColumnChoice` (remembered columns) and `mediaQuery` (cards below 600 px). A single `DataTable` will be extracted if W3–W4 tables repeat the same template |
 | `FilterBar` | own | Search + filter chips + date range + "Clear"; writes to URL; on `sm` collapses into a bottom sheet |
 | `StatusPill` | own | `tone` (success/warning/danger/neutral) + label (+ optional icon); one source for invoice, quotation, stock statuses |
 | `MoneyPipe` / `money` | own pipe | Formats minor units with the organization currency; `sign` and `withCode` options |

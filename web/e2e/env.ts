@@ -11,6 +11,9 @@ export const E2E = {
   owner: 'owner@velora.example',
   manager: 'manager@velora.example',
   sales: 'ahmed@velora.example',
+  /** Owner of a second organization (e2e/prepare-db.mjs), for data-isolation tests. */
+  otherOwner: 'owner@other.example',
+  otherPassword: 'second-business-2026',
   /** Short, so token expiry can be exercised in a test (the API's minimum). */
   accessTokenSeconds: 60,
 } as const;

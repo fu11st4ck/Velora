@@ -4,6 +4,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W2 (2026-11-25)
+- **Inventory on the web:** products list with search, stock filters, sorting and optional columns; product detail; new and edit product with a price preview; receive and adjust stock; archive; stock history filtered by product, type and dates in the business's time zone. Salespeople see prices but never cost, markups or management actions.
+- The dashboard's stock figures now open the matching products list.
+
+### Fixed — W2
+- Stock entered when a product is created is recorded as **opening stock** (`OPENING`), as business rule S4 says, instead of as a delivery (`PURCHASE_RECEIPT`).
+
 ### Added — Web app Sprint W1 (2026-11-25)
 - **Web app** (`web/`, Angular 22): sign-in, forgot and reset password (also used to accept invitations), dashboard, app shell for desktop, tablet and phone, light and dark themes. Sessions survive reloads, renew silently, and end in every tab together.
 - **Browser sessions** (`/auth/web/login`, `/refresh`, `/logout`): the refresh token is kept in an HttpOnly cookie that page scripts cannot read.

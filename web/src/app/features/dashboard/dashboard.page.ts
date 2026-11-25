@@ -1,5 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { toApiFailure } from '../../core/api/api-failure';
 import { describeFailure } from '../../core/api/messages';
@@ -20,12 +21,14 @@ interface Tile {
   value: string | null;
   lines: string[];
   alert: string | null;
+  /** Where the figure is explained in detail; only for pages that exist. */
+  link?: { path: string; query?: Record<string, string> };
 }
 
 /** W-B1 Dashboard (docs/web-screen-specifications.md). Sales staff see their own figures and no cost-based ones. */
 @Component({
   selector: 'app-dashboard-page',
-  imports: [PageHeader, KpiTile, StatusPill, StateView, Skeleton],
+  imports: [PageHeader, KpiTile, StatusPill, StateView, Skeleton, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dashboard.page.html',
   styleUrl: './dashboard.page.scss',
@@ -83,7 +86,7 @@ export class DashboardPage {
         lines: [this.plural(d.outstanding.invoiceCount, 'invoice')],
         alert: d.outstanding.overdueMinor > 0 ? `Overdue ${this.money(d.outstanding.overdueMinor)}` : null,
       },
-      { label: 'In stock', value: `${d.stock.units} pcs`, lines: [this.plural(d.stock.productCount, 'product')], alert: null },
+      { label: 'In stock', value: `${d.stock.units} pcs`, lines: [this.plural(d.stock.productCount, 'product')], alert: null, link: { path: '/inventory' } },
       d.monthProfit
         ? {
             label: "This month's profit",
@@ -99,10 +102,12 @@ export class DashboardPage {
     const d = this.data();
     if (!d) return [];
     return [
-      ...(d.stock.outCount > 0 ? [{ icon: 'remove_shopping_cart', text: `${this.plural(d.stock.outCount, 'product is', 'products are')} out of stock`, danger: false }] : []),
-      ...(d.stock.lowCount > 0 ? [{ icon: 'inventory_2', text: `${this.plural(d.stock.lowCount, 'product is', 'products are')} low in stock`, danger: false }] : []),
+      ...(d.stock.outCount > 0
+        ? [{ icon: 'remove_shopping_cart', text: `${this.plural(d.stock.outCount, 'product is', 'products are')} out of stock`, danger: false, stock: 'out' as string | null }]
+        : []),
+      ...(d.stock.lowCount > 0 ? [{ icon: 'inventory_2', text: `${this.plural(d.stock.lowCount, 'product is', 'products are')} low in stock`, danger: false, stock: 'low' as string | null }] : []),
       ...(d.outstanding.overdueCount > 0
-        ? [{ icon: 'schedule', text: `${this.plural(d.outstanding.overdueCount, 'invoice')} overdue · ${this.money(d.outstanding.overdueMinor)}`, danger: true }]
+        ? [{ icon: 'schedule', text: `${this.plural(d.outstanding.overdueCount, 'invoice')} overdue · ${this.money(d.outstanding.overdueMinor)}`, danger: true, stock: null }]
         : []),
     ];
   });

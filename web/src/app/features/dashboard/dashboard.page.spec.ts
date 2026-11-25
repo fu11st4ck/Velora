@@ -1,5 +1,6 @@
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { patchState } from '@ngrx/signals';
 import { unprotected } from '@ngrx/signals/testing';
@@ -16,7 +17,7 @@ describe('DashboardPage', () => {
   let http: HttpTestingController;
 
   function signedInAs(role: 'MANAGER' | 'SALES') {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([apiInterceptor])), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(withInterceptors([apiInterceptor])), provideHttpClientTesting(), provideRouter([])] });
     http = TestBed.inject(HttpTestingController);
     patchState(unprotected(TestBed.inject(SessionStore)), { status: 'signedIn', me: meFixture(role), accessToken: 'a1' });
   }

@@ -94,3 +94,13 @@ ul {
 .customer {
   overflow-wrap: anywhere;
 }
+
+.tile-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  &:hover app-kpi-tile { border-color: var(--color-primary); }
+  &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+}
+.attention a { color: inherit; }

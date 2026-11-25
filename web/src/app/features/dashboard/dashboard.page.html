@@ -5,7 +5,13 @@
 } @else if (data(); as d) {
   <section class="tiles" aria-label="Key figures">
     @for (t of tiles(); track t.label) {
-      <app-kpi-tile [label]="t.label" [value]="t.value" [lines]="t.lines" [alert]="t.alert" [attr.data-testid]="'kpi-' + $index" />
+      @if (t.link; as link) {
+        <a class="tile-link" [routerLink]="link.path" [queryParams]="link.query" [attr.data-testid]="'kpi-link-' + $index">
+          <app-kpi-tile [label]="t.label" [value]="t.value" [lines]="t.lines" [alert]="t.alert" [attr.data-testid]="'kpi-' + $index" />
+        </a>
+      } @else {
+        <app-kpi-tile [label]="t.label" [value]="t.value" [lines]="t.lines" [alert]="t.alert" [attr.data-testid]="'kpi-' + $index" />
+      }
     }
   </section>
 
@@ -24,7 +30,11 @@
           @for (a of attention(); track a.text) {
             <li [class.danger]="a.danger">
               <span class="material-symbols-rounded" aria-hidden="true">{{ a.icon }}</span>
-              {{ a.text }}
+              @if (a.stock) {
+                <a [routerLink]="'/inventory'" [queryParams]="{ stock: a.stock }" [attr.data-testid]="'attention-' + a.stock">{{ a.text }}</a>
+              } @else {
+                {{ a.text }}
+              }
             </li>
           }
         </ul>

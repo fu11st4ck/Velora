@@ -1,0 +1,99 @@
+@if (failure(); as f) {
+  <app-state-view
+    [kind]="f.kind"
+    [heading]="f.kind === 'notFound' ? 'Product not found' : 'Could not load this product'"
+    [message]="f.kind === 'notFound' ? 'It may have been removed, or the link is wrong.' : f.message"
+    [actionLabel]="f.kind === 'error' ? 'Try again' : null"
+    (action)="resource.reload()"
+  >
+    <a matButton routerLink="/inventory">Back to products</a>
+  </app-state-view>
+} @else if (product(); as p) {
+  <app-page-header [overline]="p.sku" [heading]="p.name">
+    @if (canStock()) {
+      <button matButton="outlined" type="button" (click)="dialogs.receive(p)" data-testid="detail-receive"><mat-icon>move_to_inbox</mat-icon>Receive</button>
+      <button matButton="outlined" type="button" (click)="dialogs.adjust(p)" data-testid="detail-adjust"><mat-icon>tune</mat-icon>Adjust</button>
+    }
+    @if (canManage()) {
+      <button matButton type="button" (click)="archive(p)" [disabled]="archiving.sending()" data-testid="detail-archive"><mat-icon>archive</mat-icon>Archive</button>
+      <a matButton="filled" [routerLink]="['/inventory', p.id, 'edit']" data-testid="detail-edit"><mat-icon>edit</mat-icon>Edit</a>
+    }
+  </app-page-header>
+
+  <div class="columns">
+    <div class="column">
+      <section class="card" aria-labelledby="prices-title">
+        <h2 class="t-title-md" id="prices-title">Prices</h2>
+        <dl class="facts">
+          <div><dt>List price</dt><dd class="t-money" data-testid="list-price">{{ money(p.listPriceMinor) }}</dd></div>
+          <div><dt>Floor price</dt><dd class="t-money" data-testid="floor-price">{{ money(p.floorPriceMinor) }}</dd></div>
+          <div><dt>Ceiling price</dt><dd class="t-money" data-testid="ceiling-price">{{ money(p.ceilingPriceMinor) }}</dd></div>
+          @if (seesCost()) {
+            <div><dt>Average cost</dt><dd class="t-money" data-testid="cost">{{ money(p.costMinor) }}</dd></div>
+            <div><dt>Default markup</dt><dd>{{ bp(p.defaultMarkupBp) }}</dd></div>
+            <div><dt>Minimum markup</dt><dd>{{ bp(p.minMarkupBp) }}</dd></div>
+          }
+        </dl>
+      </section>
+      <section class="card" aria-labelledby="details-title">
+        <h2 class="t-title-md" id="details-title">Details</h2>
+        <dl class="facts">
+          <div><dt>Barcode</dt><dd>{{ p.barcode ?? '—' }}</dd></div>
+          <div><dt>Weight</dt><dd>{{ weight(p) }}</dd></div>
+          <div><dt>Reorder level</dt><dd>{{ p.reorderLevel ?? 'Organization default' }}</dd></div>
+        </dl>
+        @if (p.description) {
+          <p class="description">{{ p.description }}</p>
+        }
+      </section>
+    </div>
+    <div class="column">
+      <section class="card" aria-labelledby="stock-title">
+        <h2 class="t-title-md" id="stock-title">Stock</h2>
+        <div class="stock">
+          <span class="t-money-lg" data-testid="on-hand">{{ p.quantity }}</span>
+          <span class="t-muted">on hand</span>
+          <app-status-pill [label]="status(p).label" [tone]="status(p).tone" data-testid="stock-status" />
+        </div>
+        <dl class="facts">
+          <div><dt>Low stock at</dt><dd>{{ p.effectiveReorderLevel ?? '—' }} or fewer</dd></div>
+          @if (seesCost()) {
+            <div><dt>Value at cost</dt><dd class="t-money">{{ value(p) }}</dd></div>
+          }
+        </dl>
+      </section>
+      <section class="card" aria-labelledby="movements-title">
+        <div class="section-head">
+          <h2 class="t-title-md" id="movements-title">Recent movements</h2>
+          <a matButton [routerLink]="['/inventory/history']" [queryParams]="{ product: p.id }">View all</a>
+        </div>
+        @if (movementsFailure(); as m) {
+          <p class="t-muted" role="alert">{{ m }} <button matButton type="button" (click)="movements.reload()">Try again</button></p>
+        } @else if (movements.hasValue()) {
+          @if (movements.value().data.length === 0) {
+            <p class="t-muted">No stock movements yet.</p>
+          } @else {
+            <ul class="movements">
+              @for (m of movements.value().data; track m.id) {
+                <li data-testid="movement">
+                  <div>
+                    <span class="type">{{ type(m) }}</span>
+                    <span class="t-body-sm t-muted">{{ when(m.createdAt) }} · {{ m.createdBy.fullName }}{{ m.reason ? ' · ' + m.reason : '' }}</span>
+                  </div>
+                  <span class="delta" [class.out]="m.quantityDelta < 0">{{ delta(m) }}</span>
+                </li>
+              }
+            </ul>
+          }
+        } @else {
+          <app-skeleton height="160px" />
+        }
+      </section>
+    </div>
+  </div>
+} @else {
+  <div aria-busy="true" aria-label="Loading the product">
+    <app-skeleton height="64px" />
+    <app-skeleton height="320px" />
+  </div>
+}

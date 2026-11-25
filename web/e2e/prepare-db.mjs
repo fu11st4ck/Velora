@@ -33,3 +33,15 @@ execFileSync('npx', ['tsx', 'prisma/seed.ts'], {
   env: { ...env, NODE_ENV: 'development', SEED_DEMO: 'true', SEED_PASSWORD: 'velora-demo-2026' },
   stdio: ['ignore', 'inherit', 'inherit'],
 });
+
+// A second business, created the way a real one is (deploy/README.md), for the data-isolation tests.
+execFileSync('npx', ['tsx', 'src/maintenance/cli.ts', 'create-organization'], {
+  cwd: backend,
+  env: {
+    ...env,
+    ORG_NAME: 'Other Jewellers LLC', ORG_CURRENCY: 'AED', ORG_TIMEZONE: 'Asia/Dubai', ORG_COUNTRY: 'AE',
+    ORG_TAX_NAME: 'VAT', ORG_TAX_RATE_BP: '500',
+    OWNER_NAME: 'Other Owner', OWNER_EMAIL: 'owner@other.example', OWNER_PASSWORD: 'second-business-2026',
+  },
+  stdio: ['ignore', 'inherit', 'inherit'],
+});

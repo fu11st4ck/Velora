@@ -1,0 +1,116 @@
+<app-page-header heading="Stock history" subtitle="Every change to stock: deliveries, sales, returns and adjustments.">
+  <a matButton="outlined" routerLink="/inventory"><mat-icon>inventory_2</mat-icon>Products</a>
+</app-page-header>
+
+<section class="filters" aria-label="Filters">
+  <mat-form-field class="product">
+    <mat-label>Product</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    @if (selectedProduct(); as p) {
+      <input matInput [value]="p.name + (p.sku ? ' · ' + p.sku : '')" readonly data-testid="history-product-selected" />
+    } @else {
+      <input matInput [ngModel]="productText" (ngModelChange)="onProductText($event)" [matAutocomplete]="auto" autocomplete="off" data-testid="history-product" />
+    }
+    @if (selectedProduct()) {
+      <button matIconButton matSuffix type="button" aria-label="Clear product" (click)="clearProduct()"><mat-icon>close</mat-icon></button>
+    }
+    <mat-autocomplete #auto="matAutocomplete" (optionSelected)="chooseProduct($event)">
+      @for (p of suggestions(); track p.id) {
+        <mat-option [value]="p">{{ p.name }} <span class="t-muted">· {{ p.sku }}</span></mat-option>
+      }
+    </mat-autocomplete>
+  </mat-form-field>
+
+  <mat-form-field class="types">
+    <mat-label>Type</mat-label>
+    <mat-select multiple [value]="filters().types" (selectionChange)="setTypes($event.value)" data-testid="history-types">
+      @for (t of types; track t.value) {
+        <mat-option [value]="t.value">{{ t.label }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field class="date">
+    <mat-label>From</mat-label>
+    <input matInput type="date" [value]="filters().from ?? ''" (change)="setDate('from', $any($event.target).value)" data-testid="history-from" />
+  </mat-form-field>
+  <mat-form-field class="date">
+    <mat-label>To</mat-label>
+    <input matInput type="date" [value]="filters().to ?? ''" (change)="setDate('to', $any($event.target).value)" data-testid="history-to" />
+    @if (rangeInvalid()) {
+      <mat-hint class="error">Must be on or after the From date.</mat-hint>
+    }
+  </mat-form-field>
+  @if (filtered()) {
+    <button matButton type="button" (click)="clearFilters()">Clear filters</button>
+  }
+</section>
+
+@if (rangeInvalid()) {
+  <app-state-view heading="Check the dates" message="The From date is after the To date." />
+} @else if (failure(); as message) {
+  <app-state-view kind="error" heading="Could not load stock history" [message]="message" actionLabel="Try again" (action)="list.reload()" />
+} @else if (list.status() === 'loading' && list.items().length === 0) {
+  <div aria-busy="true" aria-label="Loading stock history">
+    @for (i of [1, 2, 3, 4, 5]; track i) {
+      <app-skeleton height="48px" />
+    }
+  </div>
+} @else if (list.items().length === 0) {
+  <app-state-view [heading]="filtered() ? 'No movements match' : 'No stock movements yet'" [message]="filtered() ? 'Try other filters.' : null" [actionLabel]="filtered() ? 'Clear filters' : null" (action)="clearFilters()" />
+} @else {
+  @if (compact()) {
+    <ul class="cards">
+      @for (m of list.items(); track m.id) {
+        <li class="card" data-testid="history-row">
+          <div class="line">
+            <a [routerLink]="['/inventory', m.productId]" class="name">{{ m.productName }}</a>
+            <span class="delta" [class.out]="m.quantityDelta < 0">{{ delta(m) }}</span>
+          </div>
+          <span class="t-body-sm">{{ type(m) }} · balance {{ m.balanceAfter }}</span>
+          <span class="t-body-sm t-muted">{{ when(m) }} · {{ m.createdBy.fullName }}</span>
+          @if (reference(m) !== '—') {
+            <span class="t-body-sm t-muted">{{ reference(m) }}</span>
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <div class="table-wrap">
+      <table class="table" data-testid="history-table">
+        <caption class="visually-hidden">Stock movements</caption>
+        <thead>
+          <tr>
+            <th scope="col">Date</th>
+            <th scope="col">Product</th>
+            <th scope="col">Type</th>
+            <th scope="col" class="num">Change</th>
+            <th scope="col" class="num">Balance after</th>
+            @if (seesCost()) {
+              <th scope="col" class="num">Unit cost</th>
+            }
+            <th scope="col">Reference</th>
+            <th scope="col">By</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (m of list.items(); track m.id) {
+            <tr data-testid="history-row">
+              <td class="nowrap">{{ when(m) }}</td>
+              <td><a [routerLink]="['/inventory', m.productId]">{{ m.productName }}</a><span class="t-body-sm t-muted sku">{{ m.productSku }}</span></td>
+              <td>{{ type(m) }}</td>
+              <td class="num delta" [class.out]="m.quantityDelta < 0">{{ delta(m) }}</td>
+              <td class="num">{{ m.balanceAfter }}</td>
+              @if (seesCost()) {
+                <td class="num t-money">{{ cost(m) }}</td>
+              }
+              <td>{{ reference(m) }}</td>
+              <td>{{ m.createdBy.fullName }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  <app-load-more [shown]="list.items().length" [hasMore]="list.hasMore()" [loading]="list.status() === 'loadingMore'" [failure]="list.moreFailure()" (more)="list.more()" />
+}

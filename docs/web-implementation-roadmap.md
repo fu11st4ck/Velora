@@ -1,6 +1,6 @@
 # Velora Web — Implementation Roadmap
 
-**Status:** W0 approved 2026-11-25 with the default answers to Q1–Q9. **W1 delivered 2026-11-25** (see `TASKS.md`); W2 next.
+**Status:** W0 approved 2026-11-25 with the default answers to Q1–Q9. **W1 and W2 delivered 2026-11-25** (see `TASKS.md`); W3 next.
 
 The brief's nine sprints are re-ordered by what actually exists: the backend already implements every agreed v1 capability, so most web sprints are frontend-only. Two sprints from the brief are dropped because the product has no such modules (suppliers and purchases — D6; expenses / P&L — no ledger); they return only if those decisions change. Backend prerequisites come first because nothing behind sign-in can be built safely without them.
 
@@ -10,7 +10,7 @@ The brief's nine sprints are re-ordered by what actually exists: the backend alr
 |---|---|---|---|
 | **W0** | Discovery and architecture (this) | Framework decision, architecture, state, API matrix, design audit, screen specs, component inventory, testing strategy, backlog | — |
 | **W1** ✅ | Foundation and sign-in | **Backend:** B1 browser sessions (cookie), B2 https email links, B3 same-origin hosting in `deploy/` + CSP, B7 response contract tests. **Web:** project setup (Angular 22, strict, zoneless, Vitest, Playwright, ESLint), tokens + Material theme (light/dark), fonts/icons, app shell (sidebar/rail/drawer, top bar, account menu, appearance), API client + interceptors + `ApiFailure` + message table, OpenAPI types, `SessionStore`, multi-tab refresh (Web Locks), guards, W-A1–A3, W-S3, `/dev/ui` with first components (button, form field, status pill, states, toast, confirm dialog) | Approval of W0 |
-| **W2** | Dashboard and inventory | W-B1, W-C1–C6; `DataTable` (server sort, load more, card mode, columns), `FilterBar`, `KpiTile`, `MoneyInput`, `EntityVersions`; e2e 4–7, 15–16 | W1 |
+| **W2** ✅ | Dashboard and inventory | W-B1, W-C1–C6; `DataTable` (server sort, load more, card mode, columns), `FilterBar`, `KpiTile`, `MoneyInput`, `EntityVersions`; e2e 4–7, 15–16 | W1 |
 | **W3** | Customers and the sale | W-E1–E3, W-D1–D4 (`SaleStore`, live preview, price editor, customer picker, payment, duplicate protection), quotation save/convert; e2e 8–11, 17 | W2 |
 | **W4** | Documents | W-F1–F8 (lists, detail, payments, refund, cancel, return, PDF view/print/download, WhatsApp link); e2e 12–14 | W3 |
 | **W5** | Reports, settings, account | W-G1 (+ CSV), W-H1–H5, global search W-S2; e2e 3, 18 | W2 |
@@ -33,9 +33,9 @@ Rough size, for one developer working with this assistant: W1 ≈ 1.5 weeks (hal
 | WF-05 | `SessionStore`, sign-in/out, session restore, Web Locks refresh, BroadcastChannel sign-out, guards | W1 |
 | WF-06 | Auth screens W-A1–A3; not found / forbidden / expired | W1 |
 | WF-07 | Base components + `/dev/ui` | W1 |
-| WF-08 | `DataTable`, `FilterBar`, URL-synced filter stores, `EntityVersions`, money pipe/input | W2 |
-| WF-09 | Dashboard | W2 |
-| WF-10 | Products table, detail, form (drawer), receive, adjust, stock history | W2 |
+| WF-08 | `DataTable`, `FilterBar`, URL-synced filter stores, `EntityVersions`, money pipe/input | W2 ✅ |
+| WF-09 | Dashboard | W1 ✅ (links W2) |
+| WF-10 | Products table, detail, form (page — see screen spec), receive, adjust, stock history | W2 ✅ |
 | WF-11 | Customers table, detail with documents, form, picker | W3 |
 | WF-12 | Sale workspace, `SaleStore` + persistence, preview, price editor, payment and review, quotations | W3 |
 | WF-13 | Documents table, invoice/quotation detail, payment, refund, cancel, return, PDF actions | W4 |
