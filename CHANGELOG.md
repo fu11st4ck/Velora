@@ -4,6 +4,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W3 (2026-11-25)
+- **Selling on the web:** sale workspace with product search, price editor, customer picker, live totals from the server, discount and tax, full / part / credit payment by cash or bank transfer, and quotations (save and convert). A sale in progress survives reloads; a sale is never recorded twice, even when the connection drops after it was sent.
+- **Customers on the web:** list, detail with figures and documents, add and edit (with a warning when the mobile number is already saved), archive.
+
+### Fixed — W3
+- Product search results in the sale workspace were not accessible to screen readers (a button nested inside a list option).
+
 ### Added — Web app Sprint W2 (2026-11-25)
 - **Inventory on the web:** products list with search, stock filters, sorting and optional columns; product detail; new and edit product with a price preview; receive and adjust stock; archive; stock history filtered by product, type and dates in the business's time zone. Salespeople see prices but never cost, markups or management actions.
 - The dashboard's stock figures now open the matching products list.

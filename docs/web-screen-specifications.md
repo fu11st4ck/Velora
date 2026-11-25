@@ -103,10 +103,12 @@ Row 1: four `KpiTile`s — Today's sales (vs yesterday), Outstanding (overdue in
 **W-D4 Review and payment.** Panel replaces the cart column (desktop) or step 3 (`sm`): customer, lines summary, server totals; amount received now (default full, chips Full / Half / None), method (Cash, Bank transfer + reference), credit days when a balance remains (default from settings) with the due date shown; one outcome sentence ("Partially paid — AED 2,822.00 due 16 Dec 2026"). **Confirm** opens a `ConfirmDialog` summarising total, amount received and stock effect; submission follows the duplicate-protection rules (`web-state-management.md` §6). Success → invoice detail (W-F2) with a toast; refusal → back to the cart with the problems on their lines, nothing saved; no answer → "We could not confirm the sale. Retry" (same key).
 **Save quotation** (from the cart): no stock effect; → quotation detail.
 
+**As built (W3):** until the document pages exist (W4), success shows a summary in the workspace (number, status, total, received, balance, due date) with "View customer" and "New sale"; it will go to the invoice / quotation page in W4. Quotation conversion is reached with `/sell?quotation=<id>`; its button comes with the quotation page. In the product results the whole row adds the product (an inner button inside a list option failed accessibility checks).
+
 ## W-E Customers
 **W-E1.** Search (name, company, email, phone digits). Columns: Name, Company, Mobile, Email, Created. Sort: Name, Newest. Row → detail. New customer (all roles). Balances per row need B4; until then the column is absent (not faked).
 **W-E2.** Header with name/company, actions (Call/WhatsApp/Email links, Edit, Archive M/O, **New sale for this customer** → W-D1 with customer preset). Summary tiles: Invoiced, Outstanding, Overdue (S: own). Documents table filtered by `customerId` (same component as W-F1). Details: mobile, email, address, TRN, notes.
-**W-E3.** Name or company required; mobile validated and stored in international form; email; address; TRN; notes. Duplicate-mobile prompt before create.
+**W-E3.** (As built: a page, like the product form; the same form appears compactly inside the customer picker.) Name or company required; mobile validated and stored in international form; email; address; TRN; notes. Duplicate-mobile prompt before create.
 
 ## W-F Documents
 **W-F1.** Filters: type (All, Invoices, Quotations), status chips (Unpaid, Partly paid, Overdue, Paid, Cancelled; quotation statuses when Quotations), date range, salesperson (M/O), search (number, customer, company, mobile). Columns: Number + type, Date, Customer (+ company), Salesperson, Total, Balance (+ due date, red when overdue), Status. Newest first (only order the API supports; B5). Load more.

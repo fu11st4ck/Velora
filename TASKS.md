@@ -167,7 +167,24 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Axe ran on the inventory pages in the light theme only; dark-theme checks cover W1 pages. Firefox/WebKit and real phones still not run here
 - [ ] Movements created before this fix by product creation remain labelled "Received" (only affects databases that already have data)
 
-- [ ] W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
+## Web app — Sprint W3: customers and the sale (2026-11-25)
+- [x] W-E1 Customers: search (name, company, email, phone digits), sort, load more, phone cards; filters in the URL. No balance column (needs optional B4 — not faked)
+- [x] W-E2 Customer detail: call / WhatsApp / email links, invoiced / outstanding / overdue from the server (a salesperson sees only their own), documents list, edit, archive (manager/owner), "New sale" for this customer
+- [x] W-E3 Customer form (page, and compact inside the sale): name or company required; mobile normalized by the server; the customer already saved with the same number is offered before creating another
+- [x] W-D1 Sale workspace: product search (sellable only; "/" to focus, ↑↓ Enter), cart saved per user in this browser (survives reloads and an expired session, removed on sign-out), totals and per-line problems only from the server's preview, discount, tax rate, notes, clear sale; phones use Products / Cart steps with a summary bar
+- [x] W-D2 Price editor: quantity limited to stock, lowest/highest price, cost/profit/markup for managers and owners only, "sell below the lowest price" with a recorded reason (managers/owners)
+- [x] W-D3 Customer picker with "New customer" inside the dialog
+- [x] W-D4 Payment: Full / Half / None / Other, cash or bank transfer with reference, credit days with the due date, one outcome sentence, confirmation dialog; one idempotency key per sale, kept for a retry after a lost answer (inputs locked until it is confirmed); a refusal returns to the cart with the problems on the lines
+- [x] Quotations: save (no stock taken) and convert with `/sell?quotation=<id>`
+- [x] Tests: 63 unit/component tests; 39 end-to-end tests — new: 8 (full cash sale, stock taken, dashboard updated), 9 (stock taken by another device first: nothing created, cart kept, line explains), 10 (part payment by bank transfer with reference and due date), 11 (credit sale; more than the total refused by screen and API), 17 (answer lost after the server issued the invoice: retry with the same key, exactly one invoice; clicks while sending ignored), quotation save + convert, reload keeps the sale, below-minimum with reason + axe, salesperson cannot go below minimum (API refuses too), duplicate mobile, own figures for a salesperson, 16 for customers
+- [x] Accessibility fix found by axe: product results no longer nest a button inside a list option
+
+### Known gaps after W3
+- [ ] After a sale or quotation the workspace shows a summary; the document page, PDF and later payments arrive in W4 (**deviation from W-D4**, which goes to the invoice page)
+- [ ] Converting a quotation has no button yet (it will be on the quotation page, W4); the `?quotation=` address works
+- [ ] Customer edits are last-write-wins (the API has no version for customers); acceptable at 10 users, noted
+
+- [ ] W4 Documents · W5 Reports, settings, account · W6 Production readiness
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

@@ -85,3 +85,19 @@ export async function createProduct(token: string, fields: Record<string, unknow
   expect(res.status).toBe(201);
   return res.body.data;
 }
+
+/** Creates a customer through the API (as another device would). */
+export async function createCustomer(token: string, fields: Record<string, unknown> = {}): Promise<{ id: string; name: string | null; company: string | null; mobile: string | null }> {
+  const res = await api<{ data: { id: string; name: string | null; company: string | null; mobile: string | null } }>(token, 'POST', '/customers', {
+    name: `E2E Customer ${randomUUID().slice(0, 8)}`, ...fields,
+  });
+  expect(res.status).toBe(201);
+  return res.body.data;
+}
+
+/** "AED 1,234.50" — the way the app formats AED amounts (2 decimals, en grouping). */
+export function aed(minor: number): string {
+  const sign = minor < 0 ? '−' : '';
+  const abs = Math.abs(minor);
+  return `${sign}AED ${Math.trunc(abs / 100).toLocaleString('en')}.${String(abs % 100).padStart(2, '0')}`;
+}

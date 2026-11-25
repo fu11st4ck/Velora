@@ -3,6 +3,7 @@ import { patchState, signalStore, withComputed, withHooks, withMethods, withStat
 import type { Me } from '../api/types';
 import { toApiFailure, type ApiFailure } from '../api/api-failure';
 import type { MoneyFormat } from '../money/money';
+import { clearSavedSales } from '../state/saved-sale';
 import { AuthApi } from './auth.api';
 import { BrowserSession } from './browser-session';
 
@@ -90,6 +91,8 @@ export const SessionStore = signalStore(
         } catch {
           // The session is ended locally regardless; the cookie expires server-side if this failed.
         }
+        // An expired session keeps the sale in progress (sign in again and carry on); signing out does not.
+        clearSavedSales();
         end('signedOut');
         browser.post({ type: 'signed-out' });
       },

@@ -20,6 +20,8 @@ export const routes: Routes = [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', title: 'Dashboard · Velora', loadComponent: () => import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage) },
       { path: 'inventory', canActivate: [requires('product.read')], loadChildren: () => import('./features/inventory/routes').then((m) => m.INVENTORY_ROUTES) },
+      { path: 'sell', canActivate: [requires('sale.create')], loadChildren: () => import('./features/sell/routes').then((m) => m.SELL_ROUTES) },
+      { path: 'customers', canActivate: [requires('customer.read')], loadChildren: () => import('./features/customers/routes').then((m) => m.CUSTOMER_ROUTES) },
       { path: 'forbidden', title: 'No access · Velora', loadComponent: () => import('./features/errors/error-pages').then((m) => m.ForbiddenPage) },
       ...(environment.devTools ? [{ path: 'dev/ui', title: 'Design system · Velora', loadComponent: () => import('./dev/ui.page').then((m) => m.DevUiPage) }] : []),
       { path: '**', title: 'Not found · Velora', loadComponent: () => import('./features/errors/error-pages').then((m) => m.NotFoundPage) },

@@ -1,4 +1,4 @@
-import type { DashboardSummary, Me, Product, StockMovement } from '../app/core/api/types';
+import type { Customer, DashboardSummary, Invoice, Me, PricingPreview, Product, StockMovement } from '../app/core/api/types';
 
 /** Test data shaped exactly like the API's responses (types come from the OpenAPI contract). Test-only. */
 export function meFixture(role: 'OWNER' | 'MANAGER' | 'SALES' = 'MANAGER'): Me {
@@ -67,4 +67,30 @@ export function movementFixture(overrides: Partial<StockMovement> = {}): StockMo
     supplierName: null, referenceNote: null, reason: 'Damaged clasp', createdBy: { memberId: 'm1', fullName: 'Maya Manager' }, createdAt: '2026-11-24T21:05:00.000Z',
     ...overrides,
   };
+}
+
+export function customerFixture(overrides: Partial<Customer> = {}): Customer {
+  return { id: 'c0a1e0ca-13af-4da1-9715-c7f57be85001', name: 'Maya Farah', company: 'Maison Luxe', mobile: '+971558204412', email: null, address: null, taxRegistrationNumber: null, notes: null, archivedAt: null, createdAt: '2026-11-20T08:00:00.000Z', updatedAt: '2026-11-20T08:00:00.000Z', ...overrides };
+}
+
+/** A preview for one line of the bracelet at list price with 5% VAT, as the server computes it. */
+export function previewFixture(overrides: Partial<PricingPreview> = {}): PricingPreview {
+  return {
+    lines: [{ productId: '01a1e0ca-13af-7da1-9715-c7f57be85084', quantity: 1, unitPriceMinor: 364000, lineTotalMinor: 364000, available: 23, issues: [] }],
+    subtotalMinor: 364000, discountMinor: 0, tax: { id: 't1', name: 'VAT', rateBp: 500, amountMinor: 18200 }, totalMinor: 382200, valid: true,
+    ...overrides,
+  };
+}
+
+export function invoiceFixture(overrides: Partial<Invoice> = {}): Invoice {
+  return {
+    id: 'inv1', number: 'INV-2026-00008', status: 'ISSUED', issuedAt: '2026-11-25T08:00:00.000Z', currencyCode: 'AED',
+    customer: { id: 'c0a1e0ca-13af-4da1-9715-c7f57be85001', name: 'Maya Farah', company: 'Maison Luxe', mobile: '+971558204412' },
+    salesperson: { memberId: 'm1', fullName: 'Maya Manager' },
+    lines: [{ lineNo: 1, productId: '01a1e0ca-13af-7da1-9715-c7f57be85084', name: 'Alhambra Gold Bracelet', sku: 'VLR-BR-001', quantity: 1, unitPriceMinor: 364000, lineTotalMinor: 364000 }],
+    subtotalMinor: 364000, discountMinor: 0, tax: { id: 't1', name: 'VAT', rateBp: 500, amountMinor: 18200 }, totalMinor: 382200,
+    returnedMinor: 0, paidMinor: 191100, balanceMinor: 191100, paymentStatus: 'PARTIAL', isOverdue: false, creditDays: 30, dueDate: '2026-12-25',
+    notes: null, payments: [], returns: [], quotation: null, cancellation: null,
+    ...overrides,
+  } as Invoice;
 }

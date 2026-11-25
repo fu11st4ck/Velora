@@ -1,0 +1,189 @@
+@if (done(); as d) {
+  <app-page-header [heading]="d.kind === 'invoice' ? 'Sale complete' : 'Quotation saved'" />
+  <section class="card done" aria-live="polite" data-testid="sale-done">
+    @if (d.kind === 'invoice') {
+      <div class="done-head">
+        <span class="t-title-lg number" data-testid="done-number">{{ d.invoice.number }}</span>
+        <app-status-pill [label]="invoiceStatus(d.invoice).label" [tone]="invoiceStatus(d.invoice).tone" data-testid="done-status" />
+      </div>
+      <p>{{ snapshotName(d.invoice.customer) }}</p>
+      <dl class="totals">
+        <div><dt>Total</dt><dd class="t-money" data-testid="done-total">{{ money(d.invoice.totalMinor) }}</dd></div>
+        <div><dt>Received</dt><dd class="t-money" data-testid="done-paid">{{ money(d.invoice.paidMinor) }}</dd></div>
+        <div><dt>Balance</dt><dd class="t-money" data-testid="done-balance">{{ money(d.invoice.balanceMinor) }}</dd></div>
+        @if (d.invoice.dueDate) {
+          <div><dt>Due</dt><dd data-testid="done-due">{{ date(d.invoice.dueDate) }}</dd></div>
+        }
+      </dl>
+      <p class="t-body-sm t-muted">The invoice and its PDF open from the documents list once it is available (next release).</p>
+    } @else {
+      <div class="done-head">
+        <span class="t-title-lg number" data-testid="done-number">{{ d.quotation.number }}</span>
+        <app-status-pill label="Quotation" tone="neutral" />
+      </div>
+      <p>{{ snapshotName(d.quotation.customer) }}</p>
+      <dl class="totals">
+        <div><dt>Total</dt><dd class="t-money" data-testid="done-total">{{ money(d.quotation.totalMinor) }}</dd></div>
+        <div><dt>Valid until</dt><dd>{{ date(d.quotation.validUntil) }}</dd></div>
+      </dl>
+      <p class="t-body-sm t-muted">No stock was taken. Convert it to an invoice when the customer confirms.</p>
+    }
+    <div class="done-actions">
+      <a matButton="outlined" [routerLink]="['/customers', d.kind === 'invoice' ? d.invoice.customer.id : d.quotation.customer.id]">View customer</a>
+      <button matButton="filled" type="button" (click)="newSale()" data-testid="new-sale"><mat-icon>add</mat-icon>New sale</button>
+    </div>
+  </section>
+} @else {
+  <app-page-header heading="New sale" [subtitle]="sale.quotation() ? 'Converting ' + sale.quotation()!.number : null">
+    <button matButton type="button" (click)="clearSale()" [disabled]="sale.isEmpty() || mode() === 'payment'" data-testid="clear-sale"><mat-icon>delete_sweep</mat-icon>Clear sale</button>
+  </app-page-header>
+
+  @if (notice(); as n) {
+    <div class="notice" role="alert" data-testid="sale-notice">
+      <mat-icon aria-hidden="true">error</mat-icon>
+      <p>{{ n }}</p>
+      <button matIconButton type="button" aria-label="Dismiss" (click)="notice.set(null)"><mat-icon>close</mat-icon></button>
+    </div>
+  }
+
+  @if (compact() && mode() === 'cart') {
+    <div class="steps" role="tablist" aria-label="Sale steps">
+      <button role="tab" type="button" [attr.aria-selected]="step() === 'products'" (click)="step.set('products')">1 · Products</button>
+      <button role="tab" type="button" [attr.aria-selected]="step() === 'cart'" (click)="step.set('cart')" data-testid="step-cart">2 · Cart ({{ sale.itemCount() }})</button>
+    </div>
+  }
+
+  <div class="workspace" [class.paying]="mode() === 'payment'">
+    @if (!compact() || (step() === 'products' && mode() === 'cart')) {
+      <section class="card products" aria-labelledby="products-title" [attr.inert]="mode() === 'payment' ? '' : null">
+        <h2 class="visually-hidden" id="products-title">Products</h2>
+        <mat-form-field class="search">
+          <mat-label>Search products</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input #search matInput type="search" [ngModel]="query()" (ngModelChange)="onQuery($event)" (keydown)="onSearchKey($event)" autocomplete="off"
+            role="combobox" aria-controls="product-results" [attr.aria-activedescendant]="results().length ? 'product-' + active() : null" aria-expanded="true" data-testid="sale-search" />
+          <mat-hint>Press / to search · ↑ ↓ to choose · Enter to add</mat-hint>
+        </mat-form-field>
+        @if (searchError(); as e) {
+          <p class="error" role="alert">{{ e }} <button matButton type="button" (click)="onQuery(query())">Try again</button></p>
+        }
+        <ul class="results" id="product-results" role="listbox" aria-label="Products in stock" [attr.aria-busy]="searching()">
+          @for (p of results(); track p.id; let i = $index) {
+            <!-- The whole option adds the product (click, or Enter from the search box): no button nested in an option. -->
+            <li [id]="'product-' + i" role="option" [attr.aria-selected]="i === active()" [class.active]="i === active()" tabindex="-1" (click)="add(p)" (keydown.enter)="add(p)" (mouseenter)="active.set(i)" data-testid="sale-result">
+              <div class="info">
+                <span class="name">{{ p.name }}</span>
+                <span class="t-body-sm t-muted">{{ p.sku }} · {{ p.quantity }} available</span>
+              </div>
+              <span class="t-money">{{ money(p.listPriceMinor) }}</span>
+              <span class="add" aria-hidden="true" data-testid="sale-add"><mat-icon>add</mat-icon>Add</span>
+            </li>
+          } @empty {
+            @if (!searching()) {
+              <li class="t-muted empty">{{ query().trim() ? 'No product in stock matches “' + query().trim() + '”.' : 'No products in stock.' }}</li>
+            }
+          }
+        </ul>
+      </section>
+    }
+
+    @if (!compact() || step() === 'cart' || mode() === 'payment') {
+      <section class="card cart" aria-labelledby="cart-title">
+        @if (mode() === 'payment') {
+          <app-payment-panel (back)="backToCart()" (completed)="completed($event)" />
+        } @else {
+          <h2 class="t-title-md" id="cart-title">Sale</h2>
+          <div class="customer">
+            @if (customerName(); as name) {
+              <div><span class="t-overline">Customer</span><p class="name" data-testid="sale-customer">{{ name }}</p></div>
+              <button matButton type="button" (click)="chooseCustomer()" data-testid="change-customer" [disabled]="!!sale.quotation()">Change</button>
+            } @else {
+              <button matButton="outlined" type="button" (click)="chooseCustomer()" data-testid="choose-customer"><mat-icon>person_search</mat-icon>Choose customer</button>
+            }
+          </div>
+
+          @if (sale.lines().length === 0) {
+            <p class="t-muted empty-cart">No products yet. Search and add them on the {{ compact() ? 'Products step' : 'left' }}.</p>
+          } @else {
+            <ul class="lines" aria-label="Products in this sale">
+              @for (line of sale.lines(); track line.key; let i = $index) {
+                <li data-testid="cart-line">
+                  <div class="line-main">
+                    <span class="name">{{ line.name }}</span>
+                    <span class="t-body-sm t-muted">{{ line.quantity }} × {{ money(line.unitPriceMinor) }}{{ line.belowMinimumReason ? ' · below lowest price: ' + line.belowMinimumReason : '' }}</span>
+                    @for (issue of sale.lineIssues()[i]; track issue.code) {
+                      <span class="issue" role="alert" data-testid="line-issue"><mat-icon aria-hidden="true">warning</mat-icon>{{ issueText(issue) }}</span>
+                    }
+                  </div>
+                  <span class="t-money line-total" data-testid="line-total">
+                    @if (lineTotal(i); as t) { {{ t }} } @else { <app-skeleton width="80px" height="18px" /> }
+                  </span>
+                  <div class="line-actions">
+                    <button matIconButton type="button" (click)="edit(line)" [attr.aria-label]="'Change ' + line.name" [disabled]="!!sale.quotation()" data-testid="line-edit"><mat-icon>edit</mat-icon></button>
+                    <button matIconButton type="button" (click)="remove(line)" [attr.aria-label]="'Remove ' + line.name" [disabled]="!!sale.quotation()" data-testid="line-remove"><mat-icon>close</mat-icon></button>
+                  </div>
+                </li>
+              }
+            </ul>
+
+            <div class="terms">
+              <mat-form-field>
+                <mat-label>Discount</mat-label>
+                <input matInput inputmode="decimal" autocomplete="off" [ngModel]="discountText" (ngModelChange)="onDiscount($event)" [disabled]="!!sale.quotation()" data-testid="sale-discount" />
+                <span matTextSuffix>{{ session.money().currencyCode }}</span>
+                @if (discountError()) { <mat-hint class="error">{{ discountError() }}</mat-hint> }
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Tax</mat-label>
+                <mat-select [value]="sale.taxRateId()" (selectionChange)="sale.setTaxRate($event.value)" [disabled]="!!sale.quotation()" data-testid="sale-tax">
+                  @for (r of taxRates(); track r.id) {
+                    <mat-option [value]="r.id">{{ rateLabel(r) }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
+            <mat-form-field class="wide">
+              <mat-label>Notes (printed on the document)</mat-label>
+              <textarea matInput rows="2" maxlength="1000" [ngModel]="sale.notes()" (ngModelChange)="sale.setNotes($event)"></textarea>
+            </mat-form-field>
+
+            @if (previewMessage(); as m) {
+              <p class="error" role="alert" data-testid="preview-error">{{ m }}</p>
+            }
+            <dl class="totals" [attr.aria-busy]="!preview()" aria-live="polite">
+              @if (preview(); as p) {
+                <div><dt>Subtotal</dt><dd class="t-money">{{ money(p.subtotalMinor) }}</dd></div>
+                @if (p.discountMinor > 0) {
+                  <div><dt>Discount</dt><dd class="t-money">−{{ money(p.discountMinor) }}</dd></div>
+                }
+                <div><dt>{{ rateLabel(p.tax) }}</dt><dd class="t-money">{{ money(p.tax.amountMinor) }}</dd></div>
+                <div class="grand"><dt>Total</dt><dd class="t-money-lg" data-testid="sale-total">{{ money(p.totalMinor) }}</dd></div>
+              } @else if (!previewMessage()) {
+                <app-skeleton height="96px" />
+              }
+            </dl>
+          }
+
+          <div class="cart-actions">
+            @if (sale.paymentBlocker(); as why) {
+              <p class="t-body-sm t-muted" data-testid="payment-blocker">{{ why }}</p>
+            }
+            @if (!sale.quotation()) {
+              <button matButton="outlined" type="button" (click)="saveQuotation()" [disabled]="!!sale.quotationBlocker() || quoteSubmission.sending()" data-testid="save-quotation">
+                {{ quoteSubmission.sending() ? 'Saving…' : 'Save quotation' }}
+              </button>
+            }
+            <button matButton="filled" type="button" (click)="takePayment()" [disabled]="!!sale.paymentBlocker()" data-testid="take-payment">Take payment<mat-icon iconPositionEnd>arrow_forward</mat-icon></button>
+          </div>
+        }
+      </section>
+    }
+  </div>
+
+  @if (compact() && step() === 'products' && mode() === 'cart' && sale.lines().length > 0) {
+    <div class="sticky-bar">
+      <span>{{ sale.itemCount() }} {{ sale.itemCount() === 1 ? 'item' : 'items' }}@if (preview(); as p) { · {{ money(p.totalMinor) }} }</span>
+      <button matButton="filled" type="button" (click)="step.set('cart')">Review</button>
+    </div>
+  }
+}

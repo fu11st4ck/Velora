@@ -17,7 +17,11 @@ export interface NavGroup {
 export const NAVIGATION: NavGroup[] = [
   {
     label: 'Operations',
-    items: [{ label: 'Dashboard', icon: 'space_dashboard', path: '/dashboard' }],
+    items: [
+      { label: 'Dashboard', icon: 'space_dashboard', path: '/dashboard' },
+      { label: 'New sale', icon: 'point_of_sale', path: '/sell', permission: 'sale.create' },
+      { label: 'Customers', icon: 'group', path: '/customers', permission: 'customer.read' },
+    ],
   },
   {
     label: 'Inventory',

@@ -1,0 +1,62 @@
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, 440px); gap: var(--space-4); align-items: start;
+  @media (max-width: 1279.98px) { grid-template-columns: minmax(0, 1fr) 400px; }
+  @media (max-width: 599.98px) { grid-template-columns: 1fr; }
+}
+.card { padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); min-width: 0; }
+.workspace.paying .products { opacity: 0.5; }
+.search { width: 100%; }
+.error { color: var(--color-error); margin: 0; }
+.results { list-style: none; margin: var(--space-3) 0 0; padding: 0;
+  li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); border-top: 1px solid var(--color-line); }
+  li:first-child { border-top: 0; }
+  li { cursor: pointer; }
+  .add { display: inline-flex; align-items: center; gap: var(--space-1); padding: 6px var(--space-3); border: 1px solid var(--color-border-input); border-radius: var(--radius-full); font: 600 14px var(--font-ui); color: var(--color-primary);
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+  li.active { background: var(--color-primary-container); color: var(--color-on-primary-container); border-color: transparent; }
+  .info { display: flex; flex-direction: column; min-width: 0; }
+  .name { font-weight: 600; }
+  .empty { display: block; }
+}
+.cart { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);
+  @media (max-width: 599.98px) { position: static; }
+  h2 { margin: 0; }
+}
+.customer { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3);
+  .name { margin: 0; font-weight: 600; }
+}
+.empty-cart { margin: 0; }
+.lines { list-style: none; margin: 0; padding: 0;
+  li { display: grid; grid-template-columns: 1fr auto auto; gap: var(--space-2); align-items: start; padding: var(--space-3) 0; border-top: 1px solid var(--color-line); }
+  .line-main { display: flex; flex-direction: column; min-width: 0; }
+  .name { font-weight: 600; }
+  .line-total { white-space: nowrap; padding-top: 2px; }
+  .line-actions { display: flex; }
+  .issue { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--status-danger-fg); font-weight: 600; font-size: 13px;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+}
+.terms { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.wide { width: 100%; }
+.totals { margin: 0; display: grid; gap: var(--space-1);
+  div { display: flex; justify-content: space-between; gap: var(--space-3); }
+  dt { color: var(--color-text-muted); }
+  dd { margin: 0; }
+  .grand { padding-top: var(--space-2); border-top: 1px solid var(--color-line); align-items: baseline; dt { color: var(--color-text); font-weight: 600; } }
+}
+.cart-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-2);
+  p { flex-basis: 100%; margin: 0; text-align: right; }
+}
+.notice { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4); border-radius: var(--radius-lg); background: var(--status-danger-bg); color: var(--status-danger-fg);
+  p { margin: 0; flex: 1; }
+}
+.steps { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: var(--space-3);
+  button { min-height: 44px; border: 1px solid var(--color-border-input); border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-text); font: 600 14px var(--font-ui); }
+  button[aria-selected='true'] { background: var(--color-primary-container); color: var(--color-on-primary-container); border-color: transparent; }
+}
+.sticky-bar { position: sticky; bottom: 0; margin: var(--space-4) calc(-1 * var(--space-4)) 0; padding: var(--space-3) var(--space-4); display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); background: var(--color-surface-raised); border-top: 1px solid var(--color-line); box-shadow: var(--shadow-2); }
+.done { max-width: 640px; display: flex; flex-direction: column; gap: var(--space-3);
+  p { margin: 0; }
+}
+.done-head { display: flex; align-items: center; gap: var(--space-3); }
+.done-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }

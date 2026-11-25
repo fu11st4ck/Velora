@@ -27,3 +27,11 @@ export function percentInput(bp: number): string {
   const fraction = bp % 100;
   return fraction === 0 ? `${whole}` : `${whole}.${String(fraction).padStart(2, '0').replace(/0$/, '')}`;
 }
+
+/** Markup on cost (basis points) of a price, truncated — mirror of the server's markupFromPrice, for display. */
+export function markupFromPrice(costMinor: number, unitPriceMinor: number): number {
+  const cost = BigInt(costMinor);
+  const price = BigInt(unitPriceMinor);
+  if (cost === 0n || price <= cost) return 0;
+  return Number(((price - cost) * BP) / cost);
+}

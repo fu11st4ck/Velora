@@ -53,3 +53,9 @@ export function today(timeZone: string, now = new Date()): string {
 export function formatDateTime(iso: string, timeZone: string, locale = 'en-GB'): string {
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone }).format(new Date(iso));
 }
+
+/** A calendar date plus whole days ("2026-11-25" + 30 → "2026-12-25"). */
+export function addDays(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d! + days)).toISOString().slice(0, 10);
+}
