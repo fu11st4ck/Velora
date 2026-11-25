@@ -116,6 +116,18 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] The device database is not encrypted beyond the platform's app sandbox, and excluding it from device backups needs native configuration (with the first device build)
 - [ ] ARB localisation, native build flavours, deep-link registration (carried over from Sprint 1)
 
+## Web app — Sprint W0: discovery and architecture (2026-11-25) — awaiting approval
+- [x] Inspect repository, backend routes (51 operations), OpenAPI file (paths match code), mobile app, design documents, reference site (desktop, tablet, phone)
+- [x] Angular vs React comparison and recommendation — `docs/web-frontend-architecture-decision.md`
+- [x] Architecture, project structure, routing, security — `docs/web-frontend-architecture.md`
+- [x] State management with flows for sign-in, stock updates and sales — `docs/web-state-management.md`
+- [x] API status matrix and missing backend functionality — `docs/web-api-integration.md`
+- [x] Desktop/tablet design audit — `docs/web-design-audit.md`; screen specifications — `docs/web-screen-specifications.md`; design system and components — `docs/web-component-inventory.md`
+- [x] Testing strategy — `docs/web-testing-strategy.md`; roadmap, backlog, risks, questions — `docs/web-implementation-roadmap.md`
+- [ ] **Approval of W0 and answers to questions Q1–Q9** (`docs/web-implementation-roadmap.md`) — nothing is implemented until then
+- [ ] W1 Foundation and sign-in (includes backend B1 web session cookie, B2 https email links, B3 same-origin hosting, B7 contract tests)
+- [ ] W2 Dashboard and inventory · W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
+
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.
 - Android SDK download host is not reachable from the current workspace; iOS builds need macOS (CI).

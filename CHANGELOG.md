@@ -4,6 +4,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W0 (2026-11-25)
+- Architecture proposal for a responsive Angular web app on the existing API: framework decision, architecture, state management, API status matrix and missing backend functionality, desktop design audit, screen specifications, design system and component inventory, testing strategy, roadmap with risks and open questions (`docs/web-*.md`). Documentation only; no web code yet.
+
 ### Added — Deployment (2026-11-17)
 - `deploy/`: production Docker Compose stack (PostgreSQL, API, Caddy with automatic HTTPS), database role setup, secrets generator, nightly backup with optional off-server copy, restore drill, and a step-by-step guide.
 - `create-organization` maintenance command: creates a business, its default tax rate and its owner account (there is no public sign-up).

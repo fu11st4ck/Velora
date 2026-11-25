@@ -3,6 +3,8 @@
 Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend for jewellery sales and inventory: stock, customer pricing, quotations, invoices, payments and reports.
 
 > **Status (2026-11-16): Sprints 0–5 delivered, Sprint 6 partly** — the backend and the Flutter app cover sign-in, inventory, customers, the sale flow, documents, dashboard, reports, settings and offline use (saved products and customers, queued quotations, customers and payments). **Deployment:** a Docker Compose setup is in [`deploy/`](deploy/README.md) (rehearsed locally, not yet run on a server). **Not done:** product photos, barcode scanning and store builds. The app has never been run on a physical device. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
+>
+> **Web app (2026-11-25): Sprint W0 — architecture proposed, awaiting approval.** A responsive Angular web app on the same API is planned; no web code exists yet. Start with [`docs/web-implementation-roadmap.md`](docs/web-implementation-roadmap.md) (sprints, open questions) and [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 
@@ -18,6 +20,7 @@ The product is derived from the reference web demo at <https://velora-sales-inve
 | Understand the system | [`docs/system-architecture.md`](docs/system-architecture.md), [`docs/architecture-decision-records/`](docs/architecture-decision-records/) |
 | Work on data | [`docs/database-design.md`](docs/database-design.md), [`docs/entity-relationship-diagram.md`](docs/entity-relationship-diagram.md), [`backend/prisma/schema.prisma`](backend/prisma/schema.prisma) |
 | Work on the API | [`docs/api-specification.md`](docs/api-specification.md), [`docs/api-error-handling.md`](docs/api-error-handling.md), [`backend/openapi/openapi.yaml`](backend/openapi/openapi.yaml) |
+| Plan or build the web app | [`docs/web-implementation-roadmap.md`](docs/web-implementation-roadmap.md), [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md), [`docs/web-frontend-architecture.md`](docs/web-frontend-architecture.md), [`docs/web-state-management.md`](docs/web-state-management.md), [`docs/web-api-integration.md`](docs/web-api-integration.md), [`docs/web-design-audit.md`](docs/web-design-audit.md), [`docs/web-screen-specifications.md`](docs/web-screen-specifications.md), [`docs/web-component-inventory.md`](docs/web-component-inventory.md), [`docs/web-testing-strategy.md`](docs/web-testing-strategy.md) |
 | Offline, security, testing | [`docs/offline-sync-strategy.md`](docs/offline-sync-strategy.md), [`docs/security-guidelines.md`](docs/security-guidelines.md), [`docs/testing-strategy.md`](docs/testing-strategy.md) |
 
 ## Repository layout
@@ -33,6 +36,8 @@ mobile/                    Flutter app
   lib/core/                api client, auth/session, money, shared widgets
   lib/features/            auth, shell, home, products (inventory), customers, more
   test/                    unit, widget, app-flow, golden and live contract tests
+deploy/                    Production Docker Compose (PostgreSQL, API, Caddy), backup/restore
+web/                       (planned, Sprint W1) Angular web app — not created yet
 docs/                      Product, design, architecture, API, strategy documents
   reference-screenshots/   Evidence from the audit of the reference app + the audit script
   architecture-decision-records/
@@ -41,4 +46,4 @@ DEVELOPMENT.md  ENVIRONMENT.md  CHANGELOG.md  TASKS.md
 
 ## Stack
 
-Flutter · Riverpod · go_router · Dio · Drift — NestJS (Fastify) · Prisma · PostgreSQL 16 — REST `/api/v1` with OpenAPI 3.1. Rationale and trade-offs: [`docs/system-architecture.md`](docs/system-architecture.md).
+Flutter · Riverpod · go_router · Dio · SQLite — NestJS (Fastify) · Prisma · PostgreSQL 16 — REST `/api/v1` with OpenAPI 3.1. Rationale and trade-offs: [`docs/system-architecture.md`](docs/system-architecture.md). Web (proposed): Angular 22 · Signals + `httpResource` · NgRx SignalStore · Angular Material 3 · Vitest · Playwright — see [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
