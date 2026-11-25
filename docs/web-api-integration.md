@@ -1,6 +1,6 @@
 # Velora Web — API Integration
 
-**Status:** Proposed (Sprint W0, 2026-11-25). Source of truth for what exists: the backend code in `backend/src` and its test suite (254 tests). `backend/openapi/openapi.yaml` was compared with the controllers: **all 51 implemented operations are in the file**; the only operation in the file that does not exist is `POST /products/{id}/image-upload-url` (photos need object storage). Whether every *response schema* in the file matches the real responses has **not** been verified — see B7.
+**Status:** W1 (2026-11-25): B1, B2, B3 and B7 are done. Source of truth for what exists: the backend code in `backend/src` and its test suite (254 tests). `backend/openapi/openapi.yaml` was compared with the controllers: **all 51 implemented operations are in the file**; the only operation in the file that does not exist is `POST /products/{id}/image-upload-url` (photos need object storage). Since W1 every response produced by the backend test suite is validated against the file, including fields the file does not declare (B7).
 
 ## 1. Client architecture
 
@@ -55,8 +55,8 @@ Legend — **Status:** ✅ implemented and covered by backend tests · ⚠️ im
 | `POST /auth/login` | ✅ | public | — | Mobile flow (tokens in body). Web uses B1 |
 | `POST /auth/refresh` | ✅ | public | — | Mobile flow |
 | `POST /auth/logout` | ✅ | any | — | Mobile flow |
-| `POST /auth/web/login`, `/web/refresh`, `/web/logout` | ❌ | — | Sign-in, session restore, sign-out | **B1 — required before any web screen behind sign-in** |
-| `POST /auth/forgot-password` | ⚠️ | public | Forgot password | Emails a `velora://` link a desktop browser cannot open — **B2** |
+| `POST /auth/web/login`, `/web/refresh`, `/web/logout` | ✅ | public (cookie + origin) | Sign-in, session restore, sign-out | **B1 — done in W1** |
+| `POST /auth/forgot-password` | ✅ | public | Forgot password | Emails an https link to the web reset page (**B2, done in W1**) |
 | `POST /auth/reset-password` | ✅ | public (token) | Reset / set password | Also used to accept invitations |
 | `POST /auth/change-password` | ✅ | any | Account → Change password | Signs out other sessions |
 | `GET /auth/me` | ✅ | any | Shell, every guard | User, role, permissions, organization settings |
@@ -68,7 +68,7 @@ Legend — **Status:** ✅ implemented and covered by backend tests · ⚠️ im
 | `GET /organization` | ✅ | any (policy fields M/O) | Settings → Business | |
 | `PATCH /organization` | ✅ | O | Settings → Business | Currency/time zone locked once documents exist |
 | `GET /organization/members` | ✅ | M, O | Settings → Team | |
-| `POST /organization/members` | ⚠️ | O | Team → Invite | Invitation email has a `velora://` link — **B2** |
+| `POST /organization/members` | ✅ | O | Team → Invite | Invitation email links to the web reset page (B2) |
 | `PATCH /organization/members/{id}` | ✅ | O | Team | Role, access |
 | `GET /tax-rates` | ✅ | any (`includeInactive` M/O) | Cart, Settings → Tax rates | |
 | `POST /tax-rates`, `PATCH /tax-rates/{id}` | ✅ | O | Settings → Tax rates | |
@@ -128,9 +128,9 @@ Legend — **Status:** ✅ implemented and covered by backend tests · ⚠️ im
 ### Required for the web app
 | # | What | Why | Size |
 |---|---|---|---|
-| **B1** | Browser sessions: `POST /auth/web/login`, `/auth/web/refresh`, `/auth/web/logout` with the refresh token in an HttpOnly, Secure, SameSite=Strict cookie; `Origin` + custom-header check | Without it the web app must keep a 30-day credential where page scripts can read it | Small: reuses `AuthService`; ~1 day with tests |
-| **B2** | Email links that work in a browser: invitations and password resets link to `https://<APP_BASE_URL>/reset-password?token=…` instead of `velora://…` | Invited staff opening email on a computer currently cannot set a password. The same https link can later open the phone app (Android App Links / iOS Universal Links) — the `velora://` scheme is not registered in the mobile builds yet anyway | Small: config + 2 templates + web route |
-| **B3** | Same-origin hosting: Caddy serves the built web app at `/` and proxies `/api/*`; web security headers (CSP) | Cookies and no-CORS rely on it | Small: `deploy/` change |
+| **B1** ✅ (W1) | Browser sessions: `POST /auth/web/login`, `/auth/web/refresh`, `/auth/web/logout` with the refresh token in an HttpOnly, Secure, SameSite=Strict cookie; `Origin` + custom-header check | Without it the web app must keep a 30-day credential where page scripts can read it | Small: reuses `AuthService`; ~1 day with tests |
+| **B2** ✅ (W1) | Email links that work in a browser: invitations and password resets link to `https://<APP_BASE_URL>/reset-password?token=…` instead of `velora://…` | Invited staff opening email on a computer currently cannot set a password. The same https link can later open the phone app (Android App Links / iOS Universal Links) — the `velora://` scheme is not registered in the mobile builds yet anyway | Small: config + 2 templates + web route |
+| **B3** ✅ (W1) | Same-origin hosting: Caddy serves the built web app at `/` and proxies `/api/*`; web security headers (CSP) | Cookies and no-CORS rely on it | Small: `deploy/` change |
 
 ### Recommended (improves the web app; not blocking)
 | # | What | Why |
@@ -138,7 +138,7 @@ Legend — **Status:** ✅ implemented and covered by backend tests · ⚠️ im
 | B4 | `GET /customers` option to include outstanding balance per row, sortable by balance | A "who owes us" table — today only per-customer detail and the documents filter show it |
 | B5 | `GET /documents`: sort by total and due date | Desktop tables are expected to sort by these columns; today only newest first |
 | B6 | `GET /audit-logs` (M/O; filter by entity, date) | "Recent activity" beyond documents; audit entries are already written |
-| B7 | Response-schema contract tests: every backend e2e response validated against `openapi.yaml` | The web app's types come from that file; today paths are checked, response shapes are not |
+| B7 ✅ (W1) | Response-schema contract tests: every backend e2e response validated against `openapi.yaml` | The web app's types come from that file; today paths are checked, response shapes are not |
 | B8 | `GET /payments` (M/O; date range, method) | A payment register for daily cash reconciliation; payments are only visible per invoice today |
 
 ### Requested in the brief but not part of the agreed product (no web screens planned)

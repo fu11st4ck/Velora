@@ -68,8 +68,10 @@ services:
       driver: json-file
       options: { max-size: "20m", max-file: "5" }
 
+  # Serves the web app and proxies /api to the API, on one HTTPS origin.
   caddy:
-    image: caddy:2
+    build: ../web
+    image: velora-web
     restart: unless-stopped
     depends_on:
       - api

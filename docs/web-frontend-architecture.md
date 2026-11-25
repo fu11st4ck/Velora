@@ -94,7 +94,7 @@ Guards only improve the experience; the API refuses anything the role may not do
 - **Accessibility:** WCAG 2.2 AA target; keyboard-complete; focus management in dialogs and after navigation; `axe` checks in end-to-end tests.
 - **Internationalisation:** English only at launch; strings marked with `$localize`/`i18n` from the start so a translation (Arabic, RTL) can be added without touching templates. Number, currency and date formatting via `Intl` with the organization's settings.
 - **Security:** no secrets in the bundle; access token in memory; refresh token in an HttpOnly cookie (B1); strict Content-Security-Policy from Caddy (`default-src 'self'`, no inline scripts; Angular builds are CSP-compatible); Angular's built-in sanitisation, no `innerHTML` with server data; links built with `URL`, external links `rel="noopener"`.
-- **Performance budgets:** initial JS ≤ 250 kB gzip, each lazy feature ≤ 120 kB gzip, LCP ≤ 2.5 s on a mid-range laptop over 4G; enforced by `angular.json` budgets and a Playwright check.
+- **Performance budgets:** initial download ≤ 250 kB compressed, each lazy feature ≤ 120 kB compressed, LCP ≤ 2.5 s on a mid-range laptop over 4G. Angular's build budgets measure *uncompressed* size, so `angular.json` enforces the equivalent raw limits (initial: warning 600 kB, error 800 kB). W1 measured 490 kB raw / 124 kB compressed for the initial load.
 
 ## 6. Build and delivery
 - `ng build` produces static files. They are copied into the Caddy container (or a volume) and served from `/`; `/api/*` is proxied to the API (B3). One image per release, built in CI.

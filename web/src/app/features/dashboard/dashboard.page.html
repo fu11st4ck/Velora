@@ -1,0 +1,64 @@
+<app-page-header [overline]="organization()" [heading]="hello()" />
+
+@if (failure(); as message) {
+  <app-state-view kind="error" heading="Could not load the dashboard" [message]="message" actionLabel="Try again" (action)="summary.reload()" />
+} @else if (data(); as d) {
+  <section class="tiles" aria-label="Key figures">
+    @for (t of tiles(); track t.label) {
+      <app-kpi-tile [label]="t.label" [value]="t.value" [lines]="t.lines" [alert]="t.alert" [attr.data-testid]="'kpi-' + $index" />
+    }
+  </section>
+
+  @if (inventoryValue(); as value) {
+    <section class="card value" data-testid="inventory-value">
+      <span class="t-muted">Inventory value at cost</span>
+      <span class="t-money-lg">{{ value }}</span>
+    </section>
+  }
+
+  <div class="columns">
+    @if (attention().length > 0) {
+      <section class="card" aria-labelledby="attention-title">
+        <h2 class="t-title-md" id="attention-title">Needs attention</h2>
+        <ul class="attention">
+          @for (a of attention(); track a.text) {
+            <li [class.danger]="a.danger">
+              <span class="material-symbols-rounded" aria-hidden="true">{{ a.icon }}</span>
+              {{ a.text }}
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    <section class="card recent" aria-labelledby="recent-title">
+      <h2 class="t-title-md" id="recent-title">Recent documents</h2>
+      @if (d.recentDocuments.length === 0) {
+        <p class="t-muted">Quotations and invoices appear here once a sale is made.</p>
+      } @else {
+        <ul class="documents">
+          @for (doc of d.recentDocuments; track doc.id) {
+            <li data-testid="recent-document">
+              <div class="doc-main">
+                <span class="number">{{ doc.number }}</span>
+                <app-status-pill [label]="status(doc).label" [tone]="status(doc).tone" />
+                <span class="customer">{{ customer(doc) }}</span>
+                <span class="t-body-sm t-muted">{{ docLine(doc) }}</span>
+              </div>
+              <span class="t-money">{{ total(doc) }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+} @else {
+  <div aria-busy="true" aria-label="Loading the dashboard">
+    <section class="tiles">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <app-skeleton height="132px" />
+      }
+    </section>
+    <app-skeleton height="240px" />
+  </div>
+}

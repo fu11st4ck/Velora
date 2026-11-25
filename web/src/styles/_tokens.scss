@@ -1,0 +1,77 @@
+// Velora design tokens (docs/web-component-inventory.md §1). Same values as the mobile app
+// (docs/design-system.md). Light and dark values sit side by side in light-dark(); the active
+// scheme comes from `color-scheme` on <html>, set from the appearance preference.
+:root {
+  color-scheme: light dark;
+
+  --brand-wine-900: #251417;
+  --brand-wine-700: #45151f;
+  --brand-wine-600: #602433;
+  --brand-wine-100: #f1e3e6;
+  --brand-gold-700: #7a5a28;
+  --brand-gold-500: #b28a50;
+  --brand-gold-300: #d4b27b;
+  --brand-gold-100: #f6ebd8;
+
+  --color-primary: light-dark(#45151f, #e8b4bf);
+  --color-on-primary: light-dark(#ffffff, #3a0f19);
+  --color-primary-container: light-dark(#f1e3e6, #602433);
+  --color-on-primary-container: light-dark(#3d151e, #fbe3e8);
+  --color-accent: light-dark(#7a5a28, #d4b27b);
+  --color-page: light-dark(#fbfaf8, #171112);
+  --color-surface: light-dark(#ffffff, #211819);
+  --color-surface-raised: light-dark(#f3efe9, #2b2022);
+  --color-text: light-dark(#211b1c, #ede6e3);
+  --color-text-muted: light-dark(#655d5e, #b8acae);
+  --color-line: light-dark(#e7e0db, #3a2e30);
+  --color-border-input: light-dark(#8f8486, #8c7f81);
+  --color-error: light-dark(#b3261e, #f2b8b5);
+  --color-focus: #b28a50;
+
+  --sidebar-bg: #251417;
+  --sidebar-text: #e9e1de;
+  --sidebar-text-muted: #b9aaa8;
+  --sidebar-active-bg: rgb(255 255 255 / 8%);
+  --sidebar-active-marker: #d4b27b;
+
+  --status-success-fg: light-dark(#1f6846, #8fd3ae);
+  --status-success-bg: light-dark(#e6f2eb, #173326);
+  --status-warning-fg: light-dark(#7f4f12, #e9c083);
+  --status-warning-bg: light-dark(#f8eedb, #3b2a0e);
+  --status-danger-fg: light-dark(#a3261f, #f2b8b5);
+  --status-danger-bg: light-dark(#fbe9e7, #4a1512);
+  --status-neutral-fg: light-dark(#4e5468, #c3c8d8);
+  --status-neutral-bg: light-dark(#eceef3, #2a2d38);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-full: 999px;
+
+  --shadow-1: 0 1px 2px rgb(33 27 28 / 6%);
+  --shadow-2: 0 4px 16px rgb(33 27 28 / 10%);
+  --shadow-3: 0 12px 40px rgb(33 27 28 / 18%);
+
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --duration: 150ms;
+  --sidebar-width: 248px;
+  --rail-width: 72px;
+  --content-max: 1440px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration: 0ms;
+  }
+}

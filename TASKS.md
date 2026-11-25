@@ -124,9 +124,32 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [x] API status matrix and missing backend functionality — `docs/web-api-integration.md`
 - [x] Desktop/tablet design audit — `docs/web-design-audit.md`; screen specifications — `docs/web-screen-specifications.md`; design system and components — `docs/web-component-inventory.md`
 - [x] Testing strategy — `docs/web-testing-strategy.md`; roadmap, backlog, risks, questions — `docs/web-implementation-roadmap.md`
-- [ ] **Approval of W0 and answers to questions Q1–Q9** (`docs/web-implementation-roadmap.md`) — nothing is implemented until then
-- [ ] W1 Foundation and sign-in (includes backend B1 web session cookie, B2 https email links, B3 same-origin hosting, B7 contract tests)
-- [ ] W2 Dashboard and inventory · W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
+- [x] Approved 2026-11-25 with the defaults for Q1–Q9 (Angular; B1–B3; same domain; 30-day sessions; no suppliers/purchases/expenses; no optional backend items; English only; personal sign-in; web online-only)
+
+## Web app — Sprint W1: foundation and sign-in (2026-11-25)
+**Backend**
+- [x] B1 Browser sessions: `/auth/web/login`, `/refresh`, `/logout`; refresh token only in an HttpOnly, Secure, SameSite=Strict cookie scoped to those endpoints; origin + `X-Velora-Client` check; sign-out works with an expired access token
+- [x] B2 Reset and invitation emails link to `<APP_BASE_URL>/reset-password` (https, opens in any browser) instead of `velora://`
+- [x] B3 Same origin: Caddy serves the web app at `/` and proxies `/api/*`; strict Content-Security-Policy and security headers; web image built from `web/Dockerfile`
+- [x] B7 Every response in the backend tests is validated against `openapi.yaml`, including undocumented fields; spec corrected where it had drifted
+**Web (`web/`)**
+- [x] Angular 22.2 project: strict TypeScript and templates, zoneless, Vitest, ESLint (Angular + template accessibility rules), Playwright; build budgets
+- [x] Design tokens (light/dark via `light-dark()`), Material 3 theme from the tokens, self-hosted Inter, Playfair Display and Material Symbols
+- [x] API layer: types generated from the OpenAPI file (CI checks they are current), interceptor (bearer token, single refresh on 401, one retry of failed GETs, timeouts), `ApiFailure` and messages identical to the mobile app
+- [x] Session: in-memory access token, restore from the cookie, refresh serialised across tabs with Web Locks, sign-out in every tab via BroadcastChannel, return to the same page after re-sign-in
+- [x] Guards (signed in, signed out, permission), shell (sidebar ≥1280, rail 840–1279, drawer <840), account menu with appearance
+- [x] Screens: sign in, forgot password, reset/set password, dashboard (W-B1, brought forward so the app has a real home page), not found, forbidden; `/dev/ui` design-system page (development builds only)
+- [x] Shared components: status pill, state views, skeleton, page header, KPI tile, confirm dialog, toasts, money pipe
+- [x] Tests: 35 unit/component tests; 19 end-to-end tests against the **production build**, the production headers, the real API and a seeded database (incl. multi-tab refresh after token expiry, remote sign-out, lock-out, axe accessibility in light and dark, no CSP violations)
+- [x] CI job `web` (lint, types current, unit tests, build, e2e) and the web image in the stack job
+
+### Known gaps after W1
+- [ ] Dashboard tiles and rows are not links yet — their target lists arrive in W2 (inventory) and W4 (documents)
+- [ ] The phone app cannot open the new https reset link itself until Android App Links / iOS Universal Links are configured (needs the native projects); until then the link opens the web page, which works on a phone browser too
+- [ ] Only Chromium was run here; Firefox and WebKit are CI/nightly items. Not tried on a real phone
+- [ ] Docker stack with Caddy still not run (no Docker daemon here); the CSP and the production build were verified with `web/e2e/serve-dist.mjs`, which applies the Caddyfile's own headers
+
+- [ ] W2 Inventory (products, detail, forms, receive, adjust, stock history) · W3 Customers and the sale · W4 Documents · W5 Reports, settings, account · W6 Production readiness
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

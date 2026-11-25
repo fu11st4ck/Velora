@@ -4,7 +4,7 @@ Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend fo
 
 > **Status (2026-11-16): Sprints 0–5 delivered, Sprint 6 partly** — the backend and the Flutter app cover sign-in, inventory, customers, the sale flow, documents, dashboard, reports, settings and offline use (saved products and customers, queued quotations, customers and payments). **Deployment:** a Docker Compose setup is in [`deploy/`](deploy/README.md) (rehearsed locally, not yet run on a server). **Not done:** product photos, barcode scanning and store builds. The app has never been run on a physical device. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
 >
-> **Web app (2026-11-25): Sprint W0 — architecture proposed, awaiting approval.** A responsive Angular web app on the same API is planned; no web code exists yet. Start with [`docs/web-implementation-roadmap.md`](docs/web-implementation-roadmap.md) (sprints, open questions) and [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
+> **Web app (2026-11-25): Sprint W1 delivered** — Angular app in [`web/`](web/README.md) with sign-in, password reset, dashboard and the app shell, tested end to end against the real API. Inventory, customers, sales, documents, reports and settings follow in W2–W5. Start with [`docs/web-implementation-roadmap.md`](docs/web-implementation-roadmap.md) (sprints, open questions) and [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 
@@ -37,7 +37,7 @@ mobile/                    Flutter app
   lib/features/            auth, shell, home, products (inventory), customers, more
   test/                    unit, widget, app-flow, golden and live contract tests
 deploy/                    Production Docker Compose (PostgreSQL, API, Caddy), backup/restore
-web/                       (planned, Sprint W1) Angular web app — not created yet
+web/                       Angular web app (sign-in, dashboard so far) — see web/README.md
 docs/                      Product, design, architecture, API, strategy documents
   reference-screenshots/   Evidence from the audit of the reference app + the audit script
   architecture-decision-records/
@@ -46,4 +46,4 @@ DEVELOPMENT.md  ENVIRONMENT.md  CHANGELOG.md  TASKS.md
 
 ## Stack
 
-Flutter · Riverpod · go_router · Dio · SQLite — NestJS (Fastify) · Prisma · PostgreSQL 16 — REST `/api/v1` with OpenAPI 3.1. Rationale and trade-offs: [`docs/system-architecture.md`](docs/system-architecture.md). Web (proposed): Angular 22 · Signals + `httpResource` · NgRx SignalStore · Angular Material 3 · Vitest · Playwright — see [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
+Flutter · Riverpod · go_router · Dio · SQLite — NestJS (Fastify) · Prisma · PostgreSQL 16 — REST `/api/v1` with OpenAPI 3.1. Rationale and trade-offs: [`docs/system-architecture.md`](docs/system-architecture.md). Web: Angular 22 · Signals + `httpResource` · NgRx SignalStore · Angular Material 3 · Vitest · Playwright — see [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).

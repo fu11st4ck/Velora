@@ -4,6 +4,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W1 (2026-11-25)
+- **Web app** (`web/`, Angular 22): sign-in, forgot and reset password (also used to accept invitations), dashboard, app shell for desktop, tablet and phone, light and dark themes. Sessions survive reloads, renew silently, and end in every tab together.
+- **Browser sessions** (`/auth/web/login`, `/refresh`, `/logout`): the refresh token is kept in an HttpOnly cookie that page scripts cannot read.
+- **Web hosting:** Caddy now serves the web app and the API from one HTTPS address, with a strict Content-Security-Policy.
+- **Contract checks:** every backend test response is validated against `openapi.yaml`; the web app's types are generated from it.
+
+### Changed
+- Password reset and invitation emails link to `https://<your address>/reset-password` (opens in any browser) instead of `velora://`. `APP_BASE_URL` is now the web app's address; `MOBILE_DEEP_LINK_BASE` is gone.
+- `openapi.yaml` corrected where it differed from the API (tax rate id on documents, team member fields, report period, health and forgot-password bodies, nullable margin).
+
 ### Added — Web app Sprint W0 (2026-11-25)
 - Architecture proposal for a responsive Angular web app on the existing API: framework decision, architecture, state management, API status matrix and missing backend functionality, desktop design audit, screen specifications, design system and component inventory, testing strategy, roadmap with risks and open questions (`docs/web-*.md`). Documentation only; no web code yet.
 

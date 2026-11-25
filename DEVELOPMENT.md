@@ -48,6 +48,10 @@ VELORA_LIVE_API=http://localhost:3000/api/v1 VELORA_LIVE_PASSWORD='<seed passwor
 
 Staging and production builds require `--dart-define=API_BASE_URL=https://…` and refuse to start without it.
 
+## Web
+
+See [`web/README.md`](web/README.md). In short: run the API (`APP_BASE_URL=http://localhost:4200`, the default in `.env.example`), then `cd web && npx -y npm@11.6.2 install && npm start`, and open http://localhost:4200. `npm test` runs unit and component tests; `npm run e2e` builds the production app and runs the end-to-end tests against the real API and a fresh `velora_e2e` database (PostgreSQL must be running).
+
 ## Maintenance jobs
 
 ```bash

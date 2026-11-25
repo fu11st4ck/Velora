@@ -1,13 +1,13 @@
 # Deploying Velora with Docker
 
-One server runs everything: PostgreSQL, the API and Caddy (which provides HTTPS). Sized for a small team; 2 vCPU and 2–4 GB of memory are plenty.
+One server runs everything: PostgreSQL, the API, and Caddy, which provides HTTPS and serves the web app. The web app is at `https://<your domain>/` and the API under `https://<your domain>/api/v1` — one address for both. Sized for a small team; 2 vCPU and 2–4 GB of memory are plenty.
 
 > **What has and has not been tested.** The steps the containers perform — creating the database roles, running migrations, creating the first organization, the API in production mode, backup, restore and the consistency check — were rehearsed against a local PostgreSQL. **The Docker image build, the Compose stack and Caddy were not run**: the workspace this was written in has no Docker daemon. `docker compose config` validates the file. Expect to fix small things on the first `docker compose up`; the last section lists where to look.
 
 ## 1. Before you start
 
 - A Linux server (Ubuntu 24.04 or Debian 12) with a public IP address.
-- A domain name for the API, for example `api.yourshop.com`, with a DNS **A record pointing at the server**. Caddy needs it to get the HTTPS certificate.
+- A domain name, for example `app.yourshop.com`, with a DNS **A record pointing at the server**. The web app and the API share it. Caddy needs it to get the HTTPS certificate.
 - Ports **80 and 443** open in the provider's firewall. Nothing else needs to be reachable (SSH aside).
 - An SMTP account for sending email (Resend, Postmark, Brevo, or your mail provider). The API refuses to start without one, because invitations and password resets depend on it.
 
@@ -27,7 +27,7 @@ docker compose up -d --build
 docker compose ps            # postgres and api should become "healthy"; migrate should have exited 0
 ```
 
-Check it from your own computer: `https://api.yourshop.com/api/v1/health/ready` should answer `{"data":{"status":"ok"}}`.
+Check it from your own computer: `https://app.yourshop.com/api/v1/health/ready` should answer `{"data":{"status":"ok"}}`, and `https://app.yourshop.com/` should show the sign-in page.
 
 ## 3. Create your business and the owner account
 
@@ -53,10 +53,10 @@ docker compose exec \
 The mobile app is built with the server address:
 
 ```bash
-flutter build apk --release -t lib/main_prod.dart --dart-define=API_BASE_URL=https://api.yourshop.com/api/v1
+flutter build apk --release -t lib/main_prod.dart --dart-define=API_BASE_URL=https://app.yourshop.com/api/v1
 ```
 
-Production builds refuse an address that is not `https`. Note that **no Android or iOS build has been produced or tested yet**, and the links in invitation and reset emails (`velora://reset-password?…`) only open the app once that link type is registered in the native projects.
+Production builds refuse an address that is not `https`. Note that **no Android or iOS build has been produced or tested yet**, and the links in invitation and reset emails (`https://<your domain>/reset-password?…`) open the web page, which works on phones too; opening them directly in the phone app needs Android App Links / iOS Universal Links in the native projects.
 
 ## 5. Backups
 
@@ -115,5 +115,5 @@ Things worth knowing:
 | `api` exits with "Invalid environment configuration" | A value in `.env` is missing — the message names it |
 | `migrate` fails with an authentication error | The database volume was created with different passwords. Passwords are applied only when the volume is first created: fix `.env`, or (only on a brand-new install with no data) `docker compose down -v` and start again |
 | Caddy logs certificate errors | DNS does not point at this server yet, or ports 80/443 are closed |
-| Image build fails | Not verified in advance (see the note at the top) — send the error output |
+| Image build fails | Not verified in advance (see the note at the top) — send the error output. The web image needs about 2 GB of memory to build |
 | Invitations do not arrive | Check `docker compose logs api` for "could not be sent"; verify `MAIL_SMTP_URL` and that `MAIL_FROM` is an address your mail provider allows |
