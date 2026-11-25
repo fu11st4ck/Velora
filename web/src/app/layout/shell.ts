@@ -12,6 +12,7 @@ import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router
 import { filter, map } from 'rxjs';
 import { SessionStore } from '../core/auth/session.store';
 import { PreferencesStore, type ThemePreference } from '../core/state/preferences.store';
+import { GlobalSearch } from './global-search';
 import { activeNavPath, visibleNavigation } from './navigation';
 
 type Layout = 'wide' | 'rail' | 'compact';
@@ -28,11 +29,14 @@ function currentLayout(): Layout {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './shell.html',
   styleUrl: './shell.scss',
+  host: { '(document:keydown)': 'onKey($event)' },
 })
 export class Shell {
   protected readonly session = inject(SessionStore);
   protected readonly preferences = inject(PreferencesStore);
   private readonly router = inject(Router);
+  protected readonly search = inject(GlobalSearch);
+  protected readonly shortcut = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
   private readonly sidenav = viewChild.required(MatSidenav);
 
   private readonly breakpoints = toSignal(
@@ -59,6 +63,14 @@ export class Shell {
     { value: 'light', label: 'Light' },
     { value: 'dark', label: 'Dark' },
   ];
+
+  /** Ctrl+K / ⌘K opens global search from anywhere in the app. */
+  protected onKey(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.search.show();
+    }
+  }
 
   /** On a phone the drawer closes once a destination is chosen — including the page already open. */
   protected closeDrawer(): void {

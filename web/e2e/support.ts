@@ -115,3 +115,22 @@ export async function createInvoice(
   expect(res.status).toBe(201);
   return res.body.data;
 }
+
+/** Waits for the API to email `to` (via the test SMTP sink) and returns the decoded message body. */
+export async function emailTo(to: string, timeoutMs = 10_000): Promise<string> {
+  const { readdir, readFile } = await import('node:fs/promises');
+  const dir = join(__dirname, '.mail');
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const files = (await readdir(dir).catch(() => [] as string[])).sort().reverse();
+    for (const f of files) {
+      const raw = await readFile(join(dir, f), 'utf8');
+      if (raw.startsWith(`X-Sink-To: ${to}`) || raw.split('\r\n', 1)[0]!.includes(to)) {
+        // Undo quoted-printable soft breaks and escapes so links read whole.
+        return raw.replace(/=\r\n/g, '').replace(/=([0-9A-F]{2})/g, (_, h: string) => String.fromCharCode(parseInt(h, 16)));
+      }
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+  throw new Error(`No email to ${to} within ${timeoutMs} ms`);
+}

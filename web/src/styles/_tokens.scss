@@ -20,6 +20,14 @@
   --color-accent: light-dark(#7a5a28, #d4b27b);
   --color-page: light-dark(#fbfaf8, #171112);
   --color-surface: light-dark(#ffffff, #211819);
+  /* Charts (dataviz palette; validated with the skill's script on these surfaces, see TASKS W5). */
+  --chart-series-1: light-dark(#45151f, #e8b4bf);
+  --chart-good: #0aac23;
+  --chart-warning: #fbb315;
+  --chart-neutral: #8a8a8a;
+  --chart-critical: #dc3c3d;
+  --chart-ink-light: #ffffff;
+  --chart-ink-dark: #0b0b0b;
   --color-surface-raised: light-dark(#f3efe9, #2b2022);
   --color-text: light-dark(#211b1c, #ede6e3);
   --color-text-muted: light-dark(#655d5e, #b8acae);

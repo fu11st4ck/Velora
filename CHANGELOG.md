@@ -4,6 +4,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W5 (2026-11-25)
+- **Reports on the web** with period presets, payment-status chart, sales by team member, stock value, and CSV exports.
+- **Settings on the web:** business details and sales rules, tax rates, team (invite, roles, access).
+- **Account:** change password, signed-in devices. **Global search** with Ctrl/⌘ K.
+
 ### Added — Web app Sprint W4 (2026-11-25)
 - **Documents on the web:** list with filters; invoice and quotation pages; record payments, refunds, cancellations and returns (credit notes); view, print and download PDFs; share a summary on WhatsApp. A finished sale now opens its invoice.
 

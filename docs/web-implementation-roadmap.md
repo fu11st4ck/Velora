@@ -1,6 +1,6 @@
 # Velora Web — Implementation Roadmap
 
-**Status:** W0 approved 2026-11-25 with the default answers to Q1–Q9. **W1–W4 delivered 2026-11-25** (see `TASKS.md`); W5 next.
+**Status:** W0 approved 2026-11-25 with the default answers to Q1–Q9. **W1–W5 delivered 2026-11-25** (see `TASKS.md`); W6 next.
 
 The brief's nine sprints are re-ordered by what actually exists: the backend already implements every agreed v1 capability, so most web sprints are frontend-only. Two sprints from the brief are dropped because the product has no such modules (suppliers and purchases — D6; expenses / P&L — no ledger); they return only if those decisions change. Backend prerequisites come first because nothing behind sign-in can be built safely without them.
 
@@ -13,7 +13,7 @@ The brief's nine sprints are re-ordered by what actually exists: the backend alr
 | **W2** ✅ | Dashboard and inventory | W-B1, W-C1–C6; `DataTable` (server sort, load more, card mode, columns), `FilterBar`, `KpiTile`, `MoneyInput`, `EntityVersions`; e2e 4–7, 15–16 | W1 |
 | **W3** ✅ | Customers and the sale | W-E1–E3, W-D1–D4 (`SaleStore`, live preview, price editor, customer picker, payment, duplicate protection), quotation save/convert; e2e 8–11, 17 | W2 |
 | **W4** ✅ | Documents | W-F1–F8 (lists, detail, payments, refund, cancel, return, PDF view/print/download, WhatsApp link); e2e 12–14 | W3 |
-| **W5** | Reports, settings, account | W-G1 (+ CSV), W-H1–H5, global search W-S2; e2e 3, 18 | W2 |
+| **W5** ✅ | Reports, settings, account | W-G1 (+ CSV), W-H1–H5, global search W-S2; e2e 3, 18 | W2 |
 | **W6** | Production readiness | Accessibility audit (axe + keyboard + screen reader pass), performance budgets and traces, browser matrix (Firefox, WebKit in CI), security review (CSP, cookies, headers, dependency audit), deployment of the web build through Caddy, documentation, release checklist | W1–W5 |
 
 Rough size, for one developer working with this assistant: W1 ≈ 1.5 weeks (half backend), W2–W5 ≈ 1 week each, W6 ≈ 1 week.
@@ -39,9 +39,9 @@ Rough size, for one developer working with this assistant: W1 ≈ 1.5 weeks (hal
 | WF-11 | Customers table, detail with documents, form, picker | W3 ✅ |
 | WF-12 | Sale workspace, `SaleStore` + persistence, preview, price editor, payment and review, quotations | W3 ✅ |
 | WF-13 | Documents table, invoice/quotation detail, payment, refund, cancel, return, PDF actions | W4 ✅ |
-| WF-14 | Reports with ranges and CSV export | W5 |
-| WF-15 | Business settings, tax rates, team, change password, devices | W5 |
-| WF-16 | Global search | W5 |
+| WF-14 | Reports with ranges and CSV export | W5 ✅ |
+| WF-15 | Business settings, tax rates, team, change password, devices | W5 ✅ |
+| WF-16 | Global search | W5 ✅ |
 | WF-17 | A11y, performance, browser matrix, security review, deployment, docs | W6 |
 | — | Optional backend improvements B4 (customer balances), B5 (document sorting), B6 (audit log), B8 (payment register) | When approved |
 

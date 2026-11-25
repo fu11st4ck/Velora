@@ -1,0 +1,139 @@
+<app-page-header heading="Reports" [subtitle]="all() ? periodLabel() : periodLabel() + ' · your sales'">
+  @if (all()) {
+    <button matButton="outlined" type="button" [matMenuTriggerFor]="exportMenu" [disabled]="exporting()" data-testid="export-menu"><mat-icon>download</mat-icon>Export CSV</button>
+    <mat-menu #exportMenu="matMenu" xPosition="before">
+      <button mat-menu-item type="button" (click)="export('sales')" [disabled]="!!problem()" data-testid="export-sales">Sales in this period</button>
+      <button mat-menu-item type="button" (click)="export('stock')" data-testid="export-stock">Stock at cost (now)</button>
+    </mat-menu>
+  }
+</app-page-header>
+
+<section class="period" aria-label="Period">
+  <div class="chips" role="group" aria-label="Period">
+    @for (p of presets; track p.value) {
+      <button type="button" class="chip" [class.selected]="preset() === p.value" [attr.aria-pressed]="preset() === p.value" (click)="setPreset(p.value)" [attr.data-testid]="'range-' + p.value">{{ p.label }}</button>
+    }
+  </div>
+  @if (preset() === 'custom') {
+    <div class="custom">
+      <mat-form-field><mat-label>From</mat-label><input matInput type="date" [value]="period()?.from ?? ''" (change)="setDate('from', $any($event.target).value)" data-testid="range-from" /></mat-form-field>
+      <mat-form-field><mat-label>To</mat-label><input matInput type="date" [value]="period()?.to ?? ''" (change)="setDate('to', $any($event.target).value)" data-testid="range-to" /></mat-form-field>
+    </div>
+  }
+</section>
+
+@if (problem(); as p) {
+  <app-state-view heading="Check the period" [message]="p" />
+} @else {
+  @if (summary().failure; as f) {
+    <app-state-view kind="error" heading="Could not load the report" [message]="message(f)" actionLabel="Try again" (action)="reload()" />
+  } @else if (summary().data; as s) {
+    <section class="hero card" aria-labelledby="net-title">
+      <h2 class="t-overline" id="net-title">Net sales</h2>
+      <p class="hero-figure" data-testid="report-net">{{ money(s.netSalesMinor) }}</p>
+      <p class="t-muted">{{ s.invoiceCount }} {{ s.invoiceCount === 1 ? 'invoice' : 'invoices' }} · after discounts and returns, before tax</p>
+    </section>
+
+    <div class="grid">
+      <section class="card" aria-labelledby="sales-title">
+        <h2 class="t-title-md" id="sales-title">Sales</h2>
+        <dl class="facts">
+          <div><dt>Invoiced</dt><dd data-testid="report-invoiced">{{ money(s.invoicedMinor) }}</dd></div>
+          <div><dt>Tax</dt><dd>{{ money(s.taxMinor) }}</dd></div>
+          <div><dt>Discounts</dt><dd>{{ money(s.discountMinor) }}</dd></div>
+          <div><dt>Returns</dt><dd>{{ money(s.returnsMinor) }}</dd></div>
+          <div><dt>Money received</dt><dd data-testid="report-received">{{ money(s.receivedMinor) }}</dd></div>
+        </dl>
+      </section>
+      @if (all() && s.grossProfitMinor !== undefined) {
+        <section class="card" aria-labelledby="profit-title" data-testid="report-profit">
+          <h2 class="t-title-md" id="profit-title">Profit</h2>
+          <dl class="facts">
+            <div><dt>Cost of goods</dt><dd>{{ money(s.cogsMinor) }}</dd></div>
+            <div><dt>Gross profit</dt><dd>{{ money(s.grossProfitMinor) }}</dd></div>
+            <div><dt>Margin</dt><dd>{{ bp(s.marginBp) }}</dd></div>
+          </dl>
+        </section>
+      }
+      <section class="card" aria-labelledby="owed-title">
+        <h2 class="t-title-md" id="owed-title">Owed now</h2>
+        <p class="t-body-sm t-muted">As of today, whatever the period.</p>
+        <dl class="facts">
+          <div><dt>Outstanding</dt><dd data-testid="report-outstanding">{{ money(s.outstandingNowMinor) }}</dd></div>
+          <div><dt>Overdue</dt><dd [class.danger]="s.overdueNowMinor > 0">{{ money(s.overdueNowMinor) }}</dd></div>
+        </dl>
+      </section>
+    </div>
+  } @else {
+    <app-skeleton height="140px" />
+  }
+
+  <section class="card" aria-labelledby="status-title">
+    <h2 class="t-title-md" id="status-title">Invoices of this period by payment</h2>
+    @if (statuses().failure; as f) {
+      <p role="alert">{{ message(f) }}</p>
+    } @else if (statuses().data) {
+      @if (hasInvoices()) {
+        <app-status-bar [items]="statusParts()" description="Invoice value by payment status" />
+        <div class="table-wrap"><table class="table" data-testid="status-table">
+          <caption class="visually-hidden">Invoices by payment status</caption>
+          <thead><tr><th scope="col">Status</th><th scope="col" class="num">Invoices</th><th scope="col" class="num">Value</th><th scope="col" class="num">Share</th><th scope="col" class="num">Still owed</th></tr></thead>
+          <tbody>
+            @for (r of statusTable(); track r.key) {
+              <tr>
+                <th scope="row"><span class="swatch" [style.background]="r.color" aria-hidden="true"></span>{{ r.label }}</th>
+                <td class="num">{{ r.count }}</td><td class="num">{{ r.amount }}</td><td class="num">{{ r.share }}</td><td class="num">{{ r.balance }}</td>
+              </tr>
+            }
+          </tbody>
+        </table></div>
+        @if (overdue(); as o) {
+          @if (o.count > 0) {
+            <p class="overdue" data-testid="report-overdue"><mat-icon aria-hidden="true">schedule</mat-icon>Overdue: {{ o.count }} {{ o.count === 1 ? 'invoice' : 'invoices' }}, {{ money(o.balanceMinor) }} still owed (part of Partly paid and Unpaid).</p>
+          }
+        }
+      } @else {
+        <p class="t-muted">No invoices in this period.</p>
+      }
+    } @else {
+      <app-skeleton height="96px" />
+    }
+  </section>
+
+  @if (all()) {
+    <div class="grid two">
+      <section class="card" aria-labelledby="people-title">
+        <h2 class="t-title-md" id="people-title">Net sales by team member</h2>
+        @if (people().failure; as f) {
+          <p role="alert">{{ message(f) }}</p>
+        } @else if (people().data) {
+          @if (peopleRows().length > 0) {
+            <app-bar-list [items]="peopleRows()" data-testid="report-people" />
+          } @else {
+            <p class="t-muted">No sales in this period.</p>
+          }
+        } @else {
+          <app-skeleton height="120px" />
+        }
+      </section>
+      <section class="card" aria-labelledby="stock-title">
+        <h2 class="t-title-md" id="stock-title">Stock at cost (now)</h2>
+        @if (stock().failure; as f) {
+          <p role="alert">{{ message(f) }}</p>
+        } @else if (stock().data; as v) {
+          <dl class="facts">
+            <div><dt>Value at cost</dt><dd data-testid="report-stock-value">{{ money(v.summary?.valueMinor) }}</dd></div>
+            <div><dt>Units</dt><dd>{{ v.summary?.units ?? 0 }}</dd></div>
+            <div><dt>Products in stock</dt><dd>{{ v.summary?.productCount ?? 0 }}</dd></div>
+          </dl>
+          @if (stockRows().length > 0) {
+            <h3 class="t-title-sm sub">Highest value</h3>
+            <app-bar-list [items]="stockRows()" />
+          }
+        } @else {
+          <app-skeleton height="120px" />
+        }
+      </section>
+    </div>
+  }
+}

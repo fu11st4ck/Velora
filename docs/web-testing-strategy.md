@@ -40,7 +40,7 @@ Each scenario signs in through the UI with seeded accounts (owner, manager, sale
 | 15 | Unauthorized access | Sales user: no cost columns anywhere, Admin group hidden, direct URL to `/settings/team` shows forbidden, API responses contain no cost fields |
 | 16 | Organization data isolation | Second organization seeded; its products, customers and documents never appear in lists, search, or by direct URL (404) |
 | 17 | Duplicate submission | Network dropped after `POST /invoices` was sent → retry creates exactly one invoice (same idempotency key); double-click on confirm sends one request |
-| 18 | Invitation and reset links (after B2) | Owner invites; the emailed https link (captured by a test SMTP sink) opens the web reset page; the invitee signs in |
+| 18 | Invitation and reset links (after B2) | Owner invites; the emailed https link (captured by the test SMTP sink `web/e2e/mail-sink.mjs`) opens the web reset page; the invitee signs in — **implemented W5** |
 
 ## 3. What runs where
 - **Every push (CI):** lint, type-check, unit + component + integration tests, production build with budgets, OpenAPI types up to date, e2e scenarios 1–18 on Chromium against the API and PostgreSQL started in the job.

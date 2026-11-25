@@ -56,6 +56,14 @@
           <mat-icon>menu</mat-icon>
         </button>
       }
+      <button type="button" class="search" (click)="search.show()" aria-keyshortcuts="Control+K Meta+K" data-testid="global-search">
+        <mat-icon aria-hidden="true">search</mat-icon>
+        @if (layout() !== 'compact') {
+          <span>Search</span><kbd>{{ shortcut }}</kbd>
+        } @else {
+          <span class="visually-hidden">Search</span>
+        }
+      </button>
       <span class="spacer"></span>
       <button class="account" type="button" [matMenuTriggerFor]="account" aria-label="Account menu" data-testid="account-menu">
         <span class="avatar" aria-hidden="true">{{ initials() }}</span>
@@ -81,6 +89,9 @@
             <span>{{ t.label }}</span>
           </button>
         }
+        <mat-divider />
+        <a mat-menu-item routerLink="/account/password" data-testid="menu-password"><mat-icon>password</mat-icon><span>Change password</span></a>
+        <a mat-menu-item routerLink="/account/devices" data-testid="menu-devices"><mat-icon>devices</mat-icon><span>Signed-in devices</span></a>
         <mat-divider />
         <button mat-menu-item type="button" (click)="signOut()" data-testid="sign-out">
           <mat-icon>logout</mat-icon>

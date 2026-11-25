@@ -199,7 +199,20 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] WhatsApp sends a text with the document summary; the PDF itself is attached by the user (there is no API to send files)
 - [ ] Documents are listed newest first only (sorting needs optional backend item B5)
 
-- [ ] W5 Reports, settings, account · W6 Production readiness
+## Web app — Sprint W5: reports, settings, account, search (2026-11-25)
+- [x] W-G1 Reports: Today / 7 days / This month / Last month / Custom (≤ 366 days) in the URL, computed in the business time zone; net sales hero figure; sales, profit (managers/owners), owed now; invoice value by payment status as a segmented bar with a figures table, overdue on its own line (it is a subset of partly paid + unpaid); net sales by team member and stock at cost with the top 5 (managers/owners); CSV export of sales and stock with the server's file names. A salesperson sees only their own figures
+- [x] Charts follow the data-visualisation method: status colours checked with the palette validator on this app's light and dark surfaces (adjacent blocks pass colour-blind and normal-vision separation); every part is also named by the legend/table; hover and keyboard focus show each part's figures; near-black labels on fills (white on the green failed contrast)
+- [x] W-H1 Business settings (owner edits, manager reads; only changed fields are sent; currency and time zone locked once used; the session profile reloads after saving), W-H2 Tax rates (add, rename, make default, stop/resume), W-H3 Team (invite with the email result stated, change role, remove/restore access — signs the person out at once)
+- [x] W-H4 Change password (other devices signed out, this one kept), W-H5 Signed-in devices (sign out one by one); both in the account menu
+- [x] W-S2 Global search (Ctrl/⌘ K or the top-bar button): products, customers and documents at once, keyboard-driven, limited to what the role may see
+- [x] Test-only SMTP sink (`web/e2e/mail-sink.mjs`) so the e2e run reads real emails
+- [x] Tests: 71 unit/component tests; 56 end-to-end tests — new: reports figures equal the API's and CSV export (owner), salesperson report limits (API refuses CSV and valuation), a settings change sends only that field and reaches the sale, manager read-only, tax-rate default stays unique, **18** (invitation email → https link → choose password → sign in), remove/restore access, change password + devices, global search; axe on reports and team
+
+### Known gaps after W5
+- [ ] Reports: the stock section lists the top 5 by value; the full valuation is in the Stock CSV (a paged table can be added if wanted)
+- [ ] The team page does not offer branches (single-branch decision Q5)
+
+- [ ] W6 Production readiness
 
 ## Open blockers
 - CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.

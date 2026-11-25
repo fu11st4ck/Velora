@@ -2,6 +2,7 @@
 export const E2E = {
   webPort: 4300,
   apiPort: 3100,
+  smtpPort: 2525,
   database: 'velora_e2e',
   ownerUrl: process.env['E2E_OWNER_DATABASE_URL'] ?? 'postgresql://velora_owner:velora_owner_dev@localhost:5432/velora_e2e',
   appUrl: process.env['E2E_DATABASE_URL'] ?? 'postgresql://velora_app:velora_app_dev@localhost:5432/velora_e2e',

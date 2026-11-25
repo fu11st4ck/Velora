@@ -21,6 +21,12 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
   webServer: [
     {
+      command: 'node e2e/mail-sink.mjs',
+      port: E2E.smtpPort,
+      reuseExistingServer: false,
+      env: { SMTP_PORT: String(E2E.smtpPort) },
+    },
+    {
       command: 'node e2e/prepare-db.mjs && cd ../backend && npx nest build && node dist/main.js',
       url: `http://localhost:${E2E.apiPort}/api/v1/health/ready`,
       timeout: 180_000,
@@ -36,7 +42,8 @@ export default defineConfig({
         RATE_LIMIT_PER_MINUTE: '100000',
         AUTH_RATE_LIMIT_PER_15_MIN: '100000',
         LOG_LEVEL: 'warn',
-        MAIL_SMTP_URL: '',
+        // Test-only SMTP sink (e2e/mail-sink.mjs): emails are stored as files for the tests to read.
+        MAIL_SMTP_URL: `smtp://127.0.0.1:${E2E.smtpPort}`,
       },
     },
     {

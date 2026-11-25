@@ -22,6 +22,7 @@ export const NAVIGATION: NavGroup[] = [
       { label: 'New sale', icon: 'point_of_sale', path: '/sell', permission: 'sale.create' },
       { label: 'Documents', icon: 'receipt_long', path: '/documents', permission: 'document.read_own' },
       { label: 'Customers', icon: 'group', path: '/customers', permission: 'customer.read' },
+      { label: 'Reports', icon: 'monitoring', path: '/reports', permission: 'report.read_own' },
     ],
   },
   {
@@ -29,6 +30,14 @@ export const NAVIGATION: NavGroup[] = [
     items: [
       { label: 'Products', icon: 'inventory_2', path: '/inventory', permission: 'product.read' },
       { label: 'Stock history', icon: 'history', path: '/inventory/history', permission: 'inventory.read' },
+    ],
+  },
+  {
+    label: 'Admin',
+    items: [
+      { label: 'Business settings', icon: 'storefront', path: '/settings/business', permission: 'settings.read' },
+      { label: 'Tax rates', icon: 'percent', path: '/settings/tax-rates', permission: 'settings.read' },
+      { label: 'Team', icon: 'badge', path: '/settings/team', permission: 'team.read' },
     ],
   },
 ];

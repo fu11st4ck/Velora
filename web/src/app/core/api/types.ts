@@ -33,3 +33,13 @@ export type Quotation = Schemas['Quotation'];
 export type Payment = Schemas['Payment'];
 export type SalesReturn = Schemas['SalesReturn'];
 export type Member = Schemas['Member'];
+export type Organization = Schemas['Organization'];
+export type OrganizationUpdate = Schemas['OrganizationUpdate'];
+export interface DeviceSession {
+  id: string;
+  deviceName?: string | null;
+  ipAddress?: string | null;
+  signedInAt: string;
+  lastActiveAt: string;
+  isCurrent: boolean;
+}
