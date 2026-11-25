@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../../../shared/ui/dialog-defaults';
 import { ChangeDetectionStrategy, Component, Injectable, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
@@ -201,7 +202,7 @@ export class StockDialogs {
   private readonly session = inject(SessionStore);
 
   async receive(product: Product): Promise<StockChange | undefined> {
-    const ref = this.dialog.open<ReceiveStockDialog, Product, StockChange>(ReceiveStockDialog, { data: product, width: '480px', autoFocus: 'first-tabbable' });
+    const ref = this.dialog.open<ReceiveStockDialog, Product, StockChange>(ReceiveStockDialog, { ...DIALOG_DEFAULTS, data: product, width: '480px', autoFocus: 'first-tabbable' });
     const result = await firstValueFrom(ref.afterClosed());
     if (result) {
       const cost = result.product.costMinor;
@@ -212,7 +213,7 @@ export class StockDialogs {
   }
 
   async adjust(product: Product): Promise<StockChange | undefined> {
-    const ref = this.dialog.open<AdjustStockDialog, Product, StockChange>(AdjustStockDialog, { data: product, width: '480px', autoFocus: 'first-tabbable' });
+    const ref = this.dialog.open<AdjustStockDialog, Product, StockChange>(AdjustStockDialog, { ...DIALOG_DEFAULTS, data: product, width: '480px', autoFocus: 'first-tabbable' });
     const result = await firstValueFrom(ref.afterClosed());
     if (result) this.notify.success(`Stock adjusted. ${result.product.quantity} on hand.`);
     return result;

@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../../../shared/ui/dialog-defaults';
 import { ChangeDetectionStrategy, Component, DOCUMENT, DestroyRef, Injectable, inject, input, signal } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogActions, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
@@ -72,7 +73,7 @@ export class DocumentPdf {
     if (!url) return;
     // The only URL ever trusted here is a blob: this page just created from the server's PDF.
     if (!url.startsWith('blob:')) throw new Error('Refusing to frame a non-blob URL');
-    const ref = this.dialog.open(PdfViewerDialog, {
+    const ref = this.dialog.open(PdfViewerDialog, { ...DIALOG_DEFAULTS, 
       data: { title: number, url: this.sanitizer.bypassSecurityTrustResourceUrl(url), download: () => this.save(url, number) } satisfies Viewer,
       maxWidth: '96vw',
     });

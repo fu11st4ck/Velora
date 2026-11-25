@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../shared/ui/dialog-defaults';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, Injectable, computed, inject, signal } from '@angular/core';
 import { MatDialog, MatDialogContent, MatDialogRef } from '@angular/material/dialog';
@@ -163,7 +164,7 @@ export class GlobalSearch {
   show(): void {
     if (this.open) return;
     this.open = true;
-    const ref = this.dialog.open(GlobalSearchDialog, { position: { top: '12vh' }, maxWidth: '96vw', autoFocus: 'first-tabbable', ariaLabel: 'Search' });
+    const ref = this.dialog.open(GlobalSearchDialog, { ...DIALOG_DEFAULTS, position: { top: '12vh' }, maxWidth: '96vw', autoFocus: 'first-tabbable', ariaLabel: 'Search' });
     ref.afterClosed().subscribe(() => (this.open = false));
   }
 }

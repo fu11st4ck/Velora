@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../../../shared/ui/dialog-defaults';
 import { ChangeDetectionStrategy, Component, Injectable, computed, effect, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -319,7 +320,7 @@ export class InvoiceDialogs {
   private readonly dialog = inject(MatDialog);
 
   private open<T>(component: new (...args: never[]) => T, invoice: Invoice): Promise<Invoice | undefined> {
-    const ref = this.dialog.open<T, Invoice, Invoice>(component as never, { data: invoice, width: '480px', maxWidth: '96vw', autoFocus: 'first-tabbable', disableClose: false });
+    const ref = this.dialog.open<T, Invoice, Invoice>(component as never, { ...DIALOG_DEFAULTS, data: invoice, width: '480px', maxWidth: '96vw', autoFocus: 'first-tabbable', disableClose: false });
     return firstValueFrom(ref.afterClosed());
   }
 

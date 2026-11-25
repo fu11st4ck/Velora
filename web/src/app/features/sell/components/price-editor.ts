@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../../../shared/ui/dialog-defaults';
 import { ChangeDetectionStrategy, Component, Injectable, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { type AbstractControl, FormControl, FormGroup, ReactiveFormsModule, type ValidationErrors } from '@angular/forms';
@@ -188,7 +189,7 @@ export class PriceEditor {
   private readonly dialog = inject(MatDialog);
 
   async open(data: PriceEditorData): Promise<PriceEditorResult | undefined> {
-    const ref = this.dialog.open<PriceEditorDialog, PriceEditorData, PriceEditorResult>(PriceEditorDialog, { data, width: '440px', maxWidth: '96vw', autoFocus: '[data-testid="editor-price"]' });
+    const ref = this.dialog.open<PriceEditorDialog, PriceEditorData, PriceEditorResult>(PriceEditorDialog, { ...DIALOG_DEFAULTS, data, width: '440px', maxWidth: '96vw', autoFocus: '[data-testid="editor-price"]' });
     return firstValueFrom(ref.afterClosed());
   }
 }

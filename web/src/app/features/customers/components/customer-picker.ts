@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from '../../../shared/ui/dialog-defaults';
 import { ChangeDetectionStrategy, Component, Injectable, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
@@ -120,7 +121,7 @@ export class CustomerPicker {
   private readonly dialog = inject(MatDialog);
 
   async choose(): Promise<Customer | undefined> {
-    const ref = this.dialog.open<CustomerPickerDialog, { query?: string }, Customer>(CustomerPickerDialog, { width: '560px', maxWidth: '96vw', autoFocus: 'first-tabbable', data: {} });
+    const ref = this.dialog.open<CustomerPickerDialog, { query?: string }, Customer>(CustomerPickerDialog, { ...DIALOG_DEFAULTS, width: '560px', maxWidth: '96vw', autoFocus: 'first-tabbable', data: {} });
     return firstValueFrom(ref.afterClosed());
   }
 }

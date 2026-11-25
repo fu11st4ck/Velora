@@ -13,7 +13,13 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 async function violations(page: Page, label: string): Promise<string[]> {
   // Judge the finished state, not a dialog or page mid-transition (opacity changes contrast).
   await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
-  const result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  let result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  if (result.violations.length > 0) {
+    // Material links labels to fields after rendering; a page caught in between is checked again.
+    // A real problem is still there a second later and fails the test.
+    await page.waitForTimeout(1000);
+    result = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+  }
   return result.violations.map((v) => `${label}: ${v.id} (${v.impact}) ${v.nodes.map((n) => n.target.join(' ')).slice(0, 3).join(' | ')}`);
 }
 

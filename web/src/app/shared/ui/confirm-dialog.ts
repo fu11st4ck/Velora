@@ -1,3 +1,4 @@
+import { DIALOG_DEFAULTS } from './dialog-defaults';
 import { ChangeDetectionStrategy, Component, Injectable, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogActions, MatDialogClose, MatDialogContent, MatDialogTitle } from '@angular/material/dialog';
@@ -39,7 +40,7 @@ export class Confirm {
   private readonly dialog = inject(MatDialog);
 
   async ask(options: ConfirmOptions): Promise<boolean> {
-    const ref = this.dialog.open<ConfirmDialog, ConfirmOptions, boolean>(ConfirmDialog, { data: options, width: '420px', autoFocus: 'dialog' });
+    const ref = this.dialog.open<ConfirmDialog, ConfirmOptions, boolean>(ConfirmDialog, { ...DIALOG_DEFAULTS, data: options, width: '420px', autoFocus: 'dialog' });
     return (await firstValueFrom(ref.afterClosed())) === true;
   }
 }
