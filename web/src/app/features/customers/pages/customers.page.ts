@@ -16,6 +16,7 @@ import { EntityVersions } from '../../../core/state/entity-versions';
 import { LoadMore } from '../../../shared/table/load-more';
 import { COMPACT, mediaQuery } from '../../../shared/table/media';
 import { PagedList } from '../../../shared/table/paged-list';
+import { UrlSearch } from '../../../shared/table/url-search';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Skeleton } from '../../../shared/ui/skeleton';
 import { StateView } from '../../../shared/ui/state-view';
@@ -37,9 +38,9 @@ import { CustomersApi, type CustomerQuery, type CustomerSort } from '../data/cus
       <mat-form-field class="search">
         <mat-label>Search name, company, email or phone</mat-label>
         <mat-icon matPrefix>search</mat-icon>
-        <input matInput type="search" [ngModel]="searchText" (ngModelChange)="onSearch($event)" maxlength="100" data-testid="customer-search" />
-        @if (searchText) {
-          <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="onSearch('', true)"><mat-icon>close</mat-icon></button>
+        <input matInput type="search" [ngModel]="search.text()" (ngModelChange)="search.input($event)" maxlength="100" data-testid="customer-search" />
+        @if (search.text()) {
+          <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="search.clear()"><mat-icon>close</mat-icon></button>
         }
       </mat-form-field>
       <mat-form-field class="sort">
@@ -61,7 +62,7 @@ import { CustomersApi, type CustomerQuery, type CustomerSort } from '../data/cus
       </div>
     } @else if (list.items().length === 0) {
       @if (query().q) {
-        <app-state-view heading="No customers match" message="Try a name, company, email or part of the phone number." actionLabel="Clear search" (action)="onSearch('', true)" />
+        <app-state-view heading="No customers match" message="Try a name, company, email or part of the phone number." actionLabel="Clear search" (action)="search.clear()" />
       } @else {
         <app-state-view heading="No customers yet" message="Customers are added here or while making a sale." />
       }
@@ -117,8 +118,9 @@ export class CustomersPage {
     const p = this.params();
     return { q: p.get('q')?.trim() || undefined, sort: p.get('sort') === '-createdAt' ? '-createdAt' : 'name', limit: 25 };
   });
-  protected searchText = this.params().get('q') ?? '';
-  private timer: ReturnType<typeof setTimeout> | undefined;
+  protected readonly search = new UrlSearch(this.params, (q) =>
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { q }, queryParamsHandling: 'merge', replaceUrl: true }),
+  );
   protected readonly failure = computed(() => {
     const f = this.list.failure();
     return f ? describeFailure(f) : null;
@@ -135,14 +137,6 @@ export class CustomersPage {
         lastKey = key;
       });
     });
-  }
-
-  protected onSearch(text: string, now = false): void {
-    this.searchText = text;
-    clearTimeout(this.timer);
-    const go = () => void this.router.navigate([], { relativeTo: this.route, queryParams: { q: text.trim() || null }, queryParamsHandling: 'merge', replaceUrl: true });
-    if (now) go();
-    else this.timer = setTimeout(go, 300);
   }
 
   protected setSort(sort: CustomerSort): void {

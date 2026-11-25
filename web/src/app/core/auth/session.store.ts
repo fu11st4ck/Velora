@@ -9,7 +9,15 @@ import { BrowserSession } from './browser-session';
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut';
 /** Why the session ended, shown on the sign-in page. */
-export type EndReason = 'expired' | 'signedOut' | null;
+export type EndReason = 'expired' | 'signedOut' | 'unreachable' | null;
+
+/** Failures that say nothing about the session itself: the request may simply be tried again. */
+function isTransient(f: ApiFailure): boolean {
+  return f.kind === 'network' || f.kind === 'timeout' || f.kind === 'server' || f.kind === 'rateLimited';
+}
+
+const RESTORE_ATTEMPTS = 3;
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SessionState {
   status: SessionStatus;
@@ -46,7 +54,12 @@ export const SessionStore = signalStore(
     };
     const end = (endReason: EndReason) => patchState(store, { ...initial, status: 'signedOut', endReason });
 
-    /** One refresh at a time in this tab, and across tabs via a Web Lock. */
+    /**
+     * One refresh at a time in this tab, and across tabs via a Web Lock. Resolves to the new access
+     * token, or null when the server refuses the session (it ended). A failure that says nothing
+     * about the session — no connection, timeout, server error — is thrown as an ApiFailure, so the
+     * request in hand fails but the person stays signed in.
+     */
     const refresh = (): Promise<string | null> =>
       (inflight ??= browser
         .exclusive(async () => {
@@ -54,7 +67,9 @@ export const SessionStore = signalStore(
             const { accessToken } = await api.refresh();
             patchState(store, { accessToken });
             return accessToken;
-          } catch {
+          } catch (error) {
+            const failure = toApiFailure(error);
+            if (isTransient(failure)) throw failure;
             return null;
           }
         })
@@ -65,12 +80,24 @@ export const SessionStore = signalStore(
 
       /** At start-up: the refresh cookie, if any, restores the session silently. */
       async restore(): Promise<void> {
-        const token = await refresh();
+        // A server that cannot be reached for a moment must not look like a sign-out: try again a
+        // few times, then explain. The cookie is untouched, so a reload later restores the session.
+        const attempt = async (n: number): Promise<string | null | undefined> => {
+          try {
+            return await refresh();
+          } catch {
+            if (n >= RESTORE_ATTEMPTS) return undefined; // still unreachable
+            await pause(500 * 2 ** (n - 1));
+            return attempt(n + 1);
+          }
+        };
+        const token = await attempt(1);
+        if (token === undefined) return end('unreachable');
         if (!token) return end(null);
         try {
           await establish(token);
-        } catch {
-          end(null);
+        } catch (error) {
+          end(isTransient(toApiFailure(error)) ? 'unreachable' : null);
         }
       },
 
@@ -97,7 +124,7 @@ export const SessionStore = signalStore(
         browser.post({ type: 'signed-out' });
       },
 
-      /** For the HTTP layer: a fresh access token, or null when the session cannot continue. */
+      /** For the HTTP layer: a fresh access token, null when the session ended; throws when the server cannot be reached. */
       refreshAccessToken: refresh,
 
       /** The server refused the session: back to sign-in, explaining why. */

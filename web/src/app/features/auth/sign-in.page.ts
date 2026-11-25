@@ -81,7 +81,13 @@ export class SignInPage {
   protected readonly showPassword = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly notice = signal<string | null>(
-    this.session.endReason() === 'expired' ? 'Your session ended. Sign in again to continue.' : this.session.endReason() === 'signedOut' ? 'You have signed out.' : null,
+    this.session.endReason() === 'expired'
+      ? 'Your session ended. Sign in again to continue.'
+      : this.session.endReason() === 'signedOut'
+        ? 'You have signed out.'
+        : this.session.endReason() === 'unreachable'
+          ? 'Velora could not be reached, so you were not signed in automatically. Check the connection, then reload the page or sign in.'
+          : null,
   );
 
   protected async submit(): Promise<void> {

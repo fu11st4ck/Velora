@@ -1,10 +1,10 @@
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toApiFailure, type ApiFailure } from '../../../core/api/api-failure';
-import type { Customer, PricingPreview, Product, Quotation } from '../../../core/api/types';
+import type { Customer, Invoice, PricingPreview, Product, Quotation } from '../../../core/api/types';
 import { SessionStore } from '../../../core/auth/session.store';
 import { SAVED_SALE_PREFIX } from '../../../core/state/saved-sale';
 import { Submission } from '../../../core/state/submission';
-import { SalesApi, type PricingBody } from '../data/sales.api';
+import { SalesApi, type InvoiceBody, type PricingBody } from '../data/sales.api';
 
 /** One line of the cart. Never holds cost: what is saved in the browser is what a salesperson may see. */
 export interface CartLine {
@@ -31,9 +31,15 @@ export interface SaleState {
   notes: string;
   /** Set when the sale converts a quotation. */
   quotation: { id: string; number: string } | null;
+  /**
+   * An invoice sent to the server whose answer has not been received (docs/web-state-management.md §6).
+   * Saved before sending, with its exact request and idempotency key, so that after a reload or a
+   * return to this page it can only be retried as the same request — never sent again as a new one.
+   */
+  pending: { key: string; body: InvoiceBody } | null;
 }
 
-const EMPTY: SaleState = { lines: [], customer: null, discountMinor: 0, taxRateId: null, notes: '', quotation: null };
+const EMPTY: SaleState = { lines: [], customer: null, discountMinor: 0, taxRateId: null, notes: '', quotation: null, pending: null };
 const PREVIEW_DELAY_MS = 250;
 const MAX_LINES = 100;
 
@@ -53,6 +59,7 @@ function restore(key: string | null): SaleState {
       taxRateId: typeof v.taxRateId === 'string' ? v.taxRateId : null,
       notes: typeof v.notes === 'string' ? v.notes : '',
       quotation: v.quotation && typeof v.quotation.id === 'string' ? v.quotation : null,
+      pending: v.pending && typeof v.pending.key === 'string' && typeof v.pending.body?.customerId === 'string' && Array.isArray(v.pending.body.lines) ? v.pending : null,
     };
   } catch {
     return EMPTY;
@@ -80,6 +87,7 @@ export class SaleStore {
   readonly taxRateId = computed(() => this.state().taxRateId);
   readonly notes = computed(() => this.state().notes);
   readonly quotation = computed(() => this.state().quotation);
+  readonly pending = computed(() => this.state().pending);
   readonly isEmpty = computed(() => this.state().lines.length === 0 && !this.state().customer);
   readonly itemCount = computed(() => this.state().lines.reduce((n, l) => n + l.quantity, 0));
 
@@ -138,7 +146,7 @@ export class SaleStore {
       const state = this.state();
       if (!key) return;
       try {
-        if (state.lines.length === 0 && !state.customer && !state.quotation) localStorage.removeItem(key);
+        if (state.lines.length === 0 && !state.customer && !state.quotation && !state.pending) localStorage.removeItem(key);
         else localStorage.setItem(key, JSON.stringify(state));
       } catch {
         // Kept in memory for this visit.
@@ -182,22 +190,54 @@ export class SaleStore {
   }
 
   private update(change: (s: SaleState) => SaleState): void {
+    // While a sent invoice is unconfirmed the sale cannot change: only that exact request may be retried.
+    if (this.state().pending) return;
     this.state.update(change);
     this.submission.inputChanged();
   }
 
-  /** Same product at the same price adds to that line; otherwise a new line. */
-  addLine(product: Pick<Product, 'id' | 'name' | 'sku' | 'floorPriceMinor' | 'ceilingPriceMinor'>, quantity: number, unitPriceMinor: number, belowMinimumReason: string | null): void {
+  /**
+   * Issues the invoice once. The request and its key are saved before sending and removed only on a
+   * definite answer, so a lost answer can be retried — now, or after a reload — without a duplicate.
+   */
+  async submitInvoice(body: InvoiceBody): Promise<Invoice | undefined> {
+    let pending = this.state().pending;
+    if (!pending) {
+      pending = { key: crypto.randomUUID(), body };
+      const saved = pending;
+      this.state.update((s) => ({ ...s, pending: saved }));
+    }
+    this.submission.adopt(pending.key);
+    const sent = pending;
+    const invoice = await this.submission.run((key) => this.api.createInvoice(sent.body, key));
+    if (invoice || !this.submission.unconfirmed()) this.state.update((s) => ({ ...s, pending: null }));
+    return invoice;
+  }
+
+  /** The person checked Documents (or gives up): forget the unconfirmed invoice and edit the sale again. */
+  discardPending(): void {
+    this.state.update((s) => ({ ...s, pending: null }));
+    this.submission.inputChanged();
+  }
+
+  /**
+   * Same product at the same price adds to that line; otherwise a new line. Returns false when the
+   * sale cannot take it (100 lines, the API's limit, or an unconfirmed invoice is pending).
+   */
+  addLine(product: Pick<Product, 'id' | 'name' | 'sku' | 'floorPriceMinor' | 'ceilingPriceMinor'>, quantity: number, unitPriceMinor: number, belowMinimumReason: string | null): boolean {
+    const current = this.state();
+    const merges = current.lines.some((l) => l.productId === product.id && l.unitPriceMinor === unitPriceMinor && l.belowMinimumReason === belowMinimumReason);
+    if (current.pending || (!merges && current.lines.length >= MAX_LINES)) return false;
     this.update((s) => {
       const same = s.lines.find((l) => l.productId === product.id && l.unitPriceMinor === unitPriceMinor && l.belowMinimumReason === belowMinimumReason);
       if (same) return { ...s, lines: s.lines.map((l) => (l === same ? { ...l, quantity: l.quantity + quantity } : l)) };
-      if (s.lines.length >= MAX_LINES) return s;
       const line: CartLine = {
         key: crypto.randomUUID(), productId: product.id, name: product.name, sku: product.sku, quantity, unitPriceMinor,
         floorPriceMinor: product.floorPriceMinor, ceilingPriceMinor: product.ceilingPriceMinor, belowMinimumReason,
       };
       return { ...s, lines: [...s.lines, line] };
     });
+    return true;
   }
 
   updateLine(key: string, changes: Partial<Pick<CartLine, 'quantity' | 'unitPriceMinor' | 'belowMinimumReason' | 'floorPriceMinor' | 'ceilingPriceMinor'>>): void {
@@ -236,10 +276,12 @@ export class SaleStore {
       taxRateId: q.tax.id ?? null,
       notes: q.notes ?? '',
       quotation: { id: q.id, number: q.number },
+      pending: null,
     }));
   }
 
   clear(): void {
-    this.update(() => EMPTY);
+    this.state.set(EMPTY);
+    this.submission.inputChanged();
   }
 }

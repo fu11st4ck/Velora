@@ -83,6 +83,15 @@ describe('SaleStore', () => {
     expect(sale.quotationBlocker()).toBeNull();
   });
 
+  it('refuses a 101st line instead of dropping it silently (the API takes at most 100)', () => {
+    setup();
+    const sale = TestBed.inject(SaleStore);
+    for (let i = 0; i < 100; i++) expect(sale.addLine(productFixture({ id: `p${i}` }), 1, 364000, null)).toBe(true);
+    expect(sale.addLine(productFixture({ id: 'p100' }), 1, 364000, null)).toBe(false);
+    expect(sale.addLine(productFixture({ id: 'p5' }), 1, 364000, null)).toBe(true); // merging still works
+    expect(sale.lines()).toHaveLength(100);
+  });
+
   it('keeps the sale per user in this browser, without any cost figures', async () => {
     setup();
     const sale = await readySale();
@@ -107,6 +116,55 @@ describe('SaleStore', () => {
     expect(sale.previewFailure()).toMatchObject({ code: 'DISCOUNT_EXCEEDS_SUBTOTAL' });
     sale.setCustomer(customerFixture());
     expect(sale.paymentBlocker()).toContain('could not be calculated');
+  });
+});
+
+describe('SaleStore — an invoice whose answer was lost', () => {
+  it('is kept with its key across a reload, blocks edits, and is retried as the same request', async () => {
+    setup();
+    const sale = await readySale();
+    const body = { ...sale.body()!, customerId: customerFixture().id, quotationId: null, notes: null, payment: null };
+    const first = sale.submitInvoice(body);
+    await wait();
+    const sent = http.expectOne('/api/v1/invoices');
+    const key = sent.request.headers.get('Idempotency-Key');
+    sent.error(new ProgressEvent('error'));
+    expect(await first).toBeUndefined();
+    TestBed.tick();
+    expect(JSON.parse(localStorage.getItem('velora.sale.u1')!).pending).toEqual({ key, body });
+
+    // "Reload": a new store reads the same browser storage.
+    const reloaded = TestBed.runInInjectionContext(() => new SaleStore());
+    expect(reloaded.pending()).toEqual({ key, body });
+    reloaded.addLine(productFixture({ id: 'other' }), 1, 1000, null);
+    expect(reloaded.lines()).toHaveLength(1); // the sale cannot change while unconfirmed
+    const retry = reloaded.submitInvoice(reloaded.pending()!.body);
+    await wait();
+    const again = http.expectOne('/api/v1/invoices');
+    expect(again.request.headers.get('Idempotency-Key')).toBe(key);
+    expect(again.request.body).toEqual(body);
+    again.flush({ data: invoiceFixture() }, { status: 201, statusText: 'Created' });
+    expect(await retry).toMatchObject({ number: 'INV-2026-00008' });
+    expect(reloaded.pending()).toBeNull();
+    TestBed.tick();
+    await wait(300);
+    http.match(() => true).forEach((r) => r.flush({ data: previewFixture() }));
+  });
+
+  it('forgets the request after a definite refusal, so the cart can be corrected', async () => {
+    setup();
+    const sale = await readySale();
+    const body = { ...sale.body()!, customerId: customerFixture().id };
+    const done = sale.submitInvoice(body);
+    await wait();
+    http.expectOne('/api/v1/invoices').flush({ error: { code: 'INSUFFICIENT_STOCK', message: 'x', details: [] } }, { status: 409, statusText: 'Conflict' });
+    await done;
+    expect(sale.pending()).toBeNull();
+    sale.setNotes('changed');
+    expect(sale.notes()).toBe('changed');
+    TestBed.tick();
+    await wait(300);
+    http.match(() => true).forEach((r) => r.flush({ data: previewFixture() }));
   });
 });
 

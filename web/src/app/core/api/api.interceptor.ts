@@ -10,7 +10,8 @@ const RETRYABLE = new Set([0, 502, 503, 504]);
  * Every API request passes through here:
  * - adds the in-memory access token;
  * - on 401, refreshes once (single flight, see SessionStore) and replays the request; if the
- *   session cannot continue, signs out locally with "session ended";
+ *   server refuses the session, signs out locally with "session ended"; if the refresh cannot reach
+ *   the server, the request fails with that failure and the person stays signed in;
  * - retries a GET once after 1 s on a network error or gateway error (never a write);
  * - abandons requests after a timeout.
  */

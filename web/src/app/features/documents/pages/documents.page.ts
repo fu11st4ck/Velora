@@ -18,6 +18,7 @@ import { documentStatus } from '../../../shared/domain/document-status';
 import { LoadMore } from '../../../shared/table/load-more';
 import { COMPACT, mediaQuery } from '../../../shared/table/media';
 import { PagedList } from '../../../shared/table/paged-list';
+import { UrlSearch } from '../../../shared/table/url-search';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Skeleton } from '../../../shared/ui/skeleton';
 import { StateView } from '../../../shared/ui/state-view';
@@ -87,8 +88,7 @@ export class DocumentsPage {
     const q = this.query();
     return !!q.from && !!q.to && q.from > q.to;
   });
-  protected searchText = this.params().get('q') ?? '';
-  private timer: ReturnType<typeof setTimeout> | undefined;
+  protected readonly search = new UrlSearch(this.params, (q) => this.navigate({ q }, true));
   protected readonly failure = computed(() => {
     const f = this.list.failure();
     return f ? describeFailure(f) : null;
@@ -131,20 +131,12 @@ export class DocumentsPage {
     this.navigate({ status: current.size ? [...current].join(',') : null, ...(this.query().type ? {} : { type: 'invoice' }) });
   }
 
-  protected onSearch(text: string, now = false): void {
-    this.searchText = text;
-    clearTimeout(this.timer);
-    const go = () => this.navigate({ q: text.trim() || null }, true);
-    if (now) go();
-    else this.timer = setTimeout(go, 300);
-  }
-
   protected setDate(which: 'from' | 'to', value: string): void {
     this.navigate({ [which]: DATE.test(value) ? value : null });
   }
 
   protected clearFilters(): void {
-    this.searchText = '';
+    this.search.reset();
     this.navigate({ type: null, status: null, q: null, salesperson: null, from: null, to: null });
   }
 

@@ -12,7 +12,7 @@ import { addDays, formatCalendarDate, today } from '../../../core/dates/dates';
 import { formatMoney, parseMoney } from '../../../core/money/money';
 import { Confirm } from '../../../shared/ui/confirm-dialog';
 import { customerLabel } from '../../customers';
-import { SalesApi, type InvoiceBody, type PaymentMethod } from '../data/sales.api';
+import type { InvoiceBody, PaymentMethod } from '../data/sales.api';
 import { SaleStore } from '../state/sale.store';
 
 type AmountChoice = 'full' | 'half' | 'none' | 'other';
@@ -32,7 +32,6 @@ export class PaymentPanel {
   readonly back = output<void>();
   readonly completed = output<Invoice>();
   protected readonly sale = inject(SaleStore);
-  private readonly api = inject(SalesApi);
   private readonly session = inject(SessionStore);
   private readonly confirm = inject(Confirm);
 
@@ -142,7 +141,7 @@ export class PaymentPanel {
       payment: received > 0 ? { amountMinor: received, method: this.method(), reference: this.method() === 'BANK_TRANSFER' ? this.reference().trim() || null : null } : null,
       ...(this.balance() > 0 ? { creditDays: this.days() } : {}),
     };
-    const result = await this.sale.submission.run((key) => this.api.createInvoice(invoice, key));
+    const result = await this.sale.submitInvoice(invoice);
     if (result) {
       this.completed.emit(result);
       return;

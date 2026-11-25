@@ -190,6 +190,42 @@ test.describe('selling (manager)', () => {
     expect(stock.body.data.quantity).toBe(4);
   });
 
+  test('17b: after a lost answer and a reload, the sale can only be retried as the same request', async ({ page }) => {
+    const token = await apiLogin(E2E.owner);
+    const product = await createProduct(token, { openingQuantity: 5 });
+    const customer = await createCustomer(token);
+    await openSale(page);
+    await addProduct(page, product.name, 1);
+    await chooseCustomer(page, customer.name!);
+    await page.getByTestId('take-payment').click();
+
+    const keys: string[] = [];
+    let drop = true;
+    await page.route('**/api/v1/invoices', async (route) => {
+      keys.push(route.request().headers()['idempotency-key'] ?? '');
+      if (drop) {
+        drop = false;
+        await route.fetch(); // issued on the server…
+        await route.abort('connectionreset'); // …answer lost
+      } else {
+        await route.continue();
+      }
+    });
+    await page.getByTestId('confirm-sale').click();
+    await page.getByTestId('confirm').click();
+    await expect(page.getByTestId('payment-error')).toContainText('will not be recorded twice');
+
+    await page.reload();
+    await expect(page.getByTestId('pending-sale')).toBeVisible();
+    await expect(page.getByTestId('take-payment')).toHaveCount(0); // the cart cannot be confirmed again
+    await page.getByTestId('pending-retry').click();
+    await expect(page).toHaveURL(/\/documents\/invoices\//);
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+    expect(await invoicesFor(customer.id)).toHaveLength(1);
+    expect((await api<{ data: { quantity: number } }>(token, 'GET', `/products/${product.id}`)).body.data.quantity).toBe(4);
+  });
+
   test('a quotation is saved without taking stock, then converted into an invoice', async ({ page }) => {
     const token = await apiLogin(E2E.owner);
     const product = await createProduct(token, { openingQuantity: 3 });

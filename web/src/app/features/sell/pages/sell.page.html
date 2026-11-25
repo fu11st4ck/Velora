@@ -17,6 +17,18 @@
     </div>
   }
 
+  @if (sale.pending() && mode() === 'cart') {
+    <section class="card pending" role="alert" data-testid="pending-sale">
+      <h2 class="t-title-md">This sale may already be recorded</h2>
+      <p>A sale to {{ customerName() }} ({{ pendingTotalItems() }} {{ pendingTotalItems() === 1 ? 'item' : 'items' }}) was sent, but Velora's answer never arrived. Retry it to find out: it is sent exactly as before, so it cannot be recorded twice.</p>
+      @if (pendingMessage(); as m) { <p class="error">{{ m }}</p> }
+      <div class="pending-actions">
+        <a matButton routerLink="/documents">Check Documents</a>
+        <button matButton type="button" (click)="discardPending()" [disabled]="retrying()" data-testid="pending-discard">Edit the sale instead</button>
+        <button matButton="filled" type="button" (click)="retryPending()" [disabled]="retrying()" data-testid="pending-retry">{{ retrying() ? 'Sending…' : 'Retry' }}</button>
+      </div>
+    </section>
+  } @else {
   <div class="workspace" [class.paying]="mode() === 'payment'">
     @if (!compact() || (step() === 'products' && mode() === 'cart')) {
       <section class="card products" aria-labelledby="products-title" [attr.inert]="mode() === 'payment' ? '' : null">
@@ -144,7 +156,9 @@
     }
   </div>
 
-  @if (compact() && step() === 'products' && mode() === 'cart' && sale.lines().length > 0) {
+  }
+
+  @if (compact() && step() === 'products' && mode() === 'cart' && sale.lines().length > 0 && !sale.pending()) {
     <div class="sticky-bar">
       <span>{{ sale.itemCount() }} {{ sale.itemCount() === 1 ? 'item' : 'items' }}@if (preview(); as p) { · {{ money(p.totalMinor) }} }</span>
       <button matButton="filled" type="button" (click)="step.set('cart')">Review</button>

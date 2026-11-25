@@ -1,6 +1,7 @@
 import type { Client } from 'pg';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bearer, createOrg, createTestApp, createUser, ownerDb, resetDb, type SeededUser, type TestApp } from './helpers';
+import { AuthService } from '../src/auth/auth.service';
 
 const api = '/api/v1';
 const ORIGIN = 'http://localhost:4200'; // APP_BASE_URL default in tests
@@ -76,6 +77,16 @@ describe('browser sessions', () => {
     expect(cookieOf(replay)?.value).toBe('');
     expect((await post('refresh', withCookie(second))).statusCode).toBe(401);
     expect((await me(access)).statusCode).toBe(401);
+  });
+
+  it('keeps the cookie when a refresh fails for a reason unrelated to the session (database down)', async () => {
+    const value = cookieOf(await login())!.value;
+    const failing = vi.spyOn(t.app.get(AuthService), 'refresh').mockRejectedValueOnce(new Error('connection terminated unexpectedly'));
+    const res = await post('refresh', withCookie(value));
+    expect(res.statusCode).toBe(500);
+    expect(cookieOf(res)).toBeUndefined(); // no Set-Cookie: the browser keeps its session
+    failing.mockRestore();
+    expect((await post('refresh', withCookie(value))).statusCode).toBe(200);
   });
 
   it('refuses a refresh without a cookie, or with a malformed one', async () => {

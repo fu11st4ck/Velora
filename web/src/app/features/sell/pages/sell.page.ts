@@ -6,7 +6,7 @@ import { MatFormField, MatHint, MatLabel, MatPrefix, MatSuffix } from '@angular/
 import { MatIcon } from '@angular/material/icon';
 import { MatInput } from '@angular/material/input';
 import { MatOption, MatSelect } from '@angular/material/select';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toApiFailure } from '../../../core/api/api-failure';
 import { describeFailure } from '../../../core/api/messages';
 import type { Invoice, PricingPreview, Product, Quotation, TaxRate } from '../../../core/api/types';
@@ -33,7 +33,7 @@ type Issue = PricingPreview['lines'][number]['issues'][number];
 @Component({
   selector: 'app-sell-page',
   imports: [
-    FormsModule, PageHeader, Skeleton, PaymentPanel,
+    FormsModule, RouterLink, PageHeader, Skeleton, PaymentPanel,
     MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatHint, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption,
   ],
   providers: [SaleStore],
@@ -153,7 +153,10 @@ export class SellPage {
   protected async add(product: Product): Promise<void> {
     const result = await this.editor.open({ product, quantity: 1, unitPriceMinor: product.listPriceMinor, belowMinimumReason: null, editing: false });
     if (!result) return;
-    this.sale.addLine(product, result.quantity, result.unitPriceMinor, result.belowMinimumReason);
+    if (!this.sale.addLine(product, result.quantity, result.unitPriceMinor, result.belowMinimumReason)) {
+      this.notify.error('A sale can have at most 100 different lines. Issue this one and start another for the rest.');
+      return;
+    }
     this.notice.set(null);
     this.notify.success(`${product.name} added.`);
   }
@@ -297,6 +300,45 @@ export class SellPage {
     }
     const f = this.quoteSubmission.failure();
     if (f) this.notice.set(this.quoteSubmission.unconfirmed() ? 'We could not confirm the quotation — the connection dropped. Save again: it will not be created twice.' : describeFailure(f));
+  }
+
+  // ---- an invoice sent earlier whose answer never arrived (kept across reloads) ----
+  protected readonly retrying = signal(false);
+  protected readonly pendingMessage = signal<string | null>(null);
+
+  protected async retryPending(): Promise<void> {
+    const pending = this.sale.pending();
+    if (!pending || this.retrying()) return;
+    this.retrying.set(true);
+    this.pendingMessage.set(null);
+    try {
+      const invoice = await this.sale.submitInvoice(pending.body);
+      if (invoice) return this.completed(invoice);
+      const f = this.sale.submission.failure();
+      if (this.sale.pending()) {
+        this.pendingMessage.set('Still no answer from Velora. Check the connection and retry — the sale will not be recorded twice.');
+      } else if (f) {
+        // A definite refusal: nothing was recorded; the cart is editable again.
+        this.notice.set(`${describeFailure(f)} Nothing was saved. The problems are shown on the lines.`);
+      }
+    } finally {
+      this.retrying.set(false);
+    }
+  }
+
+  protected async discardPending(): Promise<void> {
+    const yes = await this.confirm.ask({
+      title: 'Edit the sale instead?',
+      message: 'If the earlier attempt reached Velora, the invoice already exists and is listed in Documents — check there first, or the sale may be recorded twice.',
+      confirmLabel: 'I checked — edit the sale',
+      cancelLabel: 'Keep waiting',
+      danger: true,
+    });
+    if (yes) this.sale.discardPending();
+  }
+
+  protected pendingTotalItems(): number {
+    return this.sale.pending()?.body.lines.reduce((n, l) => n + l.quantity, 0) ?? 0;
   }
 
   // ---- display helpers ----

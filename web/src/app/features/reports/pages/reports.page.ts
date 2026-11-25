@@ -1,5 +1,5 @@
 import { ScrollRegion } from '../../../shared/table/scroll-region';
-import { ChangeDetectionStrategy, Component, DOCUMENT, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DOCUMENT, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButton } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
@@ -58,9 +58,17 @@ export class ReportsPage {
     const p = this.params().get('range');
     return PRESETS.some((x) => x.value === p) ? (p as Preset) : 'month';
   });
+  /** Ticks every minute, so "Today" and "This month" follow the business date on a page left open overnight. */
+  private readonly now = signal(new Date());
+  private readonly clock = setInterval(() => this.now.set(new Date()), 60_000);
+  private readonly stopClock = inject(DestroyRef).onDestroy(() => clearInterval(this.clock));
+  /** The business date the presets count from; recomputed when the clock ticks, changes only at midnight there. */
+  private readonly businessToday = computed(() => presetPeriod('today', this.tz(), this.now()).from);
+
   protected readonly period = computed<Period | null>(() => {
     const preset = this.preset();
-    if (preset !== 'custom') return presetPeriod(preset, this.tz());
+    this.businessToday();
+    if (preset !== 'custom') return presetPeriod(preset, this.tz(), this.now());
     const from = this.params().get('from');
     const to = this.params().get('to');
     return from && to && DATE.test(from) && DATE.test(to) ? { from, to } : null;

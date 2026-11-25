@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs
 import { RouteConfig } from '@nestjs/platform-fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { APP_CONFIG, type AppConfig } from '../common/config';
-import { Errors } from '../common/errors';
+import { DomainError, Errors } from '../common/errors';
 import { Authenticated, Public } from '../authz/decorators';
 import { Client, type ClientInfo, Ctx, type RequestContext } from '../common/request-context';
 import { AuthService } from './auth.service';
@@ -107,7 +107,8 @@ export class AuthController {
       return { ...pair, refreshTokenExpiresAt };
     } catch (error) {
       // A cookie the server no longer accepts is useless; remove it so the browser stops sending it.
-      clearRefreshCookie(reply);
+      // Any other failure (database briefly down, timeout) says nothing about the session: keep it.
+      if (error instanceof DomainError && error.status === 401) clearRefreshCookie(reply);
       throw error;
     }
   }

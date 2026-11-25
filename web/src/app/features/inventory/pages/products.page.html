@@ -9,9 +9,9 @@
   <mat-form-field class="search" subscriptSizing="dynamic">
     <mat-label>Search name, SKU or barcode</mat-label>
     <mat-icon matPrefix>search</mat-icon>
-    <input matInput type="search" [ngModel]="searchText" (ngModelChange)="onSearch($event)" data-testid="product-search" maxlength="100" />
-    @if (searchText) {
-      <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="clearSearch()"><mat-icon>close</mat-icon></button>
+    <input matInput type="search" [ngModel]="search.text()" (ngModelChange)="search.input($event)" data-testid="product-search" maxlength="100" />
+    @if (search.text()) {
+      <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="search.clear()"><mat-icon>close</mat-icon></button>
     }
   </mat-form-field>
 

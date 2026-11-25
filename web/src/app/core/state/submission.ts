@@ -28,6 +28,13 @@ export class Submission {
     }
   }
 
+  /** Continues a change whose key was saved earlier (e.g. before a reload) and may already be applied. */
+  adopt(key: string): void {
+    if (this.sending()) return;
+    this.key = key;
+    this.unconfirmed.set(true);
+  }
+
   async run<T>(send: (idempotencyKey: string) => Promise<T>): Promise<T | undefined> {
     if (this.sending()) return undefined;
     this.sending.set(true);

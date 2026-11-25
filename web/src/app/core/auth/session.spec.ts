@@ -134,6 +134,36 @@ describe('session and API interceptor', () => {
     expect(session.accessToken()).toBeNull();
   });
 
+  it('stays signed in when the refresh cannot reach the server; the request fails as "no connection"', async () => {
+    await signIn();
+    const result = firstValueFrom(TestBed.inject(HttpClient).get(`${api}/products`));
+    http.expectOne(`${api}/products`).flush(null, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+    http.expectOne(`${api}/auth/web/refresh`).error(new ProgressEvent('error')); // network dropped
+    await expect(result).rejects.toMatchObject({ kind: 'network' });
+    expect(session.status()).toBe('signedIn');
+    expect(session.endReason()).toBeNull();
+
+    // The connection is back: the next request refreshes and succeeds.
+    const again = firstValueFrom(TestBed.inject(HttpClient).get(`${api}/products`));
+    http.expectOne(`${api}/products`).flush(null, { status: 401, statusText: 'Unauthorized' });
+    await settle();
+    http.expectOne(`${api}/auth/web/refresh`).flush({ data: { accessToken: 'access-2' } });
+    await settle();
+    http.expectOne(`${api}/products`).flush({ data: [] });
+    await expect(again).resolves.toEqual({ data: [] });
+  });
+
+  it('at start-up, retries an unreachable server and then explains instead of signing out silently', async () => {
+    const done = session.restore();
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      await vi.waitFor(() => http.expectOne(`${api}/auth/web/refresh`).flush(null, { status: 503, statusText: 'Unavailable' }), { timeout: 3000, interval: 20 });
+    }
+    await done;
+    expect(session.status()).toBe('signedOut');
+    expect(session.endReason()).toBe('unreachable');
+  });
+
   it('retries a GET once after a gateway error, but never a write', async () => {
     vi.useFakeTimers();
     try {

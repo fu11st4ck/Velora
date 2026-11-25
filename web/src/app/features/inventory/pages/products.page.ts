@@ -21,6 +21,7 @@ import { ColumnChoice, type ColumnDef } from '../../../shared/table/columns';
 import { LoadMore } from '../../../shared/table/load-more';
 import { COMPACT, mediaQuery } from '../../../shared/table/media';
 import { PagedList } from '../../../shared/table/paged-list';
+import { UrlSearch } from '../../../shared/table/url-search';
 import { PageHeader } from '../../../shared/ui/page-header';
 import { Skeleton } from '../../../shared/ui/skeleton';
 import { StateView } from '../../../shared/ui/state-view';
@@ -79,8 +80,7 @@ export class ProductsPage {
       limit: PAGE_SIZE,
     };
   });
-  protected searchText = this.params().get('q') ?? '';
-  private searchTimer: ReturnType<typeof setTimeout> | undefined;
+  protected readonly search = new UrlSearch(this.params, (q) => this.navigate({ q }, true));
 
   protected readonly columns = new ColumnChoice('velora.columns.products', () => [
     { id: 'product', label: 'Product', visibleByDefault: true, fixed: true },
@@ -148,17 +148,6 @@ export class ProductsPage {
     void this.router.navigate([], { relativeTo: this.route, queryParams: changes, queryParamsHandling: 'merge', replaceUrl });
   }
 
-  protected onSearch(text: string): void {
-    this.searchText = text;
-    clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => this.navigate({ q: text.trim() || null }, true), 300);
-  }
-
-  protected clearSearch(): void {
-    this.searchText = '';
-    clearTimeout(this.searchTimer);
-    this.navigate({ q: null }, true);
-  }
 
   protected setStock(value: StockFilter | null): void {
     this.navigate({ stock: value });
@@ -179,7 +168,7 @@ export class ProductsPage {
   }
 
   protected clearFilters(): void {
-    this.searchText = '';
+    this.search.reset();
     this.navigate({ q: null, stock: null, archived: null });
   }
 
