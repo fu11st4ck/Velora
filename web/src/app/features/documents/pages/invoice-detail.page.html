@@ -1,0 +1,161 @@
+@if (failure(); as f) {
+  <app-state-view [kind]="f.kind" [heading]="f.kind === 'notFound' ? 'Invoice not found' : 'Could not load this invoice'" [message]="f.kind === 'notFound' ? 'It may belong to someone else, or the link is wrong.' : f.message" [actionLabel]="f.kind === 'error' ? 'Try again' : null" (action)="resource.reload()">
+    <a matButton routerLink="/documents">Back to documents</a>
+  </app-state-view>
+} @else if (invoice(); as i) {
+  <app-page-header overline="Invoice" [heading]="i.number">
+    @if (whatsapp(); as link) {
+      <a matButton="outlined" [href]="link" target="_blank" rel="noopener noreferrer" data-testid="invoice-whatsapp"><mat-icon>chat</mat-icon>WhatsApp</a>
+    }
+    <app-pdf-actions kind="invoice" [id]="i.id" [number]="i.number" />
+    @if (canReturn() || canCancel() || canRefund()) {
+      <button matButton="outlined" type="button" [matMenuTriggerFor]="more" data-testid="invoice-more"><mat-icon>more_horiz</mat-icon>More</button>
+      <mat-menu #more="matMenu" xPosition="before">
+        @if (canReturn()) {
+          <a mat-menu-item [routerLink]="['/documents/invoices', i.id, 'return']" data-testid="invoice-return"><mat-icon>assignment_return</mat-icon>Return items</a>
+        }
+        @if (canRefund()) {
+          <button mat-menu-item type="button" (click)="refund(i)" data-testid="invoice-refund"><mat-icon>undo</mat-icon>Refund money</button>
+        }
+        @if (canCancel()) {
+          <button mat-menu-item type="button" (click)="cancel(i)" data-testid="invoice-cancel"><mat-icon>block</mat-icon>Cancel invoice</button>
+        }
+      </mat-menu>
+    }
+    @if (canPay()) {
+      <button matButton="filled" type="button" (click)="recordPayment(i)" data-testid="invoice-pay"><mat-icon>payments</mat-icon>Record payment</button>
+    }
+  </app-page-header>
+
+  <section class="summary" aria-label="Summary">
+    @if (status(); as s) {
+      <app-status-pill [label]="s.label" [tone]="s.tone" data-testid="invoice-status" />
+    }
+    <dl>
+      <div><dt>Total</dt><dd class="t-money" data-testid="invoice-total">{{ money(i.totalMinor) }}</dd></div>
+      <div><dt>Received</dt><dd class="t-money" data-testid="invoice-paid">{{ money(i.paidMinor) }}</dd></div>
+      @if (i.returnedMinor > 0) {
+        <div><dt>Credited</dt><dd class="t-money">{{ money(i.returnedMinor) }}</dd></div>
+      }
+      @if (i.status === 'ISSUED') {
+        <div><dt>Balance</dt><dd class="t-money" [class.overdue]="i.isOverdue" data-testid="invoice-balance">{{ money(i.balanceMinor) }}</dd></div>
+      }
+      @if (i.dueDate && i.status === 'ISSUED' && i.balanceMinor > 0) {
+        <div><dt>Due</dt><dd [class.overdue]="i.isOverdue" data-testid="invoice-due">{{ date(i.dueDate) }}</dd></div>
+      }
+    </dl>
+  </section>
+
+  <div class="columns">
+    <div class="column">
+      <section class="card" aria-labelledby="bill-title">
+        <h2 class="t-title-md" id="bill-title">Bill to</h2>
+        <p><a [routerLink]="['/customers', i.customer.id]" class="strong" data-testid="invoice-customer">{{ customerName() }}</a></p>
+        @if (i.customer.mobile) { <p class="t-muted">{{ i.customer.mobile }}</p> }
+        @if (i.customer.email) { <p class="t-muted">{{ i.customer.email }}</p> }
+        @if (i.customer.address) { <p class="t-muted">{{ i.customer.address }}</p> }
+        @if (i.customer.taxRegistrationNumber) { <p class="t-muted">TRN {{ i.customer.taxRegistrationNumber }}</p> }
+      </section>
+
+      <section class="card" aria-labelledby="lines-title">
+        <h2 class="t-title-md" id="lines-title">Items</h2>
+        <div class="table-wrap" appScrollRegion="Invoice items table">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Product</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Price</th>
+                @if (seesCost()) { <th scope="col" class="num">Cost</th><th scope="col" class="num">Markup</th> }
+                <th scope="col" class="num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of i.lines; track l.lineNo) {
+                <tr data-testid="invoice-line">
+                  <td><span class="strong">{{ l.name }}</span><span class="t-body-sm t-muted block">{{ l.sku }}@if (l.returnedQuantity) { · {{ l.returnedQuantity }} returned }</span></td>
+                  <td class="num">{{ l.quantity }}</td>
+                  <td class="num t-money">{{ money(l.unitPriceMinor) }}</td>
+                  @if (seesCost()) { <td class="num t-money">{{ money(l.unitCostMinor) }}</td><td class="num">{{ bp(l.markupBp) }}</td> }
+                  <td class="num t-money">{{ money(l.lineTotalMinor) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <dl class="totals">
+          <div><dt>Subtotal</dt><dd class="t-money">{{ money(i.subtotalMinor) }}</dd></div>
+          @if (i.discountMinor > 0) { <div><dt>Discount</dt><dd class="t-money">−{{ money(i.discountMinor) }}</dd></div> }
+          <div><dt>{{ i.tax.name }}</dt><dd class="t-money">{{ money(i.tax.amountMinor) }}</dd></div>
+          <div class="grand"><dt>Total</dt><dd class="t-money">{{ money(i.totalMinor) }}</dd></div>
+        </dl>
+        @if (i.notes) { <p class="notes">{{ i.notes }}</p> }
+      </section>
+
+      @if (i.status === 'ISSUED' && i.profit; as p) {
+        <section class="card" aria-labelledby="profit-title" data-testid="invoice-profit">
+          <h2 class="t-title-md" id="profit-title">Profit</h2>
+          <dl class="totals">
+            <div><dt>Cost of goods</dt><dd class="t-money">{{ money(p.costMinor) }}</dd></div>
+            <div><dt>Gross profit</dt><dd class="t-money">{{ money(p.grossProfitMinor) }}</dd></div>
+            <div><dt>Margin</dt><dd>{{ bp(p.marginBp) }}</dd></div>
+          </dl>
+        </section>
+      }
+    </div>
+
+    <div class="column">
+      <section class="card" aria-labelledby="payments-title">
+        <h2 class="t-title-md" id="payments-title">Payments</h2>
+        @if (payments().length === 0) {
+          <p class="t-muted">Nothing received yet.</p>
+        } @else {
+          <ul class="timeline">
+            @for (p of payments(); track p.id) {
+              <li [class.refund]="p.kind === 'REFUND'" data-testid="invoice-payment">
+                <div>
+                  <span class="strong">{{ p.kind === 'REFUND' ? 'Refund' : 'Payment' }} · {{ method(p) }}{{ p.reference ? ' · ' + p.reference : '' }}</span>
+                  <span class="t-body-sm t-muted block">{{ when(p.receivedAt) }} · {{ p.recordedBy.fullName }}{{ p.note ? ' · ' + p.note : '' }}</span>
+                </div>
+                <span class="t-money">{{ p.kind === 'REFUND' ? '−' : '' }}{{ money(p.amountMinor) }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      @if (i.returns.length > 0) {
+        <section class="card" aria-labelledby="returns-title">
+          <h2 class="t-title-md" id="returns-title">Returns</h2>
+          <ul class="timeline">
+            @for (r of i.returns; track r.id) {
+              <li data-testid="invoice-return-row">
+                <div>
+                  <span class="strong">{{ r.number }}</span>
+                  <span class="t-body-sm t-muted block">{{ when(r.createdAt) }} · {{ r.reason }}{{ r.refundMinor > 0 ? ' · refunded ' + money(r.refundMinor) : '' }}</span>
+                </div>
+                <span class="t-money">−{{ money(r.totalMinor) }}</span>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <section class="card" aria-labelledby="activity-title">
+        <h2 class="t-title-md" id="activity-title">Activity</h2>
+        <ul class="timeline">
+          <li><div><span class="strong">Issued by {{ i.salesperson.fullName }}</span><span class="t-body-sm t-muted block">{{ when(i.issuedAt) }}</span></div></li>
+          @if (i.quotation; as q) {
+            <li><div><span>From quotation <a [routerLink]="['/documents/quotations', q.id]">{{ q.number }}</a></span></div></li>
+          }
+          @if (i.cancellation; as c) {
+            <li data-testid="invoice-cancellation"><div><span class="strong">Cancelled{{ c.by ? ' by ' + c.by.fullName : '' }}</span><span class="t-body-sm t-muted block">{{ when(c.at) }} · {{ c.reason }}</span></div></li>
+          }
+        </ul>
+      </section>
+    </div>
+  </div>
+} @else {
+  <div role="status" aria-busy="true" aria-label="Loading the invoice">
+    <app-skeleton height="64px" />
+    <app-skeleton height="360px" />
+  </div>
+}

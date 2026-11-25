@@ -18,7 +18,7 @@
 1. Build and push the image for the commit.
 2. Run migrations as a one-off job with the owner URL: `npx prisma migrate deploy`. Migrations are forward-only; the API of the previous version must keep working against the new schema (add first, remove in a later release).
 3. Roll the API instances. Readiness is `GET /api/v1/health/ready` (checks the database); liveness is `/health/live`.
-4. Smoke test: sign in, `GET /dashboard/summary`, create and cancel a test invoice in a test organization.
+4. Smoke test: `npm run smoke` in `web/` against the server (read-only: headers, caching, HTTPS session cookie, sign-in, navigation — `docs/release-checklist.md` §3). For a deeper check, create and cancel a test invoice in a test organization.
 5. Run `maintenance -- check`.
 
 Rollback: redeploy the previous image. Because migrations are additive, no schema rollback is needed; a migration that cannot be additive needs its own written plan.

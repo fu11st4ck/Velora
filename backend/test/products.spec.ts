@@ -77,8 +77,9 @@ describe('create product', () => {
     });
 
     const moves = (await db.query('SELECT type, quantity_delta, balance_after, unit_cost_minor, supplier_name, created_by_id FROM stock_movements')).rows;
+    // Business rule S4: stock entered at creation is OPENING, later deliveries are PURCHASE_RECEIPT.
     expect(moves).toEqual([
-      { type: 'PURCHASE_RECEIPT', quantity_delta: 2, balance_after: 2, unit_cost_minor: '100055', supplier_name: 'Al Noor Gold', created_by_id: managerUser.memberId },
+      { type: 'OPENING', quantity_delta: 2, balance_after: 2, unit_cost_minor: '100055', supplier_name: 'Al Noor Gold', created_by_id: managerUser.memberId },
     ]);
     const audit = (await db.query(`SELECT action, entity_id FROM audit_logs WHERE action = 'product.create'`)).rows;
     expect(audit).toEqual([{ action: 'product.create', entity_id: p.id }]);

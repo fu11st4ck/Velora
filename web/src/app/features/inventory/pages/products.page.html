@@ -1,0 +1,144 @@
+<app-page-header heading="Products" [subtitle]="list.meta()?.counts?.all === undefined ? null : (list.meta()?.counts?.all + ' products')">
+  <a matButton="outlined" routerLink="/inventory/history"><mat-icon>history</mat-icon>Stock history</a>
+  @if (canManage()) {
+    <a matButton="filled" routerLink="/inventory/new" data-testid="new-product"><mat-icon>add</mat-icon>New product</a>
+  }
+</app-page-header>
+
+<section class="filters" aria-label="Filters">
+  <mat-form-field class="search" subscriptSizing="dynamic">
+    <mat-label>Search name, SKU or barcode</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput type="search" [ngModel]="search.text()" (ngModelChange)="search.input($event)" data-testid="product-search" maxlength="100" />
+    @if (search.text()) {
+      <button matIconButton matSuffix type="button" aria-label="Clear search" (click)="search.clear()"><mat-icon>close</mat-icon></button>
+    }
+  </mat-form-field>
+
+  <div class="chips" role="group" aria-label="Stock">
+    @for (c of chips(); track c.label) {
+      <button type="button" class="chip" [class.selected]="c.selected" [attr.aria-pressed]="c.selected" (click)="setStock(c.value)" [attr.data-testid]="'stock-' + (c.value ?? 'all')">
+        {{ c.label }}@if (c.count !== undefined) {<span class="count">{{ c.count }}</span>}
+      </button>
+    }
+  </div>
+
+  <div class="tools">
+    <mat-form-field subscriptSizing="dynamic" class="sort">
+      <mat-label>Sort</mat-label>
+      <mat-select [value]="query().sort" (selectionChange)="setSort($event.value)" data-testid="product-sort">
+        @for (s of sorts; track s.value) {
+          <mat-option [value]="s.value">{{ s.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    @if (canManage()) {
+      <mat-slide-toggle [checked]="query().includeArchived" (change)="setArchived($event.checked)" data-testid="show-archived">Show archived</mat-slide-toggle>
+    }
+    @if (!compact()) {
+      <button matButton type="button" [matMenuTriggerFor]="columnMenu"><mat-icon>view_column</mat-icon>Columns</button>
+      <mat-menu #columnMenu="matMenu">
+        @for (c of columns.all(); track c.id) {
+          @if (!c.fixed) {
+            <button mat-menu-item role="menuitemcheckbox" type="button" [attr.aria-checked]="columns.isVisible(c.id)" (click)="$event.stopPropagation(); toggleColumn(c)">
+              <mat-icon>{{ columns.isVisible(c.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>{{ c.label }}
+            </button>
+          }
+        }
+      </mat-menu>
+    }
+  </div>
+</section>
+
+@if (failure(); as f) {
+  <app-state-view [kind]="f.kind" heading="Could not load products" [message]="f.message" actionLabel="Try again" (action)="list.reload()" />
+} @else if (list.status() === 'loading' && list.items().length === 0) {
+  <div role="status" aria-busy="true" aria-label="Loading products">
+    @for (i of [1, 2, 3, 4, 5]; track i) {
+      <app-skeleton height="56px" />
+    }
+  </div>
+} @else if (list.items().length === 0) {
+  @if (filtered()) {
+    <app-state-view heading="No products match" message="Try another search or clear the filters." actionLabel="Clear filters" (action)="clearFilters()" />
+  } @else {
+    <app-state-view heading="No products yet" [message]="canManage() ? 'Add your first product with its cost and opening stock.' : 'Products appear here once a manager adds them.'" />
+  }
+} @else {
+  <div [attr.aria-busy]="list.status() === 'loading'" class="results">
+    @if (compact()) {
+      <ul class="cards" data-testid="product-cards">
+        @for (p of list.items(); track p.id) {
+          <li class="card">
+            <a class="card-link" [routerLink]="['/inventory', p.id]">
+              <span class="name">{{ p.name }}</span>
+              <span class="t-body-sm t-muted">{{ p.sku }}</span>
+            </a>
+            <div class="card-figures">
+              <span><strong>{{ p.quantity }}</strong> <app-status-pill [label]="status(p).label" [tone]="status(p).tone" /></span>
+              <span class="t-money">{{ money(p.listPriceMinor) }}</span>
+            </div>
+            @if (canStock() || canManage()) {
+              <app-stock-actions [product]="p" />
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <div class="table-wrap" appScrollRegion="Products table">
+        <table mat-table [dataSource]="list.items()" matSort [matSortActive]="matSort().active" [matSortDirection]="matSort().direction" (matSortChange)="onSortChange($event)" matSortDisableClear data-testid="products-table">
+          <caption class="visually-hidden">Products</caption>
+          <ng-container matColumnDef="product">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header>Product</th>
+            <td mat-cell *matCellDef="let p">
+              <a class="name" [routerLink]="['/inventory', p.id]">{{ p.name }}</a>
+              <span class="t-body-sm t-muted sku">{{ p.sku }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="barcode">
+            <th mat-header-cell *matHeaderCellDef>Barcode</th>
+            <td mat-cell *matCellDef="let p">{{ p.barcode ?? '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="weight">
+            <th mat-header-cell *matHeaderCellDef>Weight</th>
+            <td mat-cell *matCellDef="let p">{{ weight(p) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="available">
+            <th mat-header-cell *matHeaderCellDef mat-sort-header arrowPosition="before" class="num">Available</th>
+            <td mat-cell *matCellDef="let p" class="num" data-testid="available">
+              <span class="qty">{{ p.quantity }}</span>
+              <app-status-pill [label]="status(p).label" [tone]="status(p).tone" />
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="list">
+            <th mat-header-cell *matHeaderCellDef class="num">List price</th>
+            <td mat-cell *matCellDef="let p" class="num t-money">{{ money(p.listPriceMinor) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="floor">
+            <th mat-header-cell *matHeaderCellDef class="num">Floor price</th>
+            <td mat-cell *matCellDef="let p" class="num t-money">{{ money(p.floorPriceMinor) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="cost">
+            <th mat-header-cell *matHeaderCellDef class="num">Cost</th>
+            <td mat-cell *matCellDef="let p" class="num t-money">{{ money(p.costMinor) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="markup">
+            <th mat-header-cell *matHeaderCellDef class="num">Markup</th>
+            <td mat-cell *matCellDef="let p" class="num">{{ bp(p.defaultMarkupBp) }} <span class="t-body-sm t-muted">min {{ bp(p.minMarkupBp) }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="value">
+            <th mat-header-cell *matHeaderCellDef class="num">Value at cost</th>
+            <td mat-cell *matCellDef="let p" class="num t-money">{{ value(p) }}</td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef><span class="visually-hidden">Actions</span></th>
+            <td mat-cell *matCellDef="let p" class="actions"><app-stock-actions [product]="p" /></td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="displayed()"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayed()" data-testid="product-row"></tr>
+        </table>
+      </div>
+    }
+    <app-load-more [shown]="list.items().length" [total]="null" [hasMore]="list.hasMore()" [loading]="list.status() === 'loadingMore'" [failure]="list.moreFailure()" (more)="list.more()" />
+  </div>
+}

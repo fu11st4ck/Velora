@@ -1,0 +1,43 @@
+.summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-6); margin-bottom: var(--space-4); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface);
+  dl { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); margin: 0; }
+  dt { color: var(--color-text-muted); font-size: 13px; }
+  dd { margin: 0; font-weight: 600; }
+}
+.overdue { color: var(--status-danger-fg); }
+.columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: var(--space-4); align-items: start;
+  @media (max-width: 1023.98px) { grid-template-columns: 1fr; }
+}
+.column { display: grid; gap: var(--space-4); min-width: 0; }
+.card { padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); min-width: 0;
+  h2 { margin: 0 0 var(--space-3); }
+  p { margin: 0 0 var(--space-1); }
+}
+.strong { font-weight: 600; color: var(--color-text); }
+.block { display: block; }
+.table-wrap { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse;
+  th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: 1px solid var(--color-line); vertical-align: top; }
+  th { font: 600 13px/18px var(--font-ui); color: var(--color-text-muted); }
+  .num { text-align: right; white-space: nowrap; }
+}
+.totals { margin: var(--space-3) 0 0; display: grid; gap: var(--space-1);
+  div { display: flex; justify-content: space-between; gap: var(--space-3); }
+  dt { color: var(--color-text-muted); }
+  dd { margin: 0; }
+  .grand { padding-top: var(--space-2); border-top: 1px solid var(--color-line); font-weight: 600; dt { color: var(--color-text); } }
+}
+.notes { margin-top: var(--space-3); white-space: pre-line; }
+.timeline { list-style: none; margin: 0; padding: 0;
+  li { display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--color-line); }
+  li:first-child { border-top: 0; padding-top: 0; }
+  li.refund .t-money { color: var(--status-danger-fg); }
+  .t-money { white-space: nowrap; }
+}
+.return { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: var(--space-4); align-items: start;
+  @media (max-width: 1023.98px) { grid-template-columns: 1fr; }
+}
+.stepper { display: flex; align-items: center; gap: var(--space-1); .qty { min-width: 2ch; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; } }
+.wide { width: 100%; }
+.error { color: var(--color-error); margin: var(--space-2) 0; }
+.refund { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); margin-bottom: var(--space-3); border-radius: var(--radius-md); background: var(--status-warning-bg); color: var(--status-warning-fg); mat-button-toggle-group { align-self: flex-start; } }
+.submit { width: 100%; min-height: 48px; }

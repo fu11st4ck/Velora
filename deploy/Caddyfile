@@ -1,14 +1,44 @@
 # HTTPS is automatic: Caddy obtains and renews a certificate for DOMAIN.
 # The domain's DNS A record must point at this server, and ports 80 and 443 must be open.
+#
+# One origin serves both the web app (/) and the API (/api/*): the browser session cookie can then
+# be SameSite=Strict and no CORS is needed (docs/web-api-integration.md §2).
 {$DOMAIN} {
 	encode zstd gzip
-	reverse_proxy api:3000
+
 	# Request bodies are small JSON documents; anything larger is refused before it reaches the API.
 	request_body {
 		max_size 1MB
 	}
+
 	header {
 		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	handle {
+		root * /srv
+		# Every page, and only what the app needs: no third-party scripts, fonts or connections.
+		# style-src allows inline styles because Angular and Angular Material add component styles at run time.
+		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		header X-Frame-Options "DENY"
+		# Built files carry a content hash in their names (main-7G5CI4JO.js, chunk-BA-BGXw1.js,
+		# inter-latin-400-normal-55WT6UWF.woff2): cache them for a year. Everything else — the app page,
+		# served for "/" and every deep link — must be checked on each visit, so a new release is picked up.
+		@hashed path_regexp hashed -[0-9A-Za-z_-]{8}\.(js|css|woff2?)$
+		@unhashed {
+			not path_regexp unhashed -[0-9A-Za-z_-]{8}\.(js|css|woff2?)$
+		}
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		header @unhashed Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
 	}
 }

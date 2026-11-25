@@ -31,6 +31,8 @@ jobs:
       - run: npx prisma generate
       - run: npm run lint
       - run: npm run typecheck
+      - name: Install pdftotext (the PDF tests read the rendered documents back as text)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
       - run: npm test
       - run: npm run build
       - name: Lint API contract
@@ -50,8 +52,77 @@ jobs:
           sed -i 's#^MAIL_SMTP_URL=$#MAIL_SMTP_URL=smtp://localhost:25#; s#^DOMAIN=.*#DOMAIN=localhost#' .env
           docker compose config -q
           docker compose up -d --build postgres migrate api
-          docker compose exec -T api node -e "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+          # The API needs a few seconds after its container starts; wait up to 2 minutes for readiness.
+          ready="fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+          for i in $(seq 1 60); do docker compose exec -T api node -e "$ready" && break; sleep 2; done
+          docker compose exec -T api node -e "$ready"
           docker compose exec -T api node dist/maintenance/cli.js check
+      # The web image, then the whole stack behind Caddy on https://localhost (Caddy's local CA),
+      # a business created the production way, and the read-only post-deploy smoke test against it.
+      - name: Start Caddy and wait for https://localhost to serve the app and the API
+        run: |
+          cd deploy && docker compose up -d --build caddy
+          for i in $(seq 1 60); do curl -skf https://localhost/api/v1/health/ready >/dev/null && curl -skf https://localhost/ >/dev/null && break; sleep 2; done
+          curl -skf https://localhost/api/v1/health/ready
+      - name: Create a business (as in deploy/README.md)
+        run: |
+          cd deploy
+          docker compose exec -T -e ORG_NAME="Smoke Test LLC" -e ORG_CURRENCY=AED -e ORG_TIMEZONE=Asia/Dubai -e ORG_COUNTRY=AE \
+            -e ORG_TAX_NAME=VAT -e ORG_TAX_RATE_BP=500 -e OWNER_NAME="Smoke Owner" -e OWNER_EMAIL=owner@smoke.example \
+            -e OWNER_PASSWORD=smoke-test-password-2026 api node dist/maintenance/cli.js create-organization
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post-deploy smoke test (web/smoke)
+        working-directory: web
+        run: |
+          npx -y npm@11.6.2 ci
+          npx playwright install --with-deps chromium
+          SMOKE_URL=https://localhost SMOKE_INSECURE=1 SMOKE_EMAIL=owner@smoke.example SMOKE_PASSWORD=smoke-test-password-2026 npm run smoke
+      - if: failure()
+        run: cd deploy && docker compose logs --tail 200
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install (npm 11 — npm 10 cannot resolve this dependency set)
+        run: npx -y npm@11.6.2 ci
+      - name: Install backend (end-to-end tests run against the real API)
+        working-directory: backend
+        run: npm ci && npx prisma generate
+      - name: Create roles and databases
+        working-directory: backend
+        run: psql -v ON_ERROR_STOP=1 -f scripts/db-setup.sql postgresql://postgres:postgres@localhost:5432/postgres
+      - run: npm run lint
+      - name: API types match backend/openapi/openapi.yaml
+        run: npm run api:check
+      - run: npm test
+      - run: npx ng build --configuration production
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - name: Show what was on screen for each failed end-to-end test
+        if: failure()
+        run: for f in test-results/*/error-context.md; do [ -f "$f" ] && { echo "=== $f"; cat "$f"; }; done; true
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-results
+          path: web/test-results
 
   mobile:
     runs-on: ubuntu-latest
@@ -63,7 +134,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
@@ -84,7 +156,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: flutter build apk --debug -t lib/main_dev.dart
@@ -99,7 +172,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: flutter build ios --debug --no-codesign -t lib/main_dev.dart

@@ -24,6 +24,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@fastify/cookie": "11.1.5",
     "@fastify/helmet": "^13.2.0",
     "@fastify/rate-limit": "^11.2.2",
     "@nestjs/common": "^11.2.10",
@@ -38,6 +39,7 @@
     "libphonenumber-js": "^1.13.16",
     "nodemailer": "^10.5.0",
     "pdfkit": "^0.20.2",
+    "pg": "^8.23.1",
     "prisma": "^6.19.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
@@ -52,13 +54,19 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pdfkit": "^0.17.7",
     "@types/pg": "^8.23.1",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "eslint": "^9.39.5",
     "fast-check": "^4.10.2",
-    "pg": "^8.23.1",
+    "js-yaml": "5.5.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.72.2",
     "unplugin-swc": "^2.0.0",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "effect": "3.22.4"
   }
 }

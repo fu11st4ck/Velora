@@ -1,0 +1,68 @@
+<app-page-header heading="Business settings" [subtitle]="canEdit() ? null : 'Only the owner can change these settings.'" />
+
+@if (loadFailure(); as f) {
+  <app-state-view kind="error" heading="Could not load the settings" actionLabel="Try again" (action)="load()" />
+} @else if (org(); as o) {
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate class="sections">
+    <section class="card" aria-labelledby="company-title">
+      <h2 class="t-title-md" id="company-title">Company</h2>
+      <p class="t-body-sm t-muted">Printed on quotations and invoices.</p>
+      <div class="row">
+        <mat-form-field><mat-label>Business name</mat-label><input matInput formControlName="name" maxlength="120" data-testid="org-name" /><mat-error>Enter the business name.</mat-error></mat-form-field>
+        <mat-form-field><mat-label>Legal name</mat-label><input matInput formControlName="legalName" maxlength="160" /></mat-form-field>
+      </div>
+      <div class="row">
+        <mat-form-field><mat-label>Tax registration number</mat-label><input matInput formControlName="taxRegistrationNumber" maxlength="40" /></mat-form-field>
+        <mat-form-field><mat-label>Phone</mat-label><input matInput formControlName="phone" type="tel" maxlength="30" /></mat-form-field>
+        <mat-form-field><mat-label>Email</mat-label><input matInput formControlName="email" type="email" maxlength="254" /><mat-error>Enter a valid email address.</mat-error></mat-form-field>
+      </div>
+      <div class="row">
+        <mat-form-field class="wide"><mat-label>Address</mat-label><input matInput formControlName="addressLine" maxlength="240" /></mat-form-field>
+        <mat-form-field><mat-label>City</mat-label><input matInput formControlName="city" maxlength="80" /></mat-form-field>
+        <mat-form-field><mat-label>Country (2 letters)</mat-label><input matInput formControlName="countryCode" maxlength="2" /><mat-hint>For example AE. Also used to read local phone numbers.</mat-hint><mat-error>Two letters, for example AE.</mat-error></mat-form-field>
+      </div>
+      <mat-form-field class="wide"><mat-label>Invoice footer</mat-label><textarea matInput formControlName="invoiceFooter" rows="2" maxlength="400"></textarea></mat-form-field>
+    </section>
+
+    <section class="card" aria-labelledby="regional-title">
+      <h2 class="t-title-md" id="regional-title">Regional</h2>
+      @if (o.regionalSettingsLocked) {
+        <p class="notice" data-testid="regional-locked"><mat-icon aria-hidden="true">lock</mat-icon>Currency and time zone can no longer be changed: prices and documents already use them.</p>
+      }
+      <div class="row">
+        <mat-form-field><mat-label>Currency (3 letters)</mat-label><input matInput formControlName="currencyCode" maxlength="3" /><mat-error>Three letters, for example AED.</mat-error></mat-form-field>
+        <mat-form-field>
+          <mat-label>Time zone</mat-label>
+          <mat-select formControlName="timezone">
+            @for (z of zones; track z) { <mat-option [value]="z">{{ z }}</mat-option> }
+          </mat-select>
+          <mat-hint>Business days, due dates and reports follow this time zone.</mat-hint>
+        </mat-form-field>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="rules-title">
+      <h2 class="t-title-md" id="rules-title">Sales rules</h2>
+      <div class="row">
+        <mat-form-field><mat-label>Highest markup</mat-label><input matInput formControlName="maxMarkupBp" inputmode="decimal" data-testid="org-max-markup" /><span matTextSuffix>%</span><mat-hint>Sets each product's highest price.</mat-hint><mat-error>A percentage from 0 to 1000.</mat-error></mat-form-field>
+        <mat-form-field><mat-label>Default markup</mat-label><input matInput formControlName="defaultMarkupBp" inputmode="decimal" /><span matTextSuffix>%</span><mat-error>A percentage from 0 to 1000.</mat-error></mat-form-field>
+        <mat-form-field><mat-label>Default minimum markup</mat-label><input matInput formControlName="defaultMinMarkupBp" inputmode="decimal" /><span matTextSuffix>%</span><mat-error>A percentage from 0 to 1000.</mat-error></mat-form-field>
+      </div>
+      <div class="row">
+        <mat-form-field><mat-label>Credit days</mat-label><input matInput formControlName="defaultCreditDays" inputmode="numeric" data-testid="org-credit-days" /><mat-hint>Default time to pay a balance.</mat-hint><mat-error>0 to 365.</mat-error></mat-form-field>
+        <mat-form-field><mat-label>Quotation validity (days)</mat-label><input matInput formControlName="quotationValidityDays" inputmode="numeric" /><mat-error>1 to 365.</mat-error></mat-form-field>
+        <mat-form-field><mat-label>Low stock at</mat-label><input matInput formControlName="lowStockThreshold" inputmode="numeric" /><mat-hint>Units, unless a product sets its own.</mat-hint><mat-error>0 to 1,000,000.</mat-error></mat-form-field>
+      </div>
+      <mat-slide-toggle formControlName="allowOfflineSales">Allow sales on the phone app without a connection</mat-slide-toggle>
+    </section>
+
+    @if (canEdit()) {
+      <div class="footer">
+        @if (error(); as e) { <p class="error" role="alert" data-testid="settings-error">{{ e }}</p> }
+        <button matButton="filled" type="submit" [disabled]="submission.sending()" data-testid="settings-save">{{ submission.sending() ? 'Saving…' : 'Save changes' }}</button>
+      </div>
+    }
+  </form>
+} @else {
+  <app-skeleton height="480px" />
+}

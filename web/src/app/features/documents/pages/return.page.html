@@ -1,0 +1,76 @@
+@if (loadFailure(); as f) {
+  <app-state-view [kind]="f.kind === 'notFound' ? 'notFound' : 'error'" [heading]="f.kind === 'notFound' ? 'Invoice not found' : 'Could not load this invoice'" actionLabel="Try again" (action)="load()" />
+} @else if (invoice(); as i) {
+  <app-page-header [overline]="i.number" heading="Return items">
+    <a matButton [routerLink]="['/documents/invoices', i.id]">Back to the invoice</a>
+  </app-page-header>
+  @if (i.status !== 'ISSUED') {
+    <app-state-view heading="This invoice is cancelled" message="Items of a cancelled invoice cannot be returned." />
+  } @else if (lines().length === 0) {
+    <app-state-view heading="Everything was returned" message="No items of this invoice are left to return." />
+  } @else {
+    <div class="return">
+      <section class="card" aria-labelledby="items-title">
+        <h2 class="t-title-md" id="items-title">Items to return</h2>
+        <ul class="timeline">
+          @for (l of lines(); track l.lineNo) {
+            <li data-testid="return-line">
+              <div>
+                <span class="strong">{{ l.name }}</span>
+                <span class="t-body-sm t-muted block">{{ l.sku }} · up to {{ l.returnable }}</span>
+                @if (l.quantity > 0) {
+                  <mat-slide-toggle [checked]="l.restock" (change)="setRestock(l, $event.checked)" [disabled]="submission.sending()" data-testid="return-restock">Back to stock</mat-slide-toggle>
+                }
+              </div>
+              <div class="stepper" role="group" [attr.aria-label]="'Quantity of ' + l.name + ' to return'">
+                <button matIconButton type="button" aria-label="One fewer" (click)="setQuantity(l, l.quantity - 1)" [disabled]="l.quantity === 0 || submission.sending()"><mat-icon>remove</mat-icon></button>
+                <span class="qty" aria-live="polite" data-testid="return-quantity">{{ l.quantity }}</span>
+                <button matIconButton type="button" aria-label="One more" (click)="setQuantity(l, l.quantity + 1)" [disabled]="l.quantity >= l.returnable || submission.sending()" data-testid="return-more"><mat-icon>add</mat-icon></button>
+              </div>
+            </li>
+          }
+        </ul>
+        @if (touched() && selected().length === 0) {
+          <p class="error" role="alert">Choose at least one item.</p>
+        }
+        <p class="t-body-sm t-muted">Turn off “Back to stock” for damaged items: they are credited but not sold again.</p>
+      </section>
+
+      <section class="card" aria-labelledby="details-title">
+        <h2 class="t-title-md" id="details-title">Return details</h2>
+        <mat-form-field class="wide">
+          <mat-label>Reason (printed on the credit note)</mat-label>
+          <input matInput maxlength="240" autocomplete="off" [ngModel]="reason" (ngModelChange)="onReason($event)" [disabled]="submission.sending()" data-testid="return-reason" />
+        </mat-form-field>
+        @if (touched() && !reasonValid()) {
+          <p class="error" role="alert">Give a reason of at least 3 characters.</p>
+        }
+        <p class="t-body-sm">The credit reduces what {{ i.customer.company || i.customer.name }} still owes ({{ money(i.balanceMinor) }}) first; anything above it is refunded.</p>
+
+        @if (refundDue() !== null) {
+          <div class="refund" role="alert" data-testid="return-refund-due">
+            <p class="strong">{{ money(refundDue()!) }} must be refunded to the customer.</p>
+            <mat-button-toggle-group [value]="refundMethod()" (change)="refundMethod.set($event.value); submission.inputChanged()" aria-label="Refund method" hideSingleSelectionIndicator>
+              <mat-button-toggle value="CASH" data-testid="return-refund-cash">Cash</mat-button-toggle>
+              <mat-button-toggle value="BANK_TRANSFER">Bank transfer</mat-button-toggle>
+            </mat-button-toggle-group>
+            @if (refundMethod() === 'BANK_TRANSFER') {
+              <mat-form-field class="wide">
+                <mat-label>Transfer reference (optional)</mat-label>
+                <input matInput maxlength="80" autocomplete="off" [(ngModel)]="refundReference" />
+              </mat-form-field>
+            }
+          </div>
+        }
+        @if (error(); as e) {
+          <p class="error" role="alert" data-testid="return-error">{{ e }}</p>
+        }
+        <button matButton="filled" type="button" class="submit" (click)="submit()" [disabled]="submission.sending() || (refundDue() !== null && !refundMethod())" data-testid="return-submit">
+          {{ submission.sending() ? 'Saving…' : submission.unconfirmed() ? 'Try again' : refundDue() !== null ? 'Refund and issue credit note' : 'Return ' + itemCount() + (itemCount() === 1 ? ' item' : ' items') }}
+        </button>
+      </section>
+    </div>
+  }
+} @else {
+  <app-skeleton height="320px" />
+}

@@ -1,0 +1,158 @@
+<app-page-header [heading]="editing() ? 'Edit product' : 'New product'" [overline]="original()?.sku ?? null" />
+
+@if (loadFailure(); as f) {
+  <app-state-view [kind]="f.kind === 'notFound' ? 'notFound' : 'error'" [heading]="f.kind === 'notFound' ? 'Product not found' : 'Could not load this product'" actionLabel="Try again" (action)="reloadAfterConflict()" />
+} @else if (editing() && !original()) {
+  <app-skeleton height="480px" />
+} @else {
+  @if (conflict()) {
+    <div class="banner" role="alert" data-testid="version-conflict">
+      <mat-icon aria-hidden="true">sync_problem</mat-icon>
+      <p>Someone else changed this product while you were editing. Reload to see their version, then make your change again.</p>
+      <button matButton="filled" type="button" (click)="reloadAfterConflict()" data-testid="conflict-reload">Reload</button>
+    </div>
+  }
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate class="layout">
+    <div class="sections">
+      <section class="card" aria-labelledby="identity-title">
+        <h2 class="t-title-md" id="identity-title">Identity</h2>
+        <mat-form-field class="wide">
+          <mat-label>Name</mat-label>
+          <input matInput formControlName="name" maxlength="120" autocomplete="off" data-testid="product-name" />
+          <mat-error>Enter the product name.</mat-error>
+        </mat-form-field>
+        <div class="row">
+          <mat-form-field>
+            <mat-label>SKU</mat-label>
+            <input matInput formControlName="sku" maxlength="40" autocomplete="off" data-testid="product-sku" />
+            @if (!editing()) {
+              <mat-hint>Leave empty to create one automatically.</mat-hint>
+            }
+            @if (form.controls.sku.hasError('taken')) {
+              <mat-error>Another product already uses this SKU.</mat-error>
+            } @else {
+              <mat-error>Letters, digits, dot, dash and underscore only.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Barcode (optional)</mat-label>
+            <input matInput formControlName="barcode" maxlength="64" autocomplete="off" data-testid="product-barcode" />
+            @if (form.controls.barcode.hasError('taken')) {
+              <mat-error>Another product already uses this barcode.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+        <mat-form-field class="wide">
+          <mat-label>Description (optional)</mat-label>
+          <textarea matInput formControlName="description" rows="3" maxlength="1000"></textarea>
+        </mat-form-field>
+        <div class="row">
+          <mat-form-field>
+            <mat-label>Weight (optional)</mat-label>
+            <input matInput formControlName="weightValue" inputmode="decimal" autocomplete="off" />
+            <mat-error>Up to 3 decimals, for example 12.8.</mat-error>
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Unit</mat-label>
+            <mat-select formControlName="weightUnit">
+              <mat-option value="">—</mat-option>
+              <mat-option value="G">grams</mat-option>
+              <mat-option value="KG">kilograms</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+        @if (form.hasError('weightUnit') && form.controls.weightValue.touched) {
+          <p class="error" role="alert">Choose the unit of the weight.</p>
+        }
+      </section>
+
+      <section class="card" aria-labelledby="pricing-title">
+        <h2 class="t-title-md" id="pricing-title">Pricing</h2>
+        <mat-form-field class="wide">
+          <mat-label>{{ editing() ? 'Average cost' : 'Cost per unit' }}</mat-label>
+          <input matInput formControlName="cost" inputmode="decimal" autocomplete="off" data-testid="product-cost" />
+          <span matTextSuffix>{{ currency() }}</span>
+          @if (editing()) {
+            <mat-hint>Changes when stock is received.</mat-hint>
+          }
+          <mat-error>Enter an amount, for example 2,800.00.</mat-error>
+        </mat-form-field>
+        <div class="row">
+          <mat-form-field>
+            <mat-label>Default markup</mat-label>
+            <input matInput formControlName="defaultMarkup" inputmode="decimal" autocomplete="off" data-testid="product-default-markup" />
+            <span matTextSuffix>%</span>
+            @if (maxLabel()) {
+              <mat-hint>At most {{ maxLabel() }} (business settings).</mat-hint>
+            }
+            @if (form.controls.defaultMarkup.hasError('maxPercent')) {
+              <mat-error>At most {{ maxLabel() }}.</mat-error>
+            } @else {
+              <mat-error>Enter a percentage, for example 30 or 12.5.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Minimum markup</mat-label>
+            <input matInput formControlName="minMarkup" inputmode="decimal" autocomplete="off" data-testid="product-min-markup" />
+            <span matTextSuffix>%</span>
+            <mat-hint>Lowest a salesperson may sell at.</mat-hint>
+            <mat-error>Enter a percentage, for example 15.</mat-error>
+          </mat-form-field>
+        </div>
+        @if (form.hasError('markupOrder')) {
+          <p class="error" role="alert">The minimum markup must not exceed the default markup.</p>
+        }
+        @if (preview(); as p) {
+          <dl class="preview" aria-live="polite">
+            <div><dt>List price</dt><dd class="t-money" data-testid="preview-list">{{ p.list }}</dd></div>
+            <div><dt>Floor price</dt><dd class="t-money">{{ p.floor }}</dd></div>
+            @if (p.ceiling) {
+              <div><dt>Ceiling price</dt><dd class="t-money">{{ p.ceiling }}</dd></div>
+            }
+          </dl>
+          <p class="t-body-sm t-muted">Preview. Velora calculates the final prices when you save.</p>
+        }
+      </section>
+
+      <section class="card" aria-labelledby="stock-title">
+        <h2 class="t-title-md" id="stock-title">Stock</h2>
+        @if (!editing()) {
+          <mat-form-field class="wide">
+            <mat-label>Opening quantity</mat-label>
+            <input matInput formControlName="openingQuantity" inputmode="numeric" autocomplete="off" data-testid="product-opening" />
+            <mat-hint>Units you have now. Later deliveries are recorded with Receive stock.</mat-hint>
+            <mat-error>Enter a whole number from 0 to 1,000,000.</mat-error>
+          </mat-form-field>
+          @if (hasOpening()) {
+            <div class="row">
+              <mat-form-field>
+                <mat-label>Supplier (optional)</mat-label>
+                <input matInput formControlName="supplierName" maxlength="120" autocomplete="off" />
+              </mat-form-field>
+              <mat-form-field>
+                <mat-label>Reference (optional)</mat-label>
+                <input matInput formControlName="referenceNote" maxlength="240" autocomplete="off" />
+              </mat-form-field>
+            </div>
+          }
+        }
+        <mat-form-field class="wide">
+          <mat-label>Reorder level (optional)</mat-label>
+          <input matInput formControlName="reorderLevel" inputmode="numeric" autocomplete="off" data-testid="product-reorder" />
+          <mat-hint>Low stock at this quantity or fewer. Empty uses the business default.</mat-hint>
+          <mat-error>Enter a whole number from 0 to 1,000,000.</mat-error>
+        </mat-form-field>
+      </section>
+    </div>
+
+    <div class="footer">
+      @if (message(); as m) {
+        <p class="error" role="alert" data-testid="form-error">{{ m }}</p>
+      }
+      <a matButton [routerLink]="cancelLink()">Cancel</a>
+      <button matButton="filled" type="submit" [disabled]="submission.sending() || conflict()" data-testid="product-save">
+        {{ submission.sending() ? 'Saving…' : editing() ? 'Save changes' : 'Create product' }}
+      </button>
+    </div>
+  </form>
+}

@@ -8,6 +8,7 @@ import { configureApp, createAdapter } from '../src/app.factory';
 import { AppModule } from '../src/app.module';
 import { Clock } from '../src/common/clock';
 import { MailService, type OutgoingMail } from '../src/mail/mail.service';
+import { withContractChecks } from './contract';
 
 export class TestClock extends Clock {
   private offsetMs = 0;
@@ -53,6 +54,8 @@ export async function createTestApp(): Promise<TestApp> {
   await configureApp(app);
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
+  // Every response the tests see is checked against openapi.yaml (test/contract.ts).
+  withContractChecks(app);
   return { app, clock, mail, close: () => app.close() };
 }
 

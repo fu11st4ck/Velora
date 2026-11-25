@@ -4,6 +4,49 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W6 (2026-11-25)
+- Release checklist, post-deploy smoke test (`npm run smoke` in `web/`), nightly Firefox/WebKit runs, full-stack check in CI.
+
+### Fixed — W6
+- After an update, browsers could keep the previous web app: Caddy now marks the app page `no-cache` on every path and caches only content-hashed files.
+- Accessibility: buttons named differently from their visible text; wide tables on phones not scrollable by keyboard; loading placeholders; text typed straight after Ctrl+K could vanish.
+- Backend dependencies: patched versions of two libraries used by the Prisma command-line tool (security advisories).
+
+### Added — Web app Sprint W5 (2026-11-25)
+- **Reports on the web** with period presets, payment-status chart, sales by team member, stock value, and CSV exports.
+- **Settings on the web:** business details and sales rules, tax rates, team (invite, roles, access).
+- **Account:** change password, signed-in devices. **Global search** with Ctrl/⌘ K.
+
+### Added — Web app Sprint W4 (2026-11-25)
+- **Documents on the web:** list with filters; invoice and quotation pages; record payments, refunds, cancellations and returns (credit notes); view, print and download PDFs; share a summary on WhatsApp. A finished sale now opens its invoice.
+
+### Added — Web app Sprint W3 (2026-11-25)
+- **Selling on the web:** sale workspace with product search, price editor, customer picker, live totals from the server, discount and tax, full / part / credit payment by cash or bank transfer, and quotations (save and convert). A sale in progress survives reloads; a sale is never recorded twice, even when the connection drops after it was sent.
+- **Customers on the web:** list, detail with figures and documents, add and edit (with a warning when the mobile number is already saved), archive.
+
+### Fixed — W3
+- Product search results in the sale workspace were not accessible to screen readers (a button nested inside a list option).
+
+### Added — Web app Sprint W2 (2026-11-25)
+- **Inventory on the web:** products list with search, stock filters, sorting and optional columns; product detail; new and edit product with a price preview; receive and adjust stock; archive; stock history filtered by product, type and dates in the business's time zone. Salespeople see prices but never cost, markups or management actions.
+- The dashboard's stock figures now open the matching products list.
+
+### Fixed — W2
+- Stock entered when a product is created is recorded as **opening stock** (`OPENING`), as business rule S4 says, instead of as a delivery (`PURCHASE_RECEIPT`).
+
+### Added — Web app Sprint W1 (2026-11-25)
+- **Web app** (`web/`, Angular 22): sign-in, forgot and reset password (also used to accept invitations), dashboard, app shell for desktop, tablet and phone, light and dark themes. Sessions survive reloads, renew silently, and end in every tab together.
+- **Browser sessions** (`/auth/web/login`, `/refresh`, `/logout`): the refresh token is kept in an HttpOnly cookie that page scripts cannot read.
+- **Web hosting:** Caddy now serves the web app and the API from one HTTPS address, with a strict Content-Security-Policy.
+- **Contract checks:** every backend test response is validated against `openapi.yaml`; the web app's types are generated from it.
+
+### Changed
+- Password reset and invitation emails link to `https://<your address>/reset-password` (opens in any browser) instead of `velora://`. `APP_BASE_URL` is now the web app's address; `MOBILE_DEEP_LINK_BASE` is gone.
+- `openapi.yaml` corrected where it differed from the API (tax rate id on documents, team member fields, report period, health and forgot-password bodies, nullable margin).
+
+### Added — Web app Sprint W0 (2026-11-25)
+- Architecture proposal for a responsive Angular web app on the existing API: framework decision, architecture, state management, API status matrix and missing backend functionality, desktop design audit, screen specifications, design system and component inventory, testing strategy, roadmap with risks and open questions (`docs/web-*.md`). Documentation only; no web code yet.
+
 ### Added — Deployment (2026-11-17)
 - `deploy/`: production Docker Compose stack (PostgreSQL, API, Caddy with automatic HTTPS), database role setup, secrets generator, nightly backup with optional off-server copy, restore drill, and a step-by-step guide.
 - `create-organization` maintenance command: creates a business, its default tax rate and its owner account (there is no public sign-up).

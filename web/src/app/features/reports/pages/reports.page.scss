@@ -1,0 +1,36 @@
+:host { display: flex; flex-direction: column; gap: var(--space-4); }
+app-page-header { margin-bottom: 0; }
+.period { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.custom { display: flex; gap: var(--space-3); mat-form-field { width: 170px; } }
+.chip { min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--color-border-input); border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-text); font: 500 14px/20px var(--font-ui); cursor: pointer;
+  &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  &.selected { background: var(--color-primary-container); color: var(--color-on-primary-container); border-color: transparent; }
+}
+.card { padding: var(--space-5); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface); min-width: 0;
+  h2 { margin: 0 0 var(--space-3); }
+  p { margin: 0; }
+}
+.hero h2 { margin-bottom: var(--space-2); }
+/* One hero figure per view, in the interface sans with proportional figures. */
+.hero-figure { font: 600 48px/1.1 var(--font-ui); letter-spacing: -0.01em; margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--space-4); }
+.grid.two { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.facts { margin: 0; display: grid; gap: var(--space-2);
+  div { display: flex; justify-content: space-between; gap: var(--space-3); }
+  dt { color: var(--color-text-muted); }
+  dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+.danger { color: var(--status-danger-fg); }
+.table { width: 100%; border-collapse: collapse; margin-top: var(--space-3);
+  th, td { padding: var(--space-2) var(--space-3); text-align: left; border-bottom: 1px solid var(--color-line); }
+  thead th { font: 600 13px/18px var(--font-ui); color: var(--color-text-muted); }
+  tbody th { font-weight: 500; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+}
+.table-wrap { overflow-x: auto; }
+.swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: var(--space-2); vertical-align: -1px; }
+.overdue { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3) !important; color: var(--status-danger-fg); font-weight: 600;
+  mat-icon { font-size: 20px; width: 20px; height: 20px; }
+}
+.sub { margin: var(--space-4) 0 var(--space-2); }

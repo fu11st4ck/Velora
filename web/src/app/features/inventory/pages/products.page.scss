@@ -1,0 +1,42 @@
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.search { flex: 1 1 280px; max-width: 420px; }
+.tools { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-3); margin-left: auto; }
+.sort { width: 200px; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: 36px; padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-input); border-radius: var(--radius-full);
+  background: var(--color-surface); color: var(--color-text);
+  font: 500 14px/20px var(--font-ui); cursor: pointer;
+  &:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+  &.selected { background: var(--color-primary-container); color: var(--color-on-primary-container); border-color: transparent; }
+  .count { font-weight: 600; font-variant-numeric: tabular-nums; }
+}
+.results[aria-busy='true'] { opacity: 0.6; transition: opacity var(--duration); }
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+table { width: 100%; background: transparent; }
+th.num, td.num { text-align: right; }
+td .name { display: block; font-weight: 600; color: var(--color-text); text-decoration: none; &:hover { text-decoration: underline; } }
+td .sku { display: block; }
+td .qty { font-variant-numeric: tabular-nums; font-weight: 600; margin-right: var(--space-2); }
+td.actions { width: 56px; text-align: right; }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.card {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-2);
+  padding: var(--space-4); border: 1px solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-surface);
+}
+.card-link { display: flex; flex-direction: column; color: inherit; text-decoration: none; .name { font-weight: 600; } }
+.card-figures { grid-column: 1 / 2; display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.card app-stock-actions { grid-row: 1 / 3; grid-column: 2; }

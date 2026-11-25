@@ -1,0 +1,68 @@
+<section class="panel" aria-labelledby="payment-title">
+  <div class="head">
+    <button matButton type="button" (click)="back.emit()" [disabled]="locked()" data-testid="payment-back"><mat-icon>arrow_back</mat-icon>Back to the sale</button>
+    <h2 class="t-title-md" id="payment-title">Payment</h2>
+  </div>
+
+  <dl class="summary">
+    <div><dt>Customer</dt><dd>{{ customerName() }}</dd></div>
+    <div><dt>Items</dt><dd>{{ sale.itemCount() }}</dd></div>
+    <div class="total"><dt>Total</dt><dd class="t-money-lg" data-testid="payment-total">{{ money(total()) }}</dd></div>
+  </dl>
+
+  <fieldset>
+    <legend class="t-title-sm">Received now</legend>
+    <mat-button-toggle-group [value]="choice()" [disabled]="locked()" (change)="choose($event.value)" aria-label="Amount received now" hideSingleSelectionIndicator>
+      <mat-button-toggle value="full" data-testid="pay-full">Full</mat-button-toggle>
+      <mat-button-toggle value="half" data-testid="pay-half">Half</mat-button-toggle>
+      <mat-button-toggle value="none" data-testid="pay-none">None</mat-button-toggle>
+      <mat-button-toggle value="other" data-testid="pay-other">Other</mat-button-toggle>
+    </mat-button-toggle-group>
+    @if (choice() === 'other') {
+      <mat-form-field class="wide">
+        <mat-label>Amount received</mat-label>
+        <input matInput inputmode="decimal" autocomplete="off" [ngModel]="otherText()" [disabled]="locked()" (ngModelChange)="otherText.set($event); changed()" data-testid="pay-amount" />
+        <span matTextSuffix>{{ currency() }}</span>
+      </mat-form-field>
+    }
+    @if (amountError(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    } @else if ((received() ?? 0) > 0) {
+      <p class="t-body-sm">Receiving <strong>{{ money(received() ?? 0) }}</strong></p>
+    }
+  </fieldset>
+
+  @if ((received() ?? 0) > 0) {
+    <fieldset>
+      <legend class="t-title-sm">Method</legend>
+      <mat-button-toggle-group [value]="method()" [disabled]="locked()" (change)="method.set($event.value); changed()" aria-label="Payment method" hideSingleSelectionIndicator>
+        <mat-button-toggle value="CASH" data-testid="method-cash">Cash</mat-button-toggle>
+        <mat-button-toggle value="BANK_TRANSFER" data-testid="method-bank">Bank transfer</mat-button-toggle>
+      </mat-button-toggle-group>
+      @if (method() === 'BANK_TRANSFER') {
+        <mat-form-field class="wide">
+          <mat-label>Transfer reference (optional)</mat-label>
+          <input matInput maxlength="80" autocomplete="off" [ngModel]="reference()" [disabled]="locked()" (ngModelChange)="reference.set($event); changed()" data-testid="pay-reference" />
+        </mat-form-field>
+      }
+    </fieldset>
+  }
+
+  @if (balance() > 0 && !amountError()) {
+    <mat-form-field class="days">
+      <mat-label>Credit days</mat-label>
+      <input matInput inputmode="numeric" autocomplete="off" [ngModel]="creditDays()" [disabled]="locked()" (ngModelChange)="creditDays.set($event); changed()" data-testid="pay-days" />
+      <mat-hint>{{ dueLabel() }}</mat-hint>
+    </mat-form-field>
+  }
+
+  @if (outcome(); as o) {
+    <p class="outcome" aria-live="polite" data-testid="payment-outcome">{{ o }}</p>
+  }
+  @if (failure(); as f) {
+    <p class="error" role="alert" data-testid="payment-error">{{ f }}</p>
+  }
+  <button matButton="filled" type="button" class="confirm" (click)="confirmSale()" [disabled]="invalid() || sale.submission.sending()" data-testid="confirm-sale">
+    {{ sale.submission.sending() ? 'Issuing invoice…' : sale.submission.unconfirmed() ? 'Retry' : 'Confirm sale' }}
+  </button>
+</section>

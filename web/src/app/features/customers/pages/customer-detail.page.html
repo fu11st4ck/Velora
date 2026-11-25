@@ -1,0 +1,66 @@
+@if (failure(); as f) {
+  <app-state-view [kind]="f.kind" [heading]="f.kind === 'notFound' ? 'Customer not found' : 'Could not load this customer'" [message]="f.kind === 'notFound' ? 'They may have been archived, or the link is wrong.' : f.message" [actionLabel]="f.kind === 'error' ? 'Try again' : null" (action)="resource.reload()">
+    <a matButton routerLink="/customers">Back to customers</a>
+  </app-state-view>
+} @else if (customer(); as c) {
+  <app-page-header [heading]="title()" [subtitle]="c.archivedAt ? 'Archived' : null">
+    @if (contact(); as k) {
+      @if (k.tel) { <a matButton="outlined" [href]="k.tel"><mat-icon>call</mat-icon>Call</a> }
+      @if (k.whatsapp) { <a matButton="outlined" [href]="k.whatsapp" target="_blank" rel="noopener noreferrer"><mat-icon>chat</mat-icon>WhatsApp</a> }
+      @if (k.email) { <a matButton="outlined" [href]="k.email"><mat-icon>mail</mat-icon>Email</a> }
+    }
+    @if (canArchive()) {
+      <button matButton type="button" (click)="archive()" [disabled]="archiving.sending()" data-testid="customer-archive"><mat-icon>archive</mat-icon>Archive</button>
+    }
+    @if (canWrite()) {
+      <a matButton="outlined" [routerLink]="['/customers', c.id, 'edit']" data-testid="customer-edit"><mat-icon>edit</mat-icon>Edit</a>
+    }
+    @if (canSell()) {
+      <a matButton="filled" routerLink="/sell" [queryParams]="{ customer: c.id }" data-testid="customer-new-sale"><mat-icon>point_of_sale</mat-icon>New sale</a>
+    }
+  </app-page-header>
+
+  <section class="tiles" [attr.aria-label]="own() ? 'Your figures for this customer' : 'Figures for this customer'">
+    <app-kpi-tile label="Invoiced" [value]="money(c.summary.invoicedMinor)" [lines]="[c.summary.invoiceCount + (c.summary.invoiceCount === 1 ? ' invoice' : ' invoices')]" data-testid="customer-invoiced" />
+    <app-kpi-tile label="Outstanding" [value]="money(c.summary.outstandingMinor)" data-testid="customer-outstanding" />
+    <app-kpi-tile label="Overdue" [value]="money(c.summary.overdueMinor)" [alert]="c.summary.overdueMinor > 0 ? 'Payment is late' : null" />
+  </section>
+  @if (own()) {
+    <p class="t-body-sm t-muted own">Figures and documents from your own sales.</p>
+  }
+
+  <div class="columns">
+    <section class="card" aria-labelledby="docs-title">
+      <h2 class="t-title-md" id="docs-title">Documents</h2>
+      @if (documentsFailure(); as m) {
+        <p role="alert">{{ m }} <button matButton type="button" (click)="documents.reload()">Try again</button></p>
+      } @else if (documents.status() === 'loading' && documents.items().length === 0) {
+        <app-skeleton height="120px" />
+      } @else if (documents.items().length === 0) {
+        <p class="t-muted">No quotations or invoices yet.</p>
+      } @else {
+        <app-document-rows [documents]="documents.items()" />
+        <app-load-more [shown]="documents.items().length" [hasMore]="documents.hasMore()" [loading]="documents.status() === 'loadingMore'" [failure]="documents.moreFailure()" (more)="documents.more()" />
+      }
+    </section>
+    <section class="card" aria-labelledby="details-title">
+      <h2 class="t-title-md" id="details-title">Details</h2>
+      <dl class="facts">
+        <div><dt>Name</dt><dd>{{ c.name ?? '—' }}</dd></div>
+        <div><dt>Company</dt><dd>{{ c.company ?? '—' }}</dd></div>
+        <div><dt>Mobile</dt><dd data-testid="customer-mobile-value">{{ c.mobile ?? '—' }}</dd></div>
+        <div><dt>Email</dt><dd>{{ c.email ?? '—' }}</dd></div>
+        <div><dt>Address</dt><dd>{{ c.address ?? '—' }}</dd></div>
+        <div><dt>TRN</dt><dd>{{ c.taxRegistrationNumber ?? '—' }}</dd></div>
+      </dl>
+      @if (c.notes) {
+        <p class="notes">{{ c.notes }}</p>
+      }
+    </section>
+  </div>
+} @else {
+  <div role="status" aria-busy="true" aria-label="Loading the customer">
+    <app-skeleton height="64px" />
+    <app-skeleton height="320px" />
+  </div>
+}

@@ -80,6 +80,10 @@ describe('route access rules', () => {
       'AuthController.login',
       'AuthController.refresh',
       'AuthController.resetPassword',
+      // Browser sessions: authenticated by the HttpOnly cookie and an origin check instead of a bearer token.
+      'AuthController.webLogin',
+      'AuthController.webLogout',
+      'AuthController.webRefresh',
       'HealthController.live',
       'HealthController.ready',
     ]);

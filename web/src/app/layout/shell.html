@@ -1,0 +1,107 @@
+<a class="skip-link" href="#main" (click)="skipToContent($event)">Skip to content</a>
+
+<mat-sidenav-container class="container" [class]="'layout-' + layout()">
+  <mat-sidenav
+    class="sidebar"
+    [mode]="layout() === 'compact' ? 'over' : 'side'"
+    [opened]="layout() !== 'compact'"
+    [fixedInViewport]="true"
+    aria-label="Main navigation"
+  >
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><span>V</span></span>
+      @if (layout() !== 'rail') {
+        <span class="wordmark">VELORA</span>
+      }
+    </div>
+    <nav>
+      @for (group of navigation(); track group.label) {
+        @if (layout() !== 'rail') {
+          <p class="group">{{ group.label }}</p>
+        }
+        <ul>
+          @for (item of group.items; track item.path) {
+            <li>
+              <a
+                [routerLink]="item.path"
+                [class.active]="item.path === activePath()"
+                [attr.aria-current]="item.path === activePath() ? 'page' : null"
+                (click)="closeDrawer()"
+                [matTooltip]="layout() === 'rail' ? item.label : ''"
+                matTooltipPosition="right"
+              >
+                <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+                <span [class.visually-hidden]="layout() === 'rail'">{{ item.label }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    </nav>
+    @if (layout() !== 'rail') {
+      <p class="org">{{ session.me()?.membership?.organization?.name }}</p>
+    }
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <header class="topbar">
+      @if (layout() !== 'rail' || preferences.sidebarCollapsed()) {
+        <button
+          matIconButton
+          type="button"
+          (click)="toggleNavigation()"
+          [attr.aria-label]="layout() === 'compact' ? 'Open navigation' : preferences.sidebarCollapsed() ? 'Expand navigation' : 'Collapse navigation'"
+          data-testid="nav-toggle"
+        >
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+      <button type="button" class="search" (click)="search.show()" aria-keyshortcuts="Control+K Meta+K" data-testid="global-search">
+        <mat-icon aria-hidden="true">search</mat-icon>
+        @if (layout() !== 'compact') {
+          <span>Search</span><kbd>{{ shortcut }}</kbd>
+        } @else {
+          <span class="visually-hidden">Search</span>
+        }
+      </button>
+      <span class="spacer"></span>
+      <!-- On wide screens the visible name and role are the button's name (WCAG 2.5.3); elsewhere a label. -->
+      <button class="account" type="button" [matMenuTriggerFor]="account" [attr.aria-label]="layout() === 'wide' ? null : 'Account menu'" data-testid="account-menu">
+        <span class="avatar" aria-hidden="true" [attr.data-initials]="initials()"></span>
+        @if (layout() === 'wide') {
+          <span class="who">
+            <span class="name">{{ session.me()?.user?.fullName }}</span>
+            <span class="role">{{ session.role() | titlecase }}</span>
+          </span>
+        }
+        <mat-icon fontIcon="expand_more" aria-hidden="true" />
+      </button>
+      <mat-menu #account="matMenu" xPosition="before">
+        <div class="menu-head" role="presentation">
+          <strong>{{ session.me()?.user?.fullName }}</strong>
+          <span>{{ session.me()?.user?.email }}</span>
+          <span>{{ session.role() | titlecase }} · {{ session.me()?.membership?.organization?.name }}</span>
+        </div>
+        <mat-divider />
+        <p class="menu-label" role="presentation">Appearance</p>
+        @for (t of themes; track t.value) {
+          <button mat-menu-item type="button" role="menuitemradio" [attr.aria-checked]="preferences.theme() === t.value" (click)="preferences.setTheme(t.value)" [attr.data-testid]="'theme-' + t.value">
+            <mat-icon>{{ preferences.theme() === t.value ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+            <span>{{ t.label }}</span>
+          </button>
+        }
+        <mat-divider />
+        <a mat-menu-item routerLink="/account/password" data-testid="menu-password"><mat-icon>password</mat-icon><span>Change password</span></a>
+        <a mat-menu-item routerLink="/account/devices" data-testid="menu-devices"><mat-icon>devices</mat-icon><span>Signed-in devices</span></a>
+        <mat-divider />
+        <button mat-menu-item type="button" (click)="signOut()" data-testid="sign-out">
+          <mat-icon>logout</mat-icon>
+          <span>Sign out</span>
+        </button>
+      </mat-menu>
+    </header>
+    <main id="main" tabindex="-1">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
