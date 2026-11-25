@@ -1,0 +1,212 @@
+# Velora CI on GitLab (Docker executor). Same checks as .github/workflows/ci.yml and browsers.yml.
+#
+# Runner requirements:
+# - Docker executor, Linux x86_64.
+# - The `stack` job uses Docker-in-Docker: the runner must allow privileged containers
+#   (`privileged = true` in the runner's config.toml, [runners.docker] section).
+# - No macOS runner: the iOS build (GitHub job mobile-ios) is not part of this pipeline.
+#
+# Nightly Firefox/WebKit runs: create a pipeline schedule (Build → Pipeline schedules) on `main`;
+# scheduled pipelines run only those jobs.
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # A branch with an open merge request is tested by the merge request pipeline only.
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+stages: [test, stack]
+
+variables:
+  NODE_IMAGE: node:22-bookworm
+  FLUTTER_VERSION: "3.50.0"
+  # SHA-256 of flutter_linux_3.50.0-stable.tar.xz, from Flutter's releases_linux.json.
+  FLUTTER_SHA256: 6ea2d806fd57269ae783e6788e2a81fc26eaad782f1e0d0ff38623bb765ff9f5
+  # PostgreSQL service for the test jobs (reached by its service name, not localhost).
+  POSTGRES_PASSWORD: postgres
+  ADMIN_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/postgres
+  TEST_DATABASE_URL: postgresql://velora_app:velora_app_dev@postgres:5432/velora_test
+  TEST_OWNER_DATABASE_URL: postgresql://velora_owner:velora_owner_dev@postgres:5432/velora_test
+  E2E_DATABASE_URL: postgresql://velora_app:velora_app_dev@postgres:5432/velora_e2e
+  E2E_OWNER_DATABASE_URL: postgresql://velora_owner:velora_owner_dev@postgres:5432/velora_e2e
+  E2E_ADMIN_DATABASE_URL: postgresql://velora_owner:velora_owner_dev@postgres:5432/postgres
+  npm_config_cache: $CI_PROJECT_DIR/.npm
+
+# ---------------------------------------------------------------- shared pieces
+
+.postgres:
+  services:
+    - name: postgres:16
+      alias: postgres
+
+.not-scheduled:
+  rules:
+    - if: $CI_PIPELINE_SOURCE != "schedule"
+
+.db-setup: &db-setup
+  - apt-get update -qq && apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null
+  - for i in $(seq 1 30); do pg_isready -h postgres -U postgres && break; sleep 2; done
+  - psql -v ON_ERROR_STOP=1 -f backend/scripts/db-setup.sql "$ADMIN_DATABASE_URL"
+
+.web-e2e-setup: &web-e2e-setup
+  - *db-setup
+  - (cd backend && npm ci && npx prisma generate)
+  - (cd web && npx -y npm@11.6.2 ci)
+
+.flutter: &flutter
+  - |
+    if [ ! -x "$CI_PROJECT_DIR/.flutter/bin/flutter" ]; then
+      command -v xz >/dev/null || { apt-get update -qq && apt-get install -y -qq --no-install-recommends xz-utils >/dev/null; }
+      curl -fsSL -o /tmp/flutter.tar.xz "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
+      echo "${FLUTTER_SHA256}  /tmp/flutter.tar.xz" | sha256sum -c -
+      rm -rf "$CI_PROJECT_DIR/.flutter" && mkdir -p "$CI_PROJECT_DIR/.flutter"
+      tar -xJf /tmp/flutter.tar.xz -C "$CI_PROJECT_DIR/.flutter" --strip-components=1
+    fi
+  - git config --global --add safe.directory "$CI_PROJECT_DIR/.flutter"
+  - export PATH="$CI_PROJECT_DIR/.flutter/bin:$PATH" PUB_CACHE="$CI_PROJECT_DIR/.pub-cache"
+  - flutter --version
+  - cd mobile && flutter pub get
+
+# ---------------------------------------------------------------- test stage
+
+backend:
+  stage: test
+  image: $NODE_IMAGE
+  extends: [.postgres, .not-scheduled]
+  cache:
+    key: { files: [backend/package-lock.json] }
+    paths: [.npm]
+  script:
+    - *db-setup
+    # The PDF tests read the rendered documents back as text.
+    - apt-get install -y -qq --no-install-recommends poppler-utils >/dev/null
+    - cd backend
+    - npm ci
+    - npx prisma generate
+    - npm run lint
+    - npm run typecheck
+    - npm test
+    - npm run build
+    - npx --yes @redocly/cli@1 lint openapi/openapi.yaml
+
+web:
+  stage: test
+  image: $NODE_IMAGE
+  extends: [.postgres, .not-scheduled]
+  cache:
+    key: { files: [web/package-lock.json, backend/package-lock.json] }
+    paths: [.npm]
+  script:
+    - *web-e2e-setup
+    - cd web
+    - npm run lint
+    - npm run api:check # the web app's API types match backend/openapi/openapi.yaml
+    - npm test
+    - npx ng build --configuration production
+    - npx playwright install --with-deps chromium
+    - npm run e2e
+  after_script:
+    # What was on screen for each failed end-to-end test.
+    - for f in web/test-results/*/error-context.md; do [ -f "$f" ] && { echo "=== $f"; cat "$f"; }; done; true
+  artifacts:
+    when: on_failure
+    expire_in: 2 weeks
+    paths: [web/test-results]
+
+mobile:
+  stage: test
+  image: ghcr.io/cirruslabs/android-sdk:36
+  extends: [.not-scheduled]
+  cache:
+    key: flutter-$FLUTTER_VERSION
+    paths: [.flutter, .pub-cache]
+  script:
+    - *flutter
+    - dart format --output=none --set-exit-if-changed lib test
+    - flutter analyze
+    - flutter test
+
+mobile-android:
+  stage: test
+  image: ghcr.io/cirruslabs/android-sdk:36
+  extends: [.not-scheduled]
+  cache:
+    key: flutter-$FLUTTER_VERSION
+    paths: [.flutter, .pub-cache]
+  script:
+    - *flutter
+    - flutter build apk --debug -t lib/main_dev.dart
+
+# ---------------------------------------------------------------- stack stage
+
+# The production stack from deploy/: both images built, PostgreSQL, migrations, the API and Caddy on
+# https://localhost (Caddy's local CA), a business created the production way, and the read-only
+# post-deploy smoke test (web/smoke) against it. Needs a privileged runner (Docker-in-Docker).
+stack:
+  stage: stack
+  image: docker:29
+  extends: [.not-scheduled]
+  services:
+    - name: docker:29-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - apk add --no-cache bash openssl >/dev/null
+    - docker build -t velora-api ./backend
+    - cd deploy
+    - cp .env.example .env
+    - ./generate-secrets.sh >> .env
+    - sed -i 's#^MAIL_SMTP_URL=$#MAIL_SMTP_URL=smtp://localhost:25#; s#^DOMAIN=.*#DOMAIN=localhost#' .env
+    - docker compose config -q
+    - docker compose up -d --build postgres migrate api
+    # The API needs a few seconds after its container starts; wait up to 2 minutes for readiness.
+    - ready="fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+    - for i in $(seq 1 60); do docker compose exec -T api node -e "$ready" && break; sleep 2; done
+    - docker compose exec -T api node -e "$ready"
+    - docker compose exec -T api node dist/maintenance/cli.js check
+    - docker compose up -d --build caddy
+    - >
+      docker compose exec -T -e ORG_NAME="Smoke Test LLC" -e ORG_CURRENCY=AED -e ORG_TIMEZONE=Asia/Dubai -e ORG_COUNTRY=AE
+      -e ORG_TAX_NAME=VAT -e ORG_TAX_RATE_BP=500 -e OWNER_NAME="Smoke Owner" -e OWNER_EMAIL=owner@smoke.example
+      -e OWNER_PASSWORD=smoke-test-password-2026 api node dist/maintenance/cli.js create-organization
+    # The smoke test runs in a container sharing Caddy's network, so https://localhost is Caddy,
+    # exactly as on a server. The local certificate is self-signed, hence SMOKE_INSECURE=1.
+    - smoke=$(docker create --network "container:$(docker compose ps -q caddy)"
+        -e SMOKE_URL=https://localhost -e SMOKE_INSECURE=1 -e SMOKE_EMAIL=owner@smoke.example -e SMOKE_PASSWORD=smoke-test-password-2026
+        -w /web $NODE_IMAGE bash -c 'for i in $(seq 1 60); do curl -skf https://localhost/api/v1/health/ready >/dev/null && curl -skf https://localhost/ >/dev/null && break; sleep 2; done;
+        npx -y npm@11.6.2 ci && npx playwright install --with-deps chromium && npm run smoke')
+    - docker cp ../web/. "$smoke:/web"
+    - docker start -a "$smoke"
+  after_script:
+    - cd deploy && docker compose logs --tail 200 || true
+
+# ---------------------------------------------------------------- nightly browsers
+
+# Firefox and WebKit (Safari's engine) run the end-to-end suite on scheduled pipelines; every push
+# runs Chromium (job `web`). docs/web-testing-strategy.md §3.
+browsers:
+  stage: test
+  image: $NODE_IMAGE
+  extends: [.postgres]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+  parallel:
+    matrix:
+      - BROWSER: [firefox, webkit]
+  cache:
+    key: { files: [web/package-lock.json, backend/package-lock.json] }
+    paths: [.npm]
+  script:
+    - *web-e2e-setup
+    - cd web
+    - npx playwright install --with-deps "$BROWSER"
+    - E2E_BROWSERS="$BROWSER" npm run e2e -- --project="$BROWSER"
+  artifacts:
+    when: on_failure
+    expire_in: 2 weeks
+    paths: [web/test-results]
