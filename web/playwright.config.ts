@@ -18,7 +18,14 @@ export default defineConfig({
     trace: 'off',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
+  // Chromium always; Firefox and WebKit when asked (E2E_BROWSERS=firefox,webkit — the nightly
+  // .github/workflows/browsers.yml). Performance needs Chrome DevTools, so it runs in Chromium only.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
+    ...(['firefox', 'webkit'] as const)
+      .filter((b) => (process.env['E2E_BROWSERS'] ?? '').split(',').includes(b))
+      .map((b) => ({ name: b, testIgnore: /performance\.spec/, use: { ...devices[b === 'firefox' ? 'Desktop Firefox' : 'Desktop Safari'], viewport: { width: 1440, height: 900 } } })),
+  ],
   webServer: [
     {
       command: 'node e2e/mail-sink.mjs',

@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -23,7 +24,7 @@ import { CustomersApi, type CustomerQuery, type CustomerSort } from '../data/cus
 /** W-E1 Customers. Balances per row need the optional backend item B4, so that column is absent (not faked). */
 @Component({
   selector: 'app-customers-page',
-  imports: [FormsModule, RouterLink, PageHeader, StateView, Skeleton, LoadMore, MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption],
+  imports: [ScrollRegion, FormsModule, RouterLink, PageHeader, StateView, Skeleton, LoadMore, MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header heading="Customers">
@@ -53,7 +54,7 @@ import { CustomersApi, type CustomerQuery, type CustomerSort } from '../data/cus
     @if (failure(); as message) {
       <app-state-view kind="error" heading="Could not load customers" [message]="message" actionLabel="Try again" (action)="list.reload()" />
     } @else if (list.status() === 'loading' && list.items().length === 0) {
-      <div aria-busy="true" aria-label="Loading customers">
+      <div role="status" aria-busy="true" aria-label="Loading customers">
         @for (i of [1, 2, 3, 4]; track i) {
           <app-skeleton height="56px" />
         }
@@ -77,7 +78,7 @@ import { CustomersApi, type CustomerQuery, type CustomerSort } from '../data/cus
             }
           </ul>
         } @else {
-          <div class="table-wrap">
+          <div class="table-wrap" appScrollRegion="Customers table">
             <table class="table" data-testid="customers-table">
               <caption class="visually-hidden">Customers</caption>
               <thead><tr><th scope="col">Name</th><th scope="col">Company</th><th scope="col">Mobile</th><th scope="col">Email</th><th scope="col">Added</th></tr></thead>

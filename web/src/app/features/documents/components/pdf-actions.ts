@@ -70,6 +70,8 @@ export class DocumentPdf {
   async view(kind: DocumentType, id: string, number: string): Promise<void> {
     const url = await this.fetch(kind, id);
     if (!url) return;
+    // The only URL ever trusted here is a blob: this page just created from the server's PDF.
+    if (!url.startsWith('blob:')) throw new Error('Refusing to frame a non-blob URL');
     const ref = this.dialog.open(PdfViewerDialog, {
       data: { title: number, url: this.sanitizer.bypassSecurityTrustResourceUrl(url), download: () => this.save(url, number) } satisfies Viewer,
       maxWidth: '96vw',

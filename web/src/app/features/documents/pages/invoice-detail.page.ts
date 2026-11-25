@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButton } from '@angular/material/button';
@@ -25,7 +26,7 @@ import { invoiceStatus, methodLabel, whatsappLink } from '../data/labels';
 /** W-F2 Invoice detail. Every figure is the server's; actions appear only for roles that may use them. */
 @Component({
   selector: 'app-invoice-detail-page',
-  imports: [RouterLink, PageHeader, StateView, Skeleton, StatusPill, PdfActions, MatButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger],
+  imports: [ScrollRegion, RouterLink, PageHeader, StateView, Skeleton, StatusPill, PdfActions, MatButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './invoice-detail.page.html',
   styleUrl: './document-detail.scss',

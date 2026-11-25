@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -41,7 +42,7 @@ const QUOTATION_CHIPS: { value: DocumentStatusFilter; label: string }[] = [
 /** W-F1 Documents. Newest first (the only order the API offers). A salesperson sees their own documents. */
 @Component({
   selector: 'app-documents-page',
-  imports: [FormsModule, RouterLink, PageHeader, StateView, Skeleton, StatusPill, LoadMore, MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption],
+  imports: [ScrollRegion, FormsModule, RouterLink, PageHeader, StateView, Skeleton, StatusPill, LoadMore, MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './documents.page.html',
   styleUrl: './documents.page.scss',

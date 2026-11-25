@@ -29,10 +29,15 @@
 		# style-src allows inline styles because Angular and Angular Material add component styles at run time.
 		header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; frame-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		header X-Frame-Options "DENY"
-		# Built files have content hashes in their names: cache them for a year. index.html never.
-		@hashed path_regexp \.[0-9a-zA-Z]{8,}\.(js|css|woff2?)$
+		# Built files carry a content hash in their names (main-7G5CI4JO.js, chunk-BA-BGXw1.js,
+		# inter-latin-400-normal-55WT6UWF.woff2): cache them for a year. Everything else — the app page,
+		# served for "/" and every deep link — must be checked on each visit, so a new release is picked up.
+		@hashed path_regexp hashed -[0-9A-Za-z_-]{8}\.(js|css|woff2?)$
+		@unhashed {
+			not path_regexp unhashed -[0-9A-Za-z_-]{8}\.(js|css|woff2?)$
+		}
 		header @hashed Cache-Control "public, max-age=31536000, immutable"
-		header /index.html Cache-Control "no-cache"
+		header @unhashed Cache-Control "no-cache"
 		try_files {path} /index.html
 		file_server
 	}

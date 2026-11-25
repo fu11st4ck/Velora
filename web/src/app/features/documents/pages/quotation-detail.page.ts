@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { HttpErrorResponse, httpResource } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { MatButton } from '@angular/material/button';
@@ -26,7 +27,7 @@ import { quotationStatus, whatsappLink } from '../data/labels';
 /** W-F3 Quotation detail. Converting opens the sale workspace with the quotation loaded. */
 @Component({
   selector: 'app-quotation-detail-page',
-  imports: [RouterLink, PageHeader, StateView, Skeleton, StatusPill, PdfActions, MatButton, MatIcon],
+  imports: [ScrollRegion, RouterLink, PageHeader, StateView, Skeleton, StatusPill, PdfActions, MatButton, MatIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (failure(); as f) {
@@ -60,7 +61,7 @@ import { quotationStatus, whatsappLink } from '../data/labels';
       <div class="columns">
         <section class="card" aria-labelledby="lines-title">
           <h2 class="t-title-md" id="lines-title">Items</h2>
-          <div class="table-wrap">
+          <div class="table-wrap" appScrollRegion="Quotation items table">
             <table class="table">
               <thead><tr><th scope="col">Product</th><th scope="col" class="num">Qty</th><th scope="col" class="num">Price</th><th scope="col" class="num">Total</th></tr></thead>
               <tbody>

@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
@@ -21,7 +22,7 @@ import { SettingsApi } from '../data/settings.api';
 /** W-H2 Tax rates. A rate's percentage never changes once created (documents keep a snapshot anyway). */
 @Component({
   selector: 'app-tax-rates-page',
-  imports: [FormsModule, PageHeader, StateView, Skeleton, StatusPill, MatButton, MatCheckbox, MatFormField, MatLabel, MatSuffix, MatInput],
+  imports: [ScrollRegion, FormsModule, PageHeader, StateView, Skeleton, StatusPill, MatButton, MatCheckbox, MatFormField, MatLabel, MatSuffix, MatInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header heading="Tax rates" [subtitle]="canEdit() ? 'The default rate is preselected on new sales.' : 'Only the owner can change tax rates.'" />
@@ -37,7 +38,7 @@ import { SettingsApi } from '../data/settings.api';
           @if (addError(); as e) { <p class="error" role="alert" data-testid="tax-error">{{ e }}</p> }
         </form>
       }
-      <div class="table-wrap">
+      <div class="table-wrap" appScrollRegion="Tax rates table">
         <table class="table" data-testid="tax-table">
           <caption class="visually-hidden">Tax rates</caption>
           <thead><tr><th scope="col">Name</th><th scope="col" class="num">Rate</th><th scope="col">Status</th>@if (canEdit()) {<th scope="col"><span class="visually-hidden">Actions</span></th>}</tr></thead>

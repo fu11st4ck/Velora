@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButton } from '@angular/material/button';
@@ -22,7 +23,7 @@ const ROLE_LABELS: Record<Role, string> = { OWNER: 'Owner', MANAGER: 'Manager', 
 /** W-H3 Team. The owner invites, changes roles and removes access; removing access signs the person out at once. */
 @Component({
   selector: 'app-team-page',
-  imports: [ReactiveFormsModule, PageHeader, StateView, Skeleton, StatusPill, MatButton, MatFormField, MatLabel, MatInput, MatError, MatSelect, MatOption],
+  imports: [ScrollRegion, ReactiveFormsModule, PageHeader, StateView, Skeleton, StatusPill, MatButton, MatFormField, MatLabel, MatInput, MatError, MatSelect, MatOption],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header heading="Team" [subtitle]="canEdit() ? null : 'Only the owner can change the team.'" />
@@ -42,7 +43,7 @@ const ROLE_LABELS: Record<Role, string> = { OWNER: 'Owner', MANAGER: 'Manager', 
     @if (failure(); as f) {
       <app-state-view kind="error" heading="Could not load the team" [message]="message(f)" actionLabel="Try again" (action)="load()" />
     } @else if (members(); as list) {
-      <div class="table-wrap">
+      <div class="table-wrap" appScrollRegion="Team members table">
         <table class="table" data-testid="team-table">
           <caption class="visually-hidden">Team members</caption>
           <thead><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Last signed in</th>@if (canEdit()) {<th scope="col"><span class="visually-hidden">Actions</span></th>}</tr></thead>

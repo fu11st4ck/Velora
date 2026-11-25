@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, computed, effect, inject, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -41,7 +42,7 @@ const PAGE_SIZE = 25;
 /** W-C1 Products. Filters live in the URL, so a filtered list can be bookmarked, shared and restored with Back. */
 @Component({
   selector: 'app-products-page',
-  imports: [
+  imports: [ScrollRegion, 
     FormsModule, RouterLink, PageHeader, StateView, Skeleton, StatusPill, LoadMore, StockActions,
     MatButton, MatIconButton, MatIcon, MatFormField, MatLabel, MatPrefix, MatSuffix, MatInput, MatSelect, MatOption, MatSlideToggle,
     MatMenu, MatMenuItem, MatMenuTrigger,

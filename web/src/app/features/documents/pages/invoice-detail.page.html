@@ -59,7 +59,7 @@
 
       <section class="card" aria-labelledby="lines-title">
         <h2 class="t-title-md" id="lines-title">Items</h2>
-        <div class="table-wrap">
+        <div class="table-wrap" appScrollRegion="Invoice items table">
           <table class="table">
             <thead>
               <tr>
@@ -154,7 +154,7 @@
     </div>
   </div>
 } @else {
-  <div aria-busy="true" aria-label="Loading the invoice">
+  <div role="status" aria-busy="true" aria-label="Loading the invoice">
     <app-skeleton height="64px" />
     <app-skeleton height="360px" />
   </div>

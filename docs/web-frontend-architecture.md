@@ -1,6 +1,6 @@
 # Velora Web — Frontend Architecture
 
-**Status:** Proposed (Sprint W0). Decision record: `web-frontend-architecture-decision.md`. State: `web-state-management.md`. API: `web-api-integration.md`.
+**Status:** Implemented (W1–W6). Decision record: `web-frontend-architecture-decision.md`. State: `web-state-management.md`. API: `web-api-integration.md`.
 
 ## 1. Context
 
@@ -94,7 +94,7 @@ Guards only improve the experience; the API refuses anything the role may not do
 - **Accessibility:** WCAG 2.2 AA target; keyboard-complete; focus management in dialogs and after navigation; `axe` checks in end-to-end tests.
 - **Internationalisation:** English only at launch; strings marked with `$localize`/`i18n` from the start so a translation (Arabic, RTL) can be added without touching templates. Number, currency and date formatting via `Intl` with the organization's settings.
 - **Security:** no secrets in the bundle; access token in memory; refresh token in an HttpOnly cookie (B1); strict Content-Security-Policy from Caddy (`default-src 'self'`, no inline scripts; Angular builds are CSP-compatible); Angular's built-in sanitisation, no `innerHTML` with server data; links built with `URL`, external links `rel="noopener"`.
-- **Performance budgets:** initial download ≤ 250 kB compressed, each lazy feature ≤ 120 kB compressed, LCP ≤ 2.5 s on a mid-range laptop over 4G. Angular's build budgets measure *uncompressed* size, so `angular.json` enforces the equivalent raw limits (initial: warning 600 kB, error 800 kB). W1 measured 490 kB raw / 124 kB compressed for the initial load.
+- **Performance budgets:** initial download ≤ 250 kB compressed, each lazy feature ≤ 120 kB compressed, LCP ≤ 2.5 s on a mid-range laptop over 4G. Angular's build budgets measure *uncompressed* size, so `angular.json` enforces the equivalent raw limits (initial: warning 600 kB, error 800 kB). W1 measured 490 kB raw / 124 kB compressed for the initial load; W6 (all features) 506 kB raw / 127 kB compressed. **LCP measured in W6** (production build, gzip, CPU 4× slower, ~9 Mbit/s with 150 ms latency, three runs; `web/e2e/performance.spec.ts`): sign-in 1.34–1.49 s, dashboard 1.72–1.87 s, products 2.25–2.31 s — all within 2.5 s; products has the least headroom (it waits for the product list).
 
 ## 6. Build and delivery
 - `ng build` produces static files. They are copied into the Caddy container (or a volume) and served from `/`; `/api/*` is proxied to the API (B3). One image per release, built in CI.

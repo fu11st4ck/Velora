@@ -212,8 +212,36 @@ Legend: `[x]` done · `[ ]` open · `[~]` in progress · **(blocked: …)**. Det
 - [ ] Reports: the stock section lists the top 5 by value; the full valuation is in the Stock CSV (a paged table can be added if wanted)
 - [ ] The team page does not offer branches (single-branch decision Q5)
 
-- [ ] W6 Production readiness
+## Web app — Sprint W6: production readiness (2026-11-25)
+**Accessibility**
+- [x] axe (WCAG 2.2 AA) on every page and the main dialogs, light and dark, desktop and phone (`web/e2e/a11y.spec.ts`), and a keyboard-only sale (`/`, arrows, Enter, Tab)
+- [x] Fixed: account button and password toggle names differed from their visible text (WCAG 2.5.3); wide tables on phones could not be scrolled from the keyboard (now focusable, named regions); loading placeholders carried a label without a role; text typed right after Ctrl+K could be erased (global search field no longer uses ngModel)
+
+**Performance**
+- [x] LCP on the production build with CPU 4× slower and ~4G network: sign-in ≈1.4 s, dashboard ≈1.8 s, products ≈2.3 s — all within the 2.5 s budget (`web/e2e/performance.spec.ts`); initial download 506 kB raw / 127 kB compressed
+- [x] The e2e static server now compresses like Caddy, so measurements match production
+
+**Deployment (real Docker and Caddy in this workspace)**
+- [x] Web image built and run with `deploy/Caddyfile` on `https://localhost` in front of the API: headers, HTTP→HTTPS redirect, deep links, `/api` proxy, 1 MB body limit (413), cross-site session requests refused (403)
+- [x] **Fixed (found only with real Caddy):** hashed bundles were not cached (the Caddyfile expected `name.HASH.js`, Angular emits `name-HASH.js`), and the app page served at `/` or a deep link lacked `no-cache` (only `/index.html` had it) — a browser could have kept a stale app after an update
+- [x] Read-only post-deploy smoke test `npm run smoke` (`web/smoke/`), passing against the real Caddy stack here; CI job `backend-image` now starts the whole production stack, creates a business with `create-organization` and runs the smoke test
+- [x] `deploy/.env.example`: `DOMAIN` now an app domain (`app.example.com`); README and runbook updated; `docs/release-checklist.md` added
+- [ ] **API image not built in this workspace**: its `apt-get` needed `deb.debian.org`, which was added to this environment's allowed hosts, but the build command was then refused by this session's permission check, and was not retried. CI builds it (job `backend-image`)
+
+**Security**
+- [x] `npm audit --omit=dev`: web clean; backend had 4 high advisories in the Prisma CLI's config loader (`deepmerge-ts`, `effect`; not reachable from requests) — fixed with npm `overrides` to patched versions; Prisma CLI (generate, migrate) and all 266 backend tests pass with them
+- [x] Bundle: no source maps, no secrets or development addresses; the single sanitizer bypass (PDF viewer) now only accepts `blob:` URLs the page created
+- [x] Session cookie verified through Caddy over HTTPS: `HttpOnly; Secure; SameSite=Strict`, no token in browser storage, no CSP violations
+- [ ] Dev-only advisories (`minimatch` in build tooling, moderate) — not shipped; review on the next Angular update
+
+**Browsers**
+- [x] Firefox and WebKit projects in `web/playwright.config.ts` (`E2E_BROWSERS`) and a nightly workflow `.github/workflows/browsers.yml`
+- [ ] **Not run in this workspace** (only Chromium is installed here); first results will come from the nightly job
+
+**Still manual before the first release** (`docs/release-checklist.md`): screen-reader pass, real iPhone and Android phone, print dialog in each browser.
+
+- [x] Tests: 71 unit/component; 62 end-to-end (Chromium); 2 smoke tests against real Caddy; backend 266
 
 ## Open blockers
-- CI has never run: the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.
+- CI has never run (it now also includes the full-stack smoke test and nightly Firefox/WebKit): the workflow triggers on pull requests and on pushes to `main`, and neither has happened yet.
 - Android SDK download host is not reachable from the current workspace; iOS builds need macOS (CI).

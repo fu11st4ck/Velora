@@ -1,4 +1,4 @@
-# Not built in the Sprint 1 workspace (no Docker daemon there); verified by the CI job "backend-image".
+# Verified by the CI job "backend-image" (the whole stack is started and smoke-tested there).
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*

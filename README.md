@@ -4,7 +4,7 @@ Native Android and iOS application (Flutter) with a NestJS/PostgreSQL backend fo
 
 > **Status (2026-11-16): Sprints 0–5 delivered, Sprint 6 partly** — the backend and the Flutter app cover sign-in, inventory, customers, the sale flow, documents, dashboard, reports, settings and offline use (saved products and customers, queued quotations, customers and payments). **Deployment:** a Docker Compose setup is in [`deploy/`](deploy/README.md) (rehearsed locally, not yet run on a server). **Not done:** product photos, barcode scanning and store builds. The app has never been run on a physical device. See [`TASKS.md`](TASKS.md) and [`CHANGELOG.md`](CHANGELOG.md).
 >
-> **Web app (2026-11-25): Sprint W1 delivered** — Angular app in [`web/`](web/README.md) with sign-in, password reset, dashboard and the app shell, tested end to end against the real API. Inventory, customers, sales, documents, reports and settings follow in W2–W5. Start with [`docs/web-implementation-roadmap.md`](docs/web-implementation-roadmap.md) (sprints, open questions) and [`docs/web-frontend-architecture-decision.md`](docs/web-frontend-architecture-decision.md).
+> **Web app (2026-11-25): Sprints W1–W6 delivered** — the Angular app in [`web/`](web/README.md) covers sign-in, dashboard, inventory, customers, selling, documents (payments, returns, PDFs), reports, settings and account, tested end to end against the real API. Deployment: [`deploy/README.md`](deploy/README.md); before each release: [`docs/release-checklist.md`](docs/release-checklist.md).
 
 The product is derived from the reference web demo at <https://velora-sales-inventory.sujankarki15357.chatgpt.site/>. That demo is a browser-only prototype with no server; see [`docs/product-discovery.md`](docs/product-discovery.md).
 
@@ -37,7 +37,7 @@ mobile/                    Flutter app
   lib/features/            auth, shell, home, products (inventory), customers, more
   test/                    unit, widget, app-flow, golden and live contract tests
 deploy/                    Production Docker Compose (PostgreSQL, API, Caddy), backup/restore
-web/                       Angular web app (sign-in, dashboard so far) — see web/README.md
+web/                       Angular web app — see web/README.md
 docs/                      Product, design, architecture, API, strategy documents
   reference-screenshots/   Evidence from the audit of the reference app + the audit script
   architecture-decision-records/

@@ -7,10 +7,11 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
-    "lint": "eslint \"src/**/*.{ts,html}\" \"e2e/**/*.ts\"",
+    "lint": "eslint \"src/**/*.{ts,html}\" \"e2e/**/*.ts\" \"smoke/**/*.ts\"",
     "e2e": "playwright test --trace off",
     "api:types": "npx -y openapi-typescript@7.13.0 ../backend/openapi/openapi.yaml -o src/app/core/api/schema.d.ts",
-    "api:check": "npx -y openapi-typescript@7.13.0 ../backend/openapi/openapi.yaml -o .angular/schema.check.d.ts && diff -q src/app/core/api/schema.d.ts .angular/schema.check.d.ts"
+    "api:check": "npx -y openapi-typescript@7.13.0 ../backend/openapi/openapi.yaml -o .angular/schema.check.d.ts && diff -q src/app/core/api/schema.d.ts .angular/schema.check.d.ts",
+    "smoke": "playwright test --config playwright.smoke.config.ts"
   },
   "private": true,
   "packageManager": "npm@11.6.2",

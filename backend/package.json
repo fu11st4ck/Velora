@@ -64,5 +64,9 @@
     "typescript-eslint": "^8.72.2",
     "unplugin-swc": "^2.0.0",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "effect": "3.22.4"
   }
 }

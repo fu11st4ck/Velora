@@ -65,15 +65,16 @@
         }
       </button>
       <span class="spacer"></span>
-      <button class="account" type="button" [matMenuTriggerFor]="account" aria-label="Account menu" data-testid="account-menu">
-        <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+      <!-- On wide screens the visible name and role are the button's name (WCAG 2.5.3); elsewhere a label. -->
+      <button class="account" type="button" [matMenuTriggerFor]="account" [attr.aria-label]="layout() === 'wide' ? null : 'Account menu'" data-testid="account-menu">
+        <span class="avatar" aria-hidden="true" [attr.data-initials]="initials()"></span>
         @if (layout() === 'wide') {
           <span class="who">
             <span class="name">{{ session.me()?.user?.fullName }}</span>
             <span class="role">{{ session.role() | titlecase }}</span>
           </span>
         }
-        <mat-icon aria-hidden="true">expand_more</mat-icon>
+        <mat-icon fontIcon="expand_more" aria-hidden="true" />
       </button>
       <mat-menu #account="matMenu" xPosition="before">
         <div class="menu-head" role="presentation">

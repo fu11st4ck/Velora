@@ -1,3 +1,4 @@
+import { ScrollRegion } from '../../../shared/table/scroll-region';
 import { ChangeDetectionStrategy, Component, DOCUMENT, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButton } from '@angular/material/button';
@@ -34,7 +35,7 @@ interface Section<T> {
  */
 @Component({
   selector: 'app-reports-page',
-  imports: [PageHeader, StateView, Skeleton, StatusBar, BarList, MatButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatFormField, MatLabel, MatInput],
+  imports: [ScrollRegion, PageHeader, StateView, Skeleton, StatusBar, BarList, MatButton, MatIcon, MatMenu, MatMenuItem, MatMenuTrigger, MatFormField, MatLabel, MatInput],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reports.page.html',
   styleUrl: './reports.page.scss',

@@ -51,7 +51,7 @@
 } @else if (failure(); as message) {
   <app-state-view kind="error" heading="Could not load stock history" [message]="message" actionLabel="Try again" (action)="list.reload()" />
 } @else if (list.status() === 'loading' && list.items().length === 0) {
-  <div aria-busy="true" aria-label="Loading stock history">
+  <div role="status" aria-busy="true" aria-label="Loading stock history">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <app-skeleton height="48px" />
     }
@@ -76,7 +76,7 @@
       }
     </ul>
   } @else {
-    <div class="table-wrap">
+    <div class="table-wrap" appScrollRegion="Stock movements table">
       <table class="table" data-testid="history-table">
         <caption class="visually-hidden">Stock movements</caption>
         <thead>

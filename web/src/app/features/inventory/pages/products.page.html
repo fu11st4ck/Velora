@@ -53,7 +53,7 @@
 @if (failure(); as f) {
   <app-state-view [kind]="f.kind" heading="Could not load products" [message]="f.message" actionLabel="Try again" (action)="list.reload()" />
 } @else if (list.status() === 'loading' && list.items().length === 0) {
-  <div aria-busy="true" aria-label="Loading products">
+  <div role="status" aria-busy="true" aria-label="Loading products">
     @for (i of [1, 2, 3, 4, 5]; track i) {
       <app-skeleton height="56px" />
     }
@@ -85,7 +85,7 @@
         }
       </ul>
     } @else {
-      <div class="table-wrap">
+      <div class="table-wrap" appScrollRegion="Products table">
         <table mat-table [dataSource]="list.items()" matSort [matSortActive]="matSort().active" [matSortDirection]="matSort().direction" (matSortChange)="onSortChange($event)" matSortDisableClear data-testid="products-table">
           <caption class="visually-hidden">Products</caption>
           <ng-container matColumnDef="product">

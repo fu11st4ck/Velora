@@ -1,6 +1,5 @@
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, Injectable, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogContent, MatDialogRef } from '@angular/material/dialog';
 import { MatIcon } from '@angular/material/icon';
 import { MatProgressBar } from '@angular/material/progress-bar';
@@ -24,7 +23,9 @@ interface Hit {
  */
 @Component({
   selector: 'app-global-search',
-  imports: [FormsModule, MatDialogContent, MatIcon, MatProgressBar],
+  // Not ngModel: it writes its initial value a tick after the field appears, which erased text
+  // typed immediately after Ctrl+K.
+  imports: [MatDialogContent, MatIcon, MatProgressBar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <mat-dialog-content class="content">
@@ -32,8 +33,8 @@ interface Hit {
         <mat-icon aria-hidden="true">search</mat-icon>
         <input
           type="text"
-          [ngModel]="text()"
-          (ngModelChange)="onText($event)"
+          [value]="text()"
+          (input)="onText($any($event.target).value)"
           (keydown)="onKey($event)"
           placeholder="Search products, customers, documents"
           aria-label="Search products, customers and documents"

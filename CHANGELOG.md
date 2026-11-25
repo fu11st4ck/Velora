@@ -4,6 +4,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Version
 
 ## [Unreleased]
 
+### Added — Web app Sprint W6 (2026-11-25)
+- Release checklist, post-deploy smoke test (`npm run smoke` in `web/`), nightly Firefox/WebKit runs, full-stack check in CI.
+
+### Fixed — W6
+- After an update, browsers could keep the previous web app: Caddy now marks the app page `no-cache` on every path and caches only content-hashed files.
+- Accessibility: buttons named differently from their visible text; wide tables on phones not scrollable by keyboard; loading placeholders; text typed straight after Ctrl+K could vanish.
+- Backend dependencies: patched versions of two libraries used by the Prisma command-line tool (security advisories).
+
 ### Added — Web app Sprint W5 (2026-11-25)
 - **Reports on the web** with period presets, payment-status chart, sales by team member, stock value, and CSV exports.
 - **Settings on the web:** business details and sales rules, tax rates, team (invite, roles, access).

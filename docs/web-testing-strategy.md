@@ -1,6 +1,6 @@
 # Velora Web — Testing Strategy
 
-**Status:** Proposed (Sprint W0). Rule carried over from the whole project: **a test counts only if it was executed**, and reports state what ran, where, and what did not.
+**Status:** Implemented (W1–W6); what ran where is in §4. Rule carried over from the whole project: **a test counts only if it was executed**, and reports state what ran, where, and what did not.
 
 ## 1. Levels
 
@@ -49,3 +49,15 @@ Each scenario signs in through the UI with seeded accounts (owner, manager, sale
 
 ## 4. Browser support
 Last two versions of Chrome, Edge, Firefox and Safari (macOS and iOS), and Samsung Internet on Android. Manual smoke test on a real iPhone and an Android phone before the first release (needs devices; not available in this workspace).
+
+## 4. As run (W6, 2026-11-25)
+
+| Check | Where it ran | Result |
+|---|---|---|
+| Unit/component (Vitest) | This workspace and CI | 71 passing |
+| End-to-end, scenarios 1–18 + extras (Playwright, Chromium, production build, real API and PostgreSQL, test SMTP sink) | This workspace and CI | 62 passing |
+| Accessibility: axe (WCAG 2.2 AA) on every page and main dialogs, light + dark, 1440 px + 390 px; keyboard-only sale | This workspace and CI | Passing after fixes (label-in-name, scrollable regions, loading regions, search field) |
+| Performance: LCP on throttled CPU/network | This workspace and CI (Chromium) | Within 2.5 s (see web-frontend-architecture.md §5) |
+| Firefox, WebKit | Nightly CI only (`browsers.yml`) | **Not run in this workspace** (browsers not installed here) |
+| Production stack: images, Caddy on HTTPS, smoke test | CI job `backend-image`; in this workspace the web image + real Caddyfile in front of the API | Web image and Caddy verified here; **API image not built here** (see TASKS.md W6) |
+| Screen reader, real phones, print dialog | Manual, before release (`docs/release-checklist.md`) | **Not done** |

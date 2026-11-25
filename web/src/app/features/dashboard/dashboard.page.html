@@ -63,7 +63,7 @@
     </section>
   </div>
 } @else {
-  <div aria-busy="true" aria-label="Loading the dashboard">
+  <div role="status" aria-busy="true" aria-label="Loading the dashboard">
     <section class="tiles">
       @for (i of [1, 2, 3, 4]; track i) {
         <app-skeleton height="132px" />

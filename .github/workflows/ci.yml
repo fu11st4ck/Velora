@@ -52,8 +52,26 @@ jobs:
           docker compose up -d --build postgres migrate api
           docker compose exec -T api node -e "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
           docker compose exec -T api node dist/maintenance/cli.js check
-      # The web image (production build of the web app, served by Caddy).
-      - run: cd deploy && docker compose build caddy
+      # The web image, then the whole stack behind Caddy on https://localhost (Caddy's local CA),
+      # a business created the production way, and the read-only post-deploy smoke test against it.
+      - run: cd deploy && docker compose up -d --build --wait caddy
+      - name: Create a business (as in deploy/README.md)
+        run: |
+          cd deploy
+          docker compose exec -T -e ORG_NAME="Smoke Test LLC" -e ORG_CURRENCY=AED -e ORG_TIMEZONE=Asia/Dubai -e ORG_COUNTRY=AE \
+            -e ORG_TAX_NAME=VAT -e ORG_TAX_RATE_BP=500 -e OWNER_NAME="Smoke Owner" -e OWNER_EMAIL=owner@smoke.example \
+            -e OWNER_PASSWORD=smoke-test-password-2026 api node dist/maintenance/cli.js create-organization
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Post-deploy smoke test (web/smoke)
+        working-directory: web
+        run: |
+          npx -y npm@11.6.2 ci
+          npx playwright install --with-deps chromium
+          SMOKE_URL=https://localhost SMOKE_INSECURE=1 SMOKE_EMAIL=owner@smoke.example SMOKE_PASSWORD=smoke-test-password-2026 npm run smoke
+      - if: failure()
+        run: cd deploy && docker compose logs --tail 200
 
   web:
     runs-on: ubuntu-latest

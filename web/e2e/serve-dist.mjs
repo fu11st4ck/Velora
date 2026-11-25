@@ -1,8 +1,9 @@
 // Serves the production build the way deploy/Caddyfile does — same security headers (read from
-// the Caddyfile itself), same fallback to index.html, /api proxied to the API — so the CSP and the
+// the Caddyfile itself), same compression, same fallback to index.html, /api proxied to the API — so the CSP and the
 // production build can be tested without Docker. Development and CI use only.
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, request } from 'node:http';
+import { createGzip } from 'node:zlib';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,6 +33,10 @@ createServer((req, res) => {
   const path = normalize(decodeURIComponent(req.url.split('?')[0])).replace(/^(\.\.[/\\])+/, '');
   let file = join(root, path);
   if (!file.startsWith(root) || !existsSync(file) || statSync(file).isDirectory()) file = join(root, 'index.html');
-  res.writeHead(200, { ...headers, 'Content-Type': types[extname(file)] ?? 'application/octet-stream' });
-  createReadStream(file).pipe(res);
+  const type = types[extname(file)] ?? 'application/octet-stream';
+  // Like Caddy's `encode zstd gzip`: compress text responses for clients that accept it.
+  const compress = /gzip/.test(req.headers['accept-encoding'] ?? '') && /text|javascript|json|svg/.test(type);
+  res.writeHead(200, { ...headers, 'Content-Type': type, ...(compress ? { 'Content-Encoding': 'gzip', Vary: 'Accept-Encoding' } : {}) });
+  if (compress) createReadStream(file).pipe(createGzip()).pipe(res);
+  else createReadStream(file).pipe(res);
 }).listen(port, () => console.log(`serving ${root} on ${port}`));

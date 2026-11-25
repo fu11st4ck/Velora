@@ -48,7 +48,13 @@ docker compose exec \
 - Change the password in the app afterwards (More → Change password); the one typed here stays in the shell history.
 - Everyone else is invited from the app (More → Team) and receives an email with a link to choose a password.
 
-## 4. Point the app at the server
+## 4. Open the app
+
+The web app is at `https://<your domain>` — sign in with the owner account. Then check the deployment from any computer with the repository (read-only, creates nothing):
+
+```bash
+cd web && SMOKE_URL=https://app.yourshop.com SMOKE_EMAIL=you@yourshop.com SMOKE_PASSWORD='…' npm run smoke
+```
 
 The mobile app is built with the server address:
 
@@ -86,8 +92,10 @@ Also turn on your provider's server snapshots. They are a second line, not a sub
 ```bash
 cd Velora && git pull && cd deploy
 ./backup.sh
-docker compose up -d --build     # rebuilds, runs new migrations, restarts the API
+docker compose up -d --build --wait   # rebuilds, runs new migrations, restarts the API and the web app
 ```
+
+Then run the smoke test above. Browsers pick up a new release of the web app on their next page load: the app page is never cached, its files are named by content and cached for a year. The full list is in `docs/release-checklist.md`.
 
 Migrations only add to the schema, so going back means checking out the previous commit and running the same command.
 

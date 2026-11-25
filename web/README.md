@@ -23,7 +23,8 @@ Sign in with a demo account (`owner@`, `manager@` or `ahmed@velora.example`, pas
 | `npm start` | Development server with the API proxy (`proxy.conf.json`) |
 | `npm test` | Unit and component tests (Vitest, through the Angular builder) |
 | `npm run lint` | ESLint with Angular template and accessibility rules |
-| `npm run e2e` | End-to-end tests (Playwright, Chromium) against the **production build** with the production security headers, the real API and a freshly seeded `velora_e2e` database. Starts everything itself; PostgreSQL must be running |
+| `npm run e2e` | End-to-end tests (Playwright; Chromium, plus Firefox/WebKit with `E2E_BROWSERS=firefox,webkit`) against the **production build** with the production security headers, the real API and a freshly seeded `velora_e2e` database. Starts everything itself; PostgreSQL must be running |
+| `npm run smoke` | Read-only post-deploy check of a running server: `SMOKE_URL=https://… SMOKE_EMAIL=… SMOKE_PASSWORD=… npm run smoke` (`SMOKE_INSECURE=1` for a local Caddy certificate). See `docs/release-checklist.md` |
 | `npx ng build` | Production build into `dist/velora-web/browser` |
 | `npm run api:types` | Regenerates `src/app/core/api/schema.d.ts` from `backend/openapi/openapi.yaml` |
 | `npm run api:check` | Fails if the committed types are out of date (CI) |

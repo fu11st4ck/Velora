@@ -75,7 +75,7 @@
     } @else if (statuses().data) {
       @if (hasInvoices()) {
         <app-status-bar [items]="statusParts()" description="Invoice value by payment status" />
-        <div class="table-wrap"><table class="table" data-testid="status-table">
+        <div class="table-wrap" appScrollRegion="Invoices by payment status table"><table class="table" data-testid="status-table">
           <caption class="visually-hidden">Invoices by payment status</caption>
           <thead><tr><th scope="col">Status</th><th scope="col" class="num">Invoices</th><th scope="col" class="num">Value</th><th scope="col" class="num">Share</th><th scope="col" class="num">Still owed</th></tr></thead>
           <tbody>

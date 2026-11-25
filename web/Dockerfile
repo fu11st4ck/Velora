@@ -1,5 +1,5 @@
 # The web app, built and served by Caddy together with the reverse proxy for the API.
-# Not built in the development workspace (no Docker daemon there); verified by the CI job "stack".
+# Built and run with deploy/Caddyfile in the W6 check (TASKS.md); CI builds and smoke-tests it (job backend-image).
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

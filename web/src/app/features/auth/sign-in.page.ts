@@ -42,7 +42,8 @@ export function safeReturnUrl(value: string | null): string {
           <mat-label>Password</mat-label>
           <input matInput [type]="showPassword() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" required data-testid="password" />
           <button matIconButton matSuffix type="button" (click)="showPassword.set(!showPassword())" [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword()">
-            <mat-icon>{{ showPassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <!-- fontIcon: the glyph's name is not text, so the button's only name is its label (WCAG 2.5.3). -->
+            <mat-icon [fontIcon]="showPassword() ? 'visibility_off' : 'visibility'" />
           </button>
           @if (form.controls.password.hasError('required')) {
             <mat-error>Enter your password.</mat-error>
