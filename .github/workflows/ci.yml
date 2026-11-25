@@ -31,6 +31,8 @@ jobs:
       - run: npx prisma generate
       - run: npm run lint
       - run: npm run typecheck
+      - name: Install pdftotext (the PDF tests read the rendered documents back as text)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
       - run: npm test
       - run: npm run build
       - name: Lint API contract
@@ -50,11 +52,18 @@ jobs:
           sed -i 's#^MAIL_SMTP_URL=$#MAIL_SMTP_URL=smtp://localhost:25#; s#^DOMAIN=.*#DOMAIN=localhost#' .env
           docker compose config -q
           docker compose up -d --build postgres migrate api
-          docker compose exec -T api node -e "fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+          # The API needs a few seconds after its container starts; wait up to 2 minutes for readiness.
+          ready="fetch('http://127.0.0.1:3000/api/v1/health/ready').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+          for i in $(seq 1 60); do docker compose exec -T api node -e "$ready" && break; sleep 2; done
+          docker compose exec -T api node -e "$ready"
           docker compose exec -T api node dist/maintenance/cli.js check
       # The web image, then the whole stack behind Caddy on https://localhost (Caddy's local CA),
       # a business created the production way, and the read-only post-deploy smoke test against it.
-      - run: cd deploy && docker compose up -d --build --wait caddy
+      - name: Start Caddy and wait for https://localhost to serve the app and the API
+        run: |
+          cd deploy && docker compose up -d --build caddy
+          for i in $(seq 1 60); do curl -skf https://localhost/api/v1/health/ready >/dev/null && curl -skf https://localhost/ >/dev/null && break; sleep 2; done
+          curl -skf https://localhost/api/v1/health/ready
       - name: Create a business (as in deploy/README.md)
         run: |
           cd deploy
@@ -117,7 +126,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed lib test
@@ -138,7 +148,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: flutter build apk --debug -t lib/main_dev.dart
@@ -153,7 +164,8 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version-file: mobile/pubspec.yaml
+          # The version the app is developed and tested with; mobile/pubspec.yaml only states the Dart SDK range.
+          flutter-version: 3.50.0
           cache: true
       - run: flutter pub get
       - run: flutter build ios --debug --no-codesign -t lib/main_dev.dart
