@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { E2E } from './env';
-import { aed, api, apiLogin, createCustomer, createInvoice, createProduct, createUser, emailTo, navigateInApp, signIn } from './support';
+import { aed, api, apiLogin, createCustomer, createInvoice, createProduct, createUser, emailTo, navigateInApp, signIn, dialogReady } from './support';
 
 const axe = async (page: import('@playwright/test').Page) =>
   (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()).violations.map((v) => `${v.id} ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`);
@@ -92,8 +92,10 @@ test.describe('settings', () => {
       await page.getByTestId('sale-search').fill(product.name);
       await expect(page.getByTestId('sale-result')).toHaveCount(1);
       await page.getByTestId('sale-add').click();
+      await dialogReady(page);
       await page.getByTestId('editor-accept').click();
       await page.getByTestId('choose-customer').click();
+      await dialogReady(page);
       await page.getByTestId('picker-search').fill(customer.name!);
       await expect(page.getByTestId('picker-result')).toHaveCount(1);
       await page.getByTestId('picker-result').click();
@@ -242,6 +244,7 @@ test.describe('global search', () => {
     await signIn(page, E2E.manager);
     await expect(page.getByTestId('kpi-0')).toBeVisible(); // the start-up navigation has finished
     await page.keyboard.press('Control+k');
+    await dialogReady(page);
     await page.getByTestId('global-search-input').fill(tag);
     await expect(page.getByTestId('global-search-hit')).toHaveCount(3);
     const dialog = page.getByRole('dialog');

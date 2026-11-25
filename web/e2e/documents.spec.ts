@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { E2E } from './env';
-import { api, apiLogin, createCustomer, createInvoice, createProduct, navigateInApp, signIn, sql } from './support';
+import { api, apiLogin, createCustomer, createInvoice, createProduct, navigateInApp, signIn, sql, dialogReady } from './support';
 
 test.describe('documents (manager)', () => {
   test.beforeEach(async ({ page }) => {
@@ -21,6 +21,7 @@ test.describe('documents (manager)', () => {
     await expect(page.getByTestId('invoice-balance')).toHaveText('AED 1,000.00');
 
     await page.getByTestId('invoice-pay').click();
+    await dialogReady(page);
     await expect(page.getByTestId('payment-amount')).toHaveValue('1,000.00');
     await page.getByTestId('payment-amount').fill('1,000.01');
     await page.getByTestId('payment-submit').click();
@@ -31,6 +32,7 @@ test.describe('documents (manager)', () => {
     await expect(page.getByTestId('invoice-balance')).toHaveText('AED 600.00');
 
     await page.getByTestId('invoice-pay').click();
+    await dialogReady(page);
     await expect(page.getByTestId('payment-outcome')).toHaveText('The invoice will be paid in full.');
     await page.getByTestId('payment-submit').click();
     await expect(page.getByTestId('invoice-status')).toHaveText('Paid');
@@ -83,6 +85,7 @@ test.describe('documents (manager)', () => {
     await navigateInApp(page, `/documents/invoices/${invoice.id}`);
     await page.getByTestId('invoice-more').click();
     await page.getByTestId('invoice-cancel').click();
+    await dialogReady(page);
     await expect(page.getByText('1 item goes back to stock.')).toBeVisible();
     await expect(page.getByText('AED 1,365.00 received is recorded as refunded.')).toBeVisible();
     await page.getByTestId('cancel-reason').fill('Customer changed their mind');
@@ -140,6 +143,7 @@ test.describe('documents (manager)', () => {
     await navigateInApp(page, `/documents/invoices/${invoice.id}`);
     await page.getByTestId('invoice-more').click();
     await page.getByTestId('invoice-refund').click();
+    await dialogReady(page);
     await page.getByTestId('refund-amount').fill('2,000.00');
     await page.getByTestId('refund-reason').fill('Charged twice');
     await page.getByTestId('refund-submit').click();

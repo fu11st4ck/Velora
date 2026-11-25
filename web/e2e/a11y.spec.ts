@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from './env';
-import { api, apiLogin, createCustomer, createInvoice, createProduct, navigateInApp, signIn } from './support';
+import { api, apiLogin, createCustomer, createInvoice, createProduct, navigateInApp, signIn, dialogReady } from './support';
 
 /**
  * W6 accessibility audit: every page, as the owner (who sees every section), in light and dark,
@@ -59,11 +59,13 @@ for (const scheme of ['light', 'dark'] as const) {
       await navigateInApp(page, `/documents/invoices/${invoice.id}`);
       await settled(page);
       await page.getByTestId('invoice-pay').click();
+      await dialogReady(page);
       await expect(page.getByTestId('payment-amount')).toBeVisible();
       found.push(...(await violations(page, 'record payment dialog')));
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('payment-amount')).toHaveCount(0);
       await page.keyboard.press('Control+k');
+      await dialogReady(page);
       await page.getByTestId('global-search-input').fill('E2E');
       await expect(page.getByTestId('global-search-hit').first()).toBeVisible();
       found.push(...(await violations(page, 'global search')));
@@ -111,6 +113,7 @@ test('a sale can be made with the keyboard alone', async ({ page }) => {
   for (let i = 0; i < 30 && !(await page.getByTestId('confirm-sale').evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
   await page.keyboard.press('Enter'); // confirmation dialog
   await expect(page.getByTestId('confirm')).toBeVisible();
+  await dialogReady(page);
   for (let i = 0; i < 5 && !(await page.getByTestId('confirm').evaluate((el) => el === document.activeElement)); i++) await page.keyboard.press('Tab');
   await expect(page.getByTestId('confirm')).toBeFocused();
   await page.keyboard.press('Enter');

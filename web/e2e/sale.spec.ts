@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from './env';
-import { aed, api, apiLogin, createCustomer, createProduct, navigateInApp, signIn, sql } from './support';
+import { aed, api, apiLogin, createCustomer, createProduct, navigateInApp, signIn, sql, dialogReady } from './support';
 
 /** Opens the sale workspace and starts from an empty sale. */
 async function openSale(page: Page) {
@@ -17,6 +17,7 @@ async function addProduct(page: Page, name: string, quantity = 1, price?: string
   await page.getByTestId('sale-search').fill(name);
   await expect(page.getByTestId('sale-result')).toHaveCount(1);
   await page.getByTestId('sale-result').getByTestId('sale-add').click();
+  await dialogReady(page);
   await page.getByTestId('editor-quantity').fill(String(quantity));
   if (price) await page.getByTestId('editor-price').fill(price);
   await page.getByTestId('editor-accept').click();
@@ -25,6 +26,7 @@ async function addProduct(page: Page, name: string, quantity = 1, price?: string
 
 async function chooseCustomer(page: Page, search: string) {
   await page.getByTestId('choose-customer').click();
+  await dialogReady(page);
   await page.getByTestId('picker-search').fill(search);
   await expect(page.getByTestId('picker-result')).toHaveCount(1);
   await page.getByTestId('picker-result').click();
@@ -233,6 +235,7 @@ test.describe('selling (manager)', () => {
     await page.getByTestId('sale-search').fill(product.name);
     await expect(page.getByTestId('sale-result')).toHaveCount(1);
     await page.getByTestId('sale-add').click();
+    await dialogReady(page);
     await page.getByTestId('editor-price').fill('1,100.00');
     await expect(page.getByTestId('editor-below')).toBeVisible();
     await page.getByTestId('editor-override').click();
@@ -257,6 +260,7 @@ test.describe('selling (salesperson)', () => {
     await page.getByTestId('sale-search').fill(product.name);
     await expect(page.getByTestId('sale-result')).toHaveCount(1);
     await page.getByTestId('sale-add').click();
+    await dialogReady(page);
     await expect(page.getByText('Lowest AED 1,150.00 · Highest AED 1,600.00')).toBeVisible();
     await expect(page.getByText('Profit')).toHaveCount(0);
     await page.getByTestId('editor-price').fill('1,100.00');

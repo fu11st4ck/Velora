@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from './env';
-import { api, apiLogin, createProduct, navigateInApp, signIn } from './support';
+import { api, apiLogin, createProduct, navigateInApp, signIn, dialogReady } from './support';
 
 /** Opens the products page through the sidebar, as a person would. */
 async function openProducts(page: Page) {
@@ -75,6 +75,7 @@ test.describe('inventory (manager)', () => {
     await expect(page.getByTestId('on-hand')).toHaveText('10');
 
     await page.getByTestId('detail-receive').click();
+    await dialogReady(page);
     await page.getByTestId('receive-quantity').fill('4');
     await page.getByTestId('receive-cost').fill('1,200.00');
     await page.getByTestId('receive-submit').click();
@@ -82,6 +83,7 @@ test.describe('inventory (manager)', () => {
     await expect(page.getByTestId('on-hand')).toHaveText('14');
 
     await page.getByTestId('detail-adjust').click();
+    await dialogReady(page);
     await page.getByTestId('adjust-out').click();
     await page.getByTestId('adjust-quantity').fill('15');
     await page.getByTestId('adjust-reason').fill('Damaged clasp');
@@ -113,6 +115,7 @@ test.describe('inventory (manager)', () => {
     await expect(page.getByTestId('stock-status')).toHaveText('In stock');
 
     await page.getByTestId('detail-adjust').click();
+    await dialogReady(page);
     await page.getByTestId('adjust-out').click();
     await page.getByTestId('adjust-quantity').fill('6');
     await page.getByTestId('adjust-reason').fill('Count correction');
@@ -139,6 +142,7 @@ test.describe('inventory (manager)', () => {
     await expect(page.getByText('This product still has 1 in stock.', { exact: false })).toBeVisible();
 
     await page.getByTestId('detail-adjust').click();
+    await dialogReady(page);
     await page.getByTestId('adjust-out').click();
     await page.getByTestId('adjust-quantity').fill('1');
     await page.getByTestId('adjust-reason').fill('Sold elsewhere');

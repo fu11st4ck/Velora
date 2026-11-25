@@ -191,8 +191,8 @@ paths:
                       required: [id, signedInAt, lastActiveAt, isCurrent]
                       properties:
                         id: { type: string, format: uuid }
-                        deviceName: { type: string, nullable: true }
-                        ipAddress: { type: string, nullable: true }
+                        deviceName: { type: [string, 'null'] }
+                        ipAddress: { type: [string, 'null'] }
                         signedInAt: { type: string, format: date-time }
                         lastActiveAt: { type: string, format: date-time }
                         isCurrent: { type: boolean }

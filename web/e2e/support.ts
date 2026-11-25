@@ -134,3 +134,15 @@ export async function emailTo(to: string, timeoutMs = 10_000): Promise<string> {
   }
   throw new Error(`No email to ${to} within ${timeoutMs} ms`);
 }
+
+/**
+ * Waits until a dialog has opened and taken focus — the moment a person sees the cursor and starts
+ * typing. Typing earlier could race the dialog's own focus handling on a slow machine.
+ */
+export async function dialogReady(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const dialogs = document.querySelectorAll('mat-dialog-container');
+    const top = dialogs[dialogs.length - 1];
+    return !!top && !!document.activeElement && top.contains(document.activeElement);
+  });
+}
