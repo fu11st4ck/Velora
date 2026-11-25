@@ -55,7 +55,6 @@ services:
       JWT_KEY_ID: ${JWT_KEY_ID:-prod-1}
       MAIL_SMTP_URL: ${MAIL_SMTP_URL:?set in .env}
       MAIL_FROM: ${MAIL_FROM:?set in .env}
-      MOBILE_DEEP_LINK_BASE: ${MOBILE_DEEP_LINK_BASE:-velora://}
       # Caddy is the only client, so the forwarded address is the real one (used for rate limits and audit).
       TRUST_PROXY: "true"
       LOG_LEVEL: ${LOG_LEVEL:-info}

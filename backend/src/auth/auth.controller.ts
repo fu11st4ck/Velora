@@ -1,9 +1,13 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res } from '@nestjs/common';
 import { RouteConfig } from '@nestjs/platform-fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import { APP_CONFIG, type AppConfig } from '../common/config';
+import { Errors } from '../common/errors';
 import { Authenticated, Public } from '../authz/decorators';
 import { Client, type ClientInfo, Ctx, type RequestContext } from '../common/request-context';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto, ForgotPasswordDto, LoginDto, RefreshTokenDto, ResetPasswordDto } from './dto';
+import { assertFromWebApp, clearRefreshCookie, refreshCookie, setRefreshCookie } from './web-session';
 
 /** Tighter per-IP limit for unauthenticated credential endpoints. The limit value is read at request time. */
 const AUTH_LIMIT = {
@@ -15,7 +19,10 @@ const AUTH_LIMIT = {
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
 
   @Public()
   @RouteConfig(AUTH_LIMIT)
@@ -67,5 +74,52 @@ export class AuthController {
   @Get('me')
   me(@Ctx() ctx: RequestContext) {
     return this.auth.me(ctx);
+  }
+
+  // ───────── Browser sessions: the refresh token travels only in an HttpOnly cookie ─────────
+
+  @Public()
+  @RouteConfig(AUTH_LIMIT)
+  @Post('web/login')
+  @HttpCode(200)
+  async webLogin(
+    @Body() dto: LoginDto,
+    @Client() client: ClientInfo,
+    @Req() req: FastifyRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ) {
+    assertFromWebApp(req, this.config);
+    const { refreshToken, refreshTokenExpiresAt, ...session } = await this.auth.login(dto.email, dto.password, dto.deviceName, client);
+    setRefreshCookie(reply, refreshToken, refreshTokenExpiresAt);
+    return { ...session, refreshTokenExpiresAt };
+  }
+
+  @Public()
+  @Post('web/refresh')
+  @HttpCode(200)
+  async webRefresh(@Client() client: ClientInfo, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    assertFromWebApp(req, this.config);
+    const token = refreshCookie(req);
+    if (!token) throw Errors.sessionRevoked();
+    try {
+      const { refreshToken, refreshTokenExpiresAt, ...pair } = await this.auth.refresh(token, client);
+      setRefreshCookie(reply, refreshToken, refreshTokenExpiresAt);
+      return { ...pair, refreshTokenExpiresAt };
+    } catch (error) {
+      // A cookie the server no longer accepts is useless; remove it so the browser stops sending it.
+      clearRefreshCookie(reply);
+      throw error;
+    }
+  }
+
+  /** Works with an expired access token too: signing out must always be possible. */
+  @Public()
+  @Post('web/logout')
+  @HttpCode(204)
+  async webLogout(@Client() client: ClientInfo, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply): Promise<void> {
+    assertFromWebApp(req, this.config);
+    const token = refreshCookie(req);
+    if (token) await this.auth.logoutByToken(token, client);
+    clearRefreshCookie(reply);
   }
 }

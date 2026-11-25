@@ -1,3 +1,4 @@
+import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { BadRequestException, ConsoleLogger, ValidationPipe, type INestApplication } from '@nestjs/common';
@@ -43,6 +44,7 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
       exceptionFactory: (errors) => new BadRequestException({ details: flatten(errors) }),
     }),
   );
+  await app.register(cookie as never);
   await app.register(helmet as never);
   await app.register(rateLimit as never, {
     max: config.RATE_LIMIT_PER_MINUTE,

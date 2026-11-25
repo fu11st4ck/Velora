@@ -4,7 +4,9 @@ const schema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
-    APP_BASE_URL: z.string().url().default('http://localhost:3000'),
+    // Where the web app is served. Emailed links point here, and it is the only origin allowed to
+    // use the browser session cookie (/auth/web/*).
+    APP_BASE_URL: z.string().url().default('http://localhost:4200'),
     DATABASE_URL: z.string().min(1),
     JWT_PRIVATE_KEY: z.string().optional(),
     JWT_PUBLIC_KEY: z.string().optional(),
@@ -14,7 +16,6 @@ const schema = z
     PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
     MAIL_SMTP_URL: z.string().optional(),
     MAIL_FROM: z.string().default('Velora <no-reply@example.com>'),
-    MOBILE_DEEP_LINK_BASE: z.string().default('velora://'),
     RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).default(300),
     AUTH_RATE_LIMIT_PER_15_MIN: z.coerce.number().int().min(1).default(20),
     TRUST_PROXY: z.enum(['true', 'false']).default('false'),

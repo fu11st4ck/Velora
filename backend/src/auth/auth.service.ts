@@ -5,6 +5,7 @@ import { AuditService } from '../audit/audit.service';
 import { permissionsFor } from '../authz/permissions';
 import { Clock } from '../common/clock';
 import { APP_CONFIG, type AppConfig } from '../common/config';
+import { resetLink } from '../common/links';
 import { Errors } from '../common/errors';
 import type { ClientInfo, RequestContext } from '../common/request-context';
 import { MailService } from '../mail/mail.service';
@@ -205,6 +206,14 @@ export class AuthService {
     await this.revokeFamily(stored.familyId, 'logout');
   }
 
+  /** Ends the session a refresh token belongs to, without needing a valid access token (browser sign-out). */
+  async logoutByToken(refreshToken: string, client: ClientInfo): Promise<void> {
+    const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash: this.tokens.hash(refreshToken) } });
+    if (!stored) return;
+    await this.revokeFamily(stored.familyId, 'logout');
+    await this.auditAuth('auth.logout', stored.userId, client);
+  }
+
   async forgotPassword(email: string, client: ClientInfo): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.isActive) return; // identical outward behaviour whether or not the account exists
@@ -223,7 +232,7 @@ export class AuthService {
       text:
         `Hello ${user.fullName},\n\nOpen this link on your phone to choose a new password. ` +
         `It works once and expires in ${this.config.PASSWORD_RESET_TTL_MINUTES} minutes.\n\n` +
-        `${this.config.MOBILE_DEEP_LINK_BASE}reset-password?token=${token}\n\n` +
+        `${resetLink(this.config.APP_BASE_URL, token)}\n\n` +
         `If you did not ask for this, you can ignore this email.`,
     });
   }

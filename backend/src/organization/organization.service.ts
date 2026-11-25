@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { canSeeCost, hasPermission } from '../authz/permissions';
 import { Clock } from '../common/clock';
 import { APP_CONFIG, type AppConfig } from '../common/config';
+import { resetLink } from '../common/links';
 import { DomainError, Errors } from '../common/errors';
 import type { RequestContext } from '../common/request-context';
 import { MailService } from '../mail/mail.service';
@@ -222,7 +223,7 @@ export class OrganizationService {
       text:
         `Hello ${dto.fullName},\n\nYou have been added to ${organizationName} on Velora. ` +
         `Open this link on your phone to choose your password. It works once and expires in ${INVITATION_TTL_DAYS} days.\n\n` +
-        `${this.config.MOBILE_DEEP_LINK_BASE}reset-password?token=${invitation.token}\n\n` +
+        `${resetLink(this.config.APP_BASE_URL, invitation.token)}\n\n` +
         `If the link has expired, use "Forgot password" on the sign-in screen with this email address.`,
     });
     // The account exists either way. When the email could not be sent, the owner is told, and the

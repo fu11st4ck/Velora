@@ -10,7 +10,7 @@ Status: specification for Sprint 1 — the variables are not yet read by any cod
 |---|---|---|---|
 | `NODE_ENV` | yes | `development` \| `test` \| `production` | Runtime mode |
 | `PORT` | no | `3000` | HTTP port |
-| `APP_BASE_URL` | yes | `http://localhost:3000` | Used in emailed links |
+| `APP_BASE_URL` | yes | `http://localhost:4200` (dev), `https://<domain>` (prod) | Address of the web app: emailed reset and invitation links point to `<APP_BASE_URL>/reset-password`, and it is the only origin allowed to use the browser session cookie |
 | `DATABASE_URL` | yes | `postgresql://velora_app:…@localhost:5432/velora` | Application role (no DDL, no RLS bypass) |
 | `DATABASE_MIGRATION_URL` | yes (deploy) | `postgresql://velora_owner:…@…/velora` | Owner role, used only by the migration job and the maintenance jobs (`npm run maintenance`) |
 | `JWT_PRIVATE_KEY` / `JWT_PUBLIC_KEY` | yes | PEM | Access-token signing key pair |
@@ -24,7 +24,6 @@ Status: specification for Sprint 1 — the variables are not yet read by any cod
 | `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY` | yes | — | |
 | `MAIL_SMTP_URL` | yes | `smtp://localhost:1025` | Mailpit locally |
 | `MAIL_FROM` | yes | `Velora <no-reply@example.com>` | |
-| `MOBILE_DEEP_LINK_BASE` | yes | `velora://` | Reset-password and invite links |
 | `RATE_LIMIT_PER_MINUTE` | no | `120` | Per user |
 | `LOG_LEVEL` | no | `info` | |
 | `SENTRY_DSN` | no | — | Error monitoring; disabled when empty |
