@@ -142,7 +142,7 @@ Once this is set up, every merge into `main` deploys itself. After all the tests
 **One-time setup**
 
 1. **Turn on the container registry.**
-   - Self-managed GitLab: enable the container registry on the instance.
+   - Self-managed GitLab: enable the container registry on the instance, at a public HTTPS address, for example `registry_external_url 'https://registry.example.com'` in `/etc/gitlab/gitlab.rb`, then `gitlab-ctl reconfigure`. An internal or plain-HTTP address (such as `http://gitlab:5050`) fails: Docker refuses to log in to it, and the server could not reach it anyway.
    - The project: Settings → General → Visibility → Container registry.
 2. **Prepare the server.**
    - Follow §1 and §2, but only up to and including `chmod 600 .env`, in the directory you choose as `DEPLOY_PATH` (for example `/opt/velora`). The source code does not need to be on the server.

@@ -203,13 +203,17 @@ stack:
     - docker start -a "$smoke"
     - |
       if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] && [ "$CI_PIPELINE_SOURCE" = "push" ]; then
-        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY" || {
+          echo "Could not log in to the container registry at '$CI_REGISTRY'. It must be served over HTTPS at an" >&2
+          echo "address both the runner and the server can reach: registry_external_url in gitlab.rb (deploy/README.md §9)." >&2
+          exit 1; }
         docker tag velora-api "$RELEASE_API_IMAGE" && docker push "$RELEASE_API_IMAGE"
         docker tag velora-web "$RELEASE_WEB_IMAGE" && docker push "$RELEASE_WEB_IMAGE"
         for app in api web; do docker tag "velora-$app" "$CI_REGISTRY_IMAGE/$app:latest" && docker push "$CI_REGISTRY_IMAGE/$app:latest"; done
       fi
   after_script:
-    - cd deploy && docker compose logs --tail 200 || true
+    # The application's containers only: PostgreSQL's first-start output is long and rarely the cause.
+    - cd deploy && docker compose ps -a && docker compose logs --tail 100 migrate api caddy || true
 
 # ---------------------------------------------------------------- deploy stage
 
