@@ -164,11 +164,18 @@ stack:
   services:
     - name: docker:29-dind
       alias: docker
+      # Plain TCP inside the job's own network. Docker 27+ refuses to listen on TCP without TLS
+      # unless told so explicitly, and the dind entrypoint does not pass this when TLS is off.
+      command: ["--tls=false"]
   variables:
     DOCKER_HOST: tcp://docker:2375
     DOCKER_TLS_CERTDIR: ""
   script:
     - apk add --no-cache bash openssl >/dev/null
+    - for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 2; done
+    - >
+      docker info >/dev/null || { echo "The Docker-in-Docker service did not start. The runner must allow
+      privileged containers: privileged = true under [runners.docker] in its config.toml." >&2; exit 1; }
     - docker build -t velora-api ./backend
     - cd deploy
     - cp .env.example .env
