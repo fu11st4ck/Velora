@@ -6,6 +6,10 @@
 #   (`privileged = true` in the runner's config.toml, [runners.docker] section).
 # - No macOS runner: the iOS build (GitHub job mobile-ios) is not part of this pipeline.
 #
+# Deployment: every merge into main (a push to the default branch) that passes all the jobs pushes the
+# API and web images tested by `stack` to this project's container registry, and the `deploy` job
+# runs them on the server over SSH (deploy/ci-deploy.sh). Setup: deploy/README.md §9.
+#
 # Nightly Firefox/WebKit runs: create a pipeline schedule (Build → Pipeline schedules) on `main`;
 # scheduled pipelines run only those jobs.
 
@@ -18,7 +22,7 @@ workflow:
       when: never
     - if: $CI_COMMIT_BRANCH
 
-stages: [test, stack]
+stages: [test, stack, deploy]
 
 variables:
   NODE_IMAGE: node:22-bookworm
@@ -34,6 +38,9 @@ variables:
   E2E_OWNER_DATABASE_URL: postgresql://velora_owner:velora_owner_dev@postgres:5432/velora_e2e
   E2E_ADMIN_DATABASE_URL: postgresql://velora_owner:velora_owner_dev@postgres:5432/postgres
   npm_config_cache: $CI_PROJECT_DIR/.npm
+  # The release images, named by commit, so a deploy job re-run from an older pipeline rolls back.
+  RELEASE_API_IMAGE: $CI_REGISTRY_IMAGE/api:$CI_COMMIT_SHA
+  RELEASE_WEB_IMAGE: $CI_REGISTRY_IMAGE/web:$CI_COMMIT_SHA
 
 # ---------------------------------------------------------------- shared pieces
 
@@ -45,6 +52,10 @@ variables:
 .not-scheduled:
   rules:
     - if: $CI_PIPELINE_SOURCE != "schedule"
+
+.main-push:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push"
 
 .db-setup: &db-setup
   - apt-get update -qq && apt-get install -y -qq --no-install-recommends postgresql-client >/dev/null
@@ -145,6 +156,7 @@ mobile-android:
 # The production stack from deploy/: both images built, PostgreSQL, migrations, the API and Caddy on
 # https://localhost (Caddy's local CA), a business created the production way, and the read-only
 # post-deploy smoke test (web/smoke) against it. Needs a privileged runner (Docker-in-Docker).
+# On main, the images that passed are then pushed to the container registry for the `deploy` job.
 stack:
   stage: stack
   image: docker:29
@@ -182,8 +194,71 @@ stack:
         npx -y npm@11.6.2 ci && npx playwright install --with-deps chromium && npm run smoke')
     - docker cp ../web/. "$smoke:/web"
     - docker start -a "$smoke"
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] && [ "$CI_PIPELINE_SOURCE" = "push" ]; then
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+        docker tag velora-api "$RELEASE_API_IMAGE" && docker push "$RELEASE_API_IMAGE"
+        docker tag velora-web "$RELEASE_WEB_IMAGE" && docker push "$RELEASE_WEB_IMAGE"
+        for app in api web; do docker tag "velora-$app" "$CI_REGISTRY_IMAGE/$app:latest" && docker push "$CI_REGISTRY_IMAGE/$app:latest"; done
+      fi
   after_script:
     - cd deploy && docker compose logs --tail 200 || true
+
+# ---------------------------------------------------------------- deploy stage
+
+# Runs the release on the server over SSH. Project CI/CD variables (Settings → CI/CD → Variables,
+# protected, so only main can read them):
+#   DEPLOY_HOST        server name or IP          DEPLOY_USER  SSH user, in the server's docker group
+#   DEPLOY_PATH        directory for the stack, e.g. /opt/velora (holds .env, created once by hand)
+#   DEPLOY_URL         https://<DOMAIN>, checked after the deploy
+#   SSH_PRIVATE_KEY    type File: a key that DEPLOY_USER accepts
+#   SSH_KNOWN_HOSTS    output of `ssh-keyscan <DEPLOY_HOST>`, checked against the server's real key
+# One deploy at a time (resource_group). Roll back: re-run `deploy` in an older main pipeline.
+deploy:
+  stage: deploy
+  image: alpine:3.22
+  extends: [.main-push]
+  needs: [stack]
+  resource_group: production
+  environment:
+    name: production
+    url: $DEPLOY_URL
+  before_script:
+    - apk add --no-cache openssh-client curl tar >/dev/null
+    - |
+      for v in DEPLOY_HOST DEPLOY_USER DEPLOY_PATH DEPLOY_URL SSH_PRIVATE_KEY SSH_KNOWN_HOSTS; do
+        eval "val=\${$v:-}"; [ -n "$val" ] || { echo "CI/CD variable $v is not set (see deploy/README.md §9)" >&2; exit 1; }
+      done
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    - printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 600 "$SSH_PRIVATE_KEY"
+    - target="$DEPLOY_USER@$DEPLOY_HOST"
+    - ssh_cmd="ssh -i $SSH_PRIVATE_KEY -o BatchMode=yes -o StrictHostKeyChecking=yes"
+  script:
+    # The stack's files only: .env and backups/ on the server are never touched.
+    - >
+      tar -C deploy -czf - docker-compose.yml docker-compose.registry.yml Caddyfile postgres-init
+      backup.sh restore.sh generate-secrets.sh ci-deploy.sh .env.example README.md
+      | $ssh_cmd "$target" "mkdir -p '$DEPLOY_PATH' && tar -C '$DEPLOY_PATH' -xzf -"
+    - >
+      printf '%s' "$CI_JOB_TOKEN"
+      | $ssh_cmd "$target" "'$DEPLOY_PATH/ci-deploy.sh' '$RELEASE_API_IMAGE' '$RELEASE_WEB_IMAGE' '$CI_REGISTRY' '$CI_REGISTRY_USER'"
+    - curl -fsS --retry 30 --retry-delay 5 --retry-all-errors "$DEPLOY_URL/api/v1/health/ready"
+    - curl -fsS -o /dev/null "$DEPLOY_URL/"
+
+# The read-only post-deploy smoke test (web/smoke) against the live site, when an account for it is
+# set: CI/CD variables PRODUCTION_SMOKE_EMAIL and PRODUCTION_SMOKE_PASSWORD (protected, masked).
+production-smoke:
+  stage: deploy
+  image: $NODE_IMAGE
+  needs: [deploy]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "push" && $PRODUCTION_SMOKE_EMAIL
+  script:
+    - cd web
+    - npx -y npm@11.6.2 ci
+    - npx playwright install --with-deps chromium
+    - SMOKE_URL="$DEPLOY_URL" SMOKE_EMAIL="$PRODUCTION_SMOKE_EMAIL" SMOKE_PASSWORD="$PRODUCTION_SMOKE_PASSWORD" npm run smoke
 
 # ---------------------------------------------------------------- nightly browsers
 

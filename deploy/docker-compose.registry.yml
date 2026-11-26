@@ -1,0 +1,16 @@
+# Deployment from GitLab CI (.gitlab-ci.yml, job `deploy`): the API and web images come from the
+# project's container registry instead of being built on the server. The deploy job sets these in
+# .env, so every later `docker compose …` command on the server (and backup.sh) uses them too:
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.registry.yml
+#   VELORA_API_IMAGE=<registry>/api:<commit>
+#   VELORA_WEB_IMAGE=<registry>/web:<commit>
+services:
+  migrate:
+    build: !reset null
+    image: ${VELORA_API_IMAGE:?set by the deploy job}
+  api:
+    build: !reset null
+    image: ${VELORA_API_IMAGE:?set by the deploy job}
+  caddy:
+    build: !reset null
+    image: ${VELORA_WEB_IMAGE:?set by the deploy job}

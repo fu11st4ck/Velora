@@ -125,3 +125,47 @@ Things worth knowing:
 | Caddy logs certificate errors | DNS does not point at this server yet, or ports 80/443 are closed |
 | Image build fails | Not verified in advance (see the note at the top) — send the error output. The web image needs about 2 GB of memory to build |
 | Invitations do not arrive | Check `docker compose logs api` for "could not be sent"; verify `MAIL_SMTP_URL` and that `MAIL_FROM` is an address your mail provider allows |
+
+## 9. Automatic deploys from GitLab CI
+
+Once this is set up, every merge into `main` deploys itself. After all the tests pass and the stack test (job `stack`) has run the smoke test against the API and web images, those same images are pushed to the project's container registry (`<registry>/product/velora/api:<commit>` and `…/web:<commit>`). The `deploy` job then connects to the server over SSH and:
+
+1. Copies this directory's files to `DEPLOY_PATH`. It never touches `.env` or `backups/`.
+2. Runs `ci-deploy.sh`, which:
+   - points `.env` at the new images (`COMPOSE_FILE` adds `docker-compose.registry.yml`, so nothing is built on the server);
+   - pulls the images;
+   - runs `./backup.sh`;
+   - starts the release with `docker compose up -d --wait`, which applies migrations first;
+   - runs the consistency check.
+3. Checks `DEPLOY_URL` over HTTPS.
+
+**One-time setup**
+
+1. **Turn on the container registry.**
+   - Self-managed GitLab: enable the container registry on the instance.
+   - The project: Settings → General → Visibility → Container registry.
+2. **Prepare the server.**
+   - Follow §1 and §2, but only up to and including `chmod 600 .env`, in the directory you choose as `DEPLOY_PATH` (for example `/opt/velora`). The source code does not need to be on the server.
+   - The SSH user must be in the `docker` group.
+   - Use a separate deploy key (`ssh-keygen -t ed25519 -f velora-deploy`); add its public half to that user's `~/.ssh/authorized_keys`.
+   - Moving an existing install keeps its data: the Compose project is named `velora` wherever its files are.
+3. **Add the project variables** (Settings → CI/CD → Variables). Mark all of them *Protected*. Protect `main` if it isn't already, so only `main` pipelines can read them.
+
+   | Variable | Value |
+   |---|---|
+   | `DEPLOY_HOST` | The server's name or IP |
+   | `DEPLOY_USER` | The SSH user |
+   | `DEPLOY_PATH` | For example `/opt/velora` |
+   | `DEPLOY_URL` | `https://<DOMAIN>` |
+   | `SSH_PRIVATE_KEY` | Type *File*: the private deploy key |
+   | `SSH_KNOWN_HOSTS` | Output of `ssh-keyscan <server>`, run from a trusted network |
+   | `PRODUCTION_SMOKE_EMAIL`, `PRODUCTION_SMOKE_PASSWORD` | Optional, also *Masked*: an account for the read-only smoke test after each deploy |
+
+4. **Create the business once** (§3) after the first deploy.
+
+**Rolling back:** open an earlier `main` pipeline in Build → Pipelines and run its `deploy` job again. Images are kept per commit. Migrations only add to the schema, so the earlier API works against the newer database (see §6).
+
+**When a deploy fails:**
+- The job log shows the failing step.
+- On the server, `docker compose ps` and `docker compose logs api` show the rest.
+- A backup taken by the job is in `backups/`.

@@ -1,6 +1,7 @@
 # Velora in production on one server: PostgreSQL, the API and Caddy (HTTPS).
 # Run from this directory, with the settings in ./.env (see README.md):
 #   docker compose up -d --build
+# Deploys from GitLab CI use registry images instead of building here: docker-compose.registry.yml, README.md §9.
 #
 # Only Caddy is reachable from outside (ports 80 and 443). The database has no published port.
 name: velora
